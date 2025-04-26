@@ -1891,9 +1891,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Create user in Jellyfin
-        const serverUrl = jellyfinCreds.serverUrl;
+        const serverUrl = jellyfinCreds.url;
         const apiKey = jellyfinCreds.apiKey;
         const adminUserId = jellyfinCreds.userId;
+        
+        // Make sure we have a valid access token
+        if (!jellyfinCreds.accessToken) {
+          return res.status(500).json({ error: "No valid Jellyfin access token available" });
+        }
         
         // Create user in Jellyfin via API
         const apiResponse = await fetch(`${serverUrl}/Users/New`, {
@@ -1917,13 +1922,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Get the created user data
-        const jellyfinUser = await apiResponse.json();
+        const jellyfinUserData = await apiResponse.json();
+        
+        // Type-safe approach - extract the ID
+        const jellyfinUserId = typeof jellyfinUserData === 'object' && jellyfinUserData !== null 
+          ? String(jellyfinUserData.Id || '') 
+          : '';
+          
+        if (!jellyfinUserId) {
+          return res.status(500).json({ error: "Failed to get Jellyfin user ID" });
+        }
         
         // Save the user in our local database too
         const localUser = await storage.createUser({
           username: username,
           password: password, // This will be hashed in the storage implementation
-          jellyfinUserId: jellyfinUser.Id,
+          jellyfinUserId: jellyfinUserId,
           label: invite.userLabel || null
         });
         
@@ -1935,7 +1949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true, 
           message: "User created successfully",
           username: username,
-          jellyfinUserId: jellyfinUser.Id
+          jellyfinUserId: jellyfinUserId
         });
       } catch (error) {
         console.error("Error creating user:", error);
