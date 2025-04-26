@@ -1094,9 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Account created: Mrcoffee",
           timestamp: "4/26/2025 01:29 PM",
           username: "Mrcoffee",
-          inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-          bgColor: "bg-blue-500",
-          textColor: "text-white"
+          inviteCode: "TNyWg96ZGdwu8gkEiPViRR"
         },
         {
           id: "2",
@@ -1104,9 +1102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invite expired: TNyWg96ZGdwu8gkEiPViRR",
           timestamp: "4/26/2025 01:29 PM",
           inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-          createdBy: "JFA-GO",
-          bgColor: "bg-amber-500",
-          textColor: "text-white"
+          createdBy: "JFA-GO"
         },
         {
           id: "3",
@@ -1114,9 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invite created: TNyWg96ZGdwu8gkEiPViRR",
           timestamp: "4/26/2025 11:30 AM",
           inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-          createdBy: "blackhat",
-          bgColor: "bg-blue-500",
-          textColor: "text-white"
+          createdBy: "blackhat"
         },
         {
           id: "4",
@@ -1124,9 +1118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invite expired: vqeRwjEBUftTLhi5MSgc4C",
           timestamp: "4/26/2025 10:51 AM",
           inviteCode: "vqeRwjEBUftTLhi5MSgc4C",
-          createdBy: "JFA-GO",
-          bgColor: "bg-amber-500",
-          textColor: "text-white"
+          createdBy: "JFA-GO"
         },
         {
           id: "5",
@@ -1134,9 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Account created: Gaurav",
           timestamp: "4/26/2025 12:25 AM",
           username: "Gaurav",
-          inviteCode: "gsxK79GDwB69eUjVFYRs39",
-          bgColor: "bg-blue-500",
-          textColor: "text-white"
+          inviteCode: "gsxK79GDwB69eUjVFYRs39"
         },
         {
           id: "6",
@@ -1144,9 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invite expired: gsxK79GDwB69eUjVFYRs39",
           timestamp: "4/26/2025 12:25 AM",
           inviteCode: "gsxK79GDwB69eUjVFYRs39",
-          createdBy: "JFA-GO",
-          bgColor: "bg-amber-500",
-          textColor: "text-white"
+          createdBy: "JFA-GO"
         }
       ];
       

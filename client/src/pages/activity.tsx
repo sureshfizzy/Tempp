@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
-// Sample activity data structure (we'll replace this with real API data when available)
+// Activity data structure
 interface ActivityItem {
   id: string;
   type: "account_created" | "invite_expired" | "invite_created";
@@ -25,8 +25,6 @@ interface ActivityItem {
   inviteCode?: string;
   username?: string;
   createdBy?: string;
-  bgColor: string;
-  textColor: string;
 }
 
 // Function to fetch activities from API
@@ -232,31 +230,46 @@ function ActivityPage() {
               </div>
               
               <div className="space-y-4">
-                {sortedActivities.map((activity) => (
-                  <div 
-                    key={activity.id} 
-                    className={`${activity.bgColor} ${activity.textColor} p-4 rounded-md shadow-sm transition-all hover:shadow-md`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium">{activity.message}</h3>
-                        {activity.type === "account_created" && (
-                          <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
-                        )}
-                        {(activity.type === "invite_expired" || activity.type === "invite_created") && activity.createdBy && (
-                          <p className="text-sm opacity-90">BY {activity.createdBy}</p>
-                        )}
+                {sortedActivities.map((activity) => {
+                  // Replace the dynamic color classes with fixed ones based on activity type
+                  let bgColorClass = 'bg-blue-500'; 
+                  let textColorClass = 'text-white';
+                  
+                  // Set appropriate colors based on activity type
+                  if (activity.type === 'invite_expired') {
+                    bgColorClass = 'bg-amber-500';
+                  } else if (activity.type === 'account_created') {
+                    bgColorClass = 'bg-blue-500';
+                  } else if (activity.type === 'invite_created') {
+                    bgColorClass = 'bg-green-500';
+                  }
+                  
+                  return (
+                    <div 
+                      key={activity.id} 
+                      className={`${bgColorClass} ${textColorClass} p-4 rounded-md shadow-sm transition-all hover:shadow-md`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{activity.message}</h3>
+                          {activity.type === "account_created" && (
+                            <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
+                          )}
+                          {(activity.type === "invite_expired" || activity.type === "invite_created") && activity.createdBy && (
+                            <p className="text-sm opacity-90">BY {activity.createdBy}</p>
+                          )}
+                        </div>
+                        <div className="text-sm opacity-80">{activity.timestamp}</div>
                       </div>
-                      <div className="text-sm opacity-80">{activity.timestamp}</div>
+                      
+                      <div className="flex justify-end mt-2">
+                        <button className="p-1 rounded-full bg-black/10 hover:bg-black/20">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    
-                    <div className="flex justify-end mt-2">
-                      <button className="p-1 rounded-full bg-black/10 hover:bg-black/20">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {filteredActivities.length === 0 && (
                   <div className="text-center py-8 bg-card rounded-md">
