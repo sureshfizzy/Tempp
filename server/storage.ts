@@ -560,13 +560,16 @@ export class DatabaseStorage implements IStorage {
       // Generate a unique invite code
       const code = this.generateInviteCode();
       
-      // Calculate expiration date if needed
-      let expiresAt: Date | null = null;
+      // Calculate expiration date - we must always set a value due to NOT NULL constraint
+      // Default to 30 days if not specified
+      let expiresAt = new Date();
       
-      // Use the hours for expiry (only field available in our schema)
+      // Use the hours for expiry if specified
       if (inviteData.userExpiryHours && inviteData.userExpiryHours > 0) {
-        expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
+      } else {
+        // Default to 30 days expiration
+        expiresAt.setDate(expiresAt.getDate() + 30);
       }
 
       // Handle max uses properly (can be null for unlimited)

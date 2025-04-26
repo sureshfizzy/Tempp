@@ -159,15 +159,11 @@ export default function LoginPage() {
 
   // Desktop render
   const DesktopLogin = () => (
-    <div className="min-h-screen flex overflow-hidden">
-      {/* Movie background with gradient overlay */}
-      <MovieBackground />
+    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
+      {/* Plain background with no movie images */}
       
-      {/* Cinema decoration for ambiance */}
-      <CinemaDecoration />
-      
-      {/* Left Panel (Content) */}
-      <div className="relative w-full md:w-1/2 flex items-center justify-center p-8">
+      {/* Content Panel (Centered) */}
+      <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center fade-in">
             <div className="flex items-center justify-center mb-4">
@@ -182,7 +178,7 @@ export default function LoginPage() {
           </div>
           
           <div className="fade-in" style={{ animationDelay: "0.2s" }}>
-            <Card className="cinema-card border-primary/30 shadow-lg">
+            <Card className="bg-slate-900 border-primary/30 shadow-lg">
               <CardContent className="pt-6">
                 {!connectionStatus?.connected ? (
                   <div className="text-center py-4">
@@ -222,25 +218,16 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      
-      {/* Right Panel (Big hero image) - only on desktop */}
-      <div className="hidden md:block relative w-1/2">
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/80 z-10" />
-      </div>
     </div>
   );
 
-  // Mobile render - optimized design with static background
+  // Mobile render - simplified design with plain background
   const MobileLogin = () => (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-cinema-dark to-black">
-      {/* Static background for better performance */}
-      <MovieBackground static variant="dark" />
-      
-      {/* Simplified decorative elements */}
-      <CinemaDecoration simplified />
+    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
+      {/* Plain background with no decorations */}
       
       {/* Content */}
-      <div className="relative min-h-screen flex flex-col items-center justify-center p-6 z-10">
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md text-center mb-8 fade-in">
           <div className="inline-block mb-4">
             <ClapperboardIcon className="h-16 w-16 text-primary" />
@@ -254,7 +241,7 @@ export default function LoginPage() {
         </div>
         
         <div className="w-full max-w-md fade-in" style={{ animationDelay: "0.2s" }}>
-          <Card className="cinema-card border-primary/30">
+          <Card className="bg-slate-900 border-primary/30">
             <CardContent className="pt-6">
               {!connectionStatus?.connected ? (
                 <div className="text-center py-4">
