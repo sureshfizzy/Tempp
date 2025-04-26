@@ -59,6 +59,7 @@ export default function UsersPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userWatchTimes, setUserWatchTimes] = useState<Record<string, number>>({});
   const isMobile = useIsMobile();
 
   // Get all users
@@ -112,6 +113,32 @@ export default function UsersPage() {
       setFilteredUsers([]);
     }
   }, [searchQuery, usersQuery.data]);
+  
+  // Fetch watch time data for users
+  useEffect(() => {
+    async function fetchWatchTimes() {
+      if (!filteredUsers.length) return;
+      
+      const watchTimes: Record<string, number> = {};
+      
+      // Only fetch for a reasonable number of users to avoid too many requests
+      const usersToFetch = filteredUsers.slice(0, 10);
+      
+      for (const user of usersToFetch) {
+        try {
+          const watchTime = await getUserWatchTime(user.Id);
+          watchTimes[user.Id] = watchTime;
+        } catch (error) {
+          console.error(`Error fetching watch time for user ${user.Name}:`, error);
+          watchTimes[user.Id] = 0;
+        }
+      }
+      
+      setUserWatchTimes(watchTimes);
+    }
+    
+    fetchWatchTimes();
+  }, [filteredUsers]);
 
   // Handle select all users
   const handleSelectAll = () => {
@@ -307,6 +334,7 @@ export default function UsersPage() {
                     <TableHead className="hidden md:table-cell">Access</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
+                    <TableHead className="hidden md:table-cell">Watch Time</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -365,6 +393,16 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {formatDate(user.LastActivityDate)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            {userWatchTimes[user.Id] !== undefined ? (
+                              <span>{formatWatchTime(userWatchTimes[user.Id])}</span>
+                            ) : (
+                              <div className="h-4 w-8 bg-gray-200 animate-pulse rounded"></div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {isMobile ? (

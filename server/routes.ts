@@ -1329,13 +1329,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ message: "Failed to fetch watch time from Jellyfin" });
       }
       
-      const data = await response.json();
+      const data = await response.json() as {
+        Items?: Array<{
+          Id?: string;
+          Name?: string;
+          Type?: string;
+          RunTimeTicks?: number;
+        }>;
+        TotalRecordCount?: number;
+      };
       
       // Calculate total minutes from RunTimeTicks of all items
       let totalMinutes = 0;
       
       if (data.Items && Array.isArray(data.Items)) {
-        data.Items.forEach((item: any) => {
+        data.Items.forEach((item) => {
           if (item.RunTimeTicks) {
             // RunTimeTicks is in 100-nanosecond intervals, convert to minutes
             // 1 minute = 60 seconds = 60 * 10^7 ticks
