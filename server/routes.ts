@@ -925,6 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updates.username = updateData.Name;
           }
           
+          // If password is updated, it will be hashed by the updateUser method
           if (updateData.Password) {
             updates.password = updateData.Password;
           }

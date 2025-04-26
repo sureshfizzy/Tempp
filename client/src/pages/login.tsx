@@ -8,6 +8,8 @@ import { useForm } from "react-hook-form";
 import { getConnectionStatus } from "@/lib/jellyfin";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -42,6 +44,7 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Get connection status to check if we have a server URL configured
   const connectionQuery = useQuery({
@@ -68,9 +71,12 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : "Invalid username or password";
+      setLoginError(errorMessage);
+      
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid username or password",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -87,9 +93,16 @@ export default function LoginPage() {
 
   // Submit handler
   const onSubmit = async (data: LoginFormData) => {
+    // Clear any previous errors
+    setLoginError(null);
     setIsLoading(true);
+    
     try {
       await loginMutation.mutateAsync(data);
+    } catch (err) {
+      console.error("Login error:", err);
+      
+      // Error is already handled in onError callback of loginMutation
     } finally {
       setIsLoading(false);
     }
