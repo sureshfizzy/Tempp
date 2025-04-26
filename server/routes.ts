@@ -553,6 +553,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   console.log("Created local user with ID:", newLocalUser.id);
                   
+                  // Handle invite code for new users if provided
+                  if (loginData.inviteCode) {
+                    console.log("Invite code provided during new user login:", loginData.inviteCode);
+                    try {
+                      // Use the invite
+                      const inviteResult = await storage.useInvite(loginData.inviteCode);
+                      console.log("Invite use result for new user:", inviteResult);
+                      
+                      if (!inviteResult) {
+                        console.log("Invalid or expired invite code for new user");
+                        // We still allow the login to proceed, just note that the invite wasn't valid
+                      }
+                    } catch (error) {
+                      console.error("Error processing invite code for new user:", error);
+                      // Continue with login even if invite processing fails
+                    }
+                  }
+                  
                   // Continue with the created user
                   if (req.session) {
                     req.session.connected = true;
@@ -645,6 +663,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "Invalid username or password",
             details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
           });
+        }
+      }
+      
+      // Handle invite code if provided
+      if (loginData.inviteCode) {
+        console.log("Invite code provided during login:", loginData.inviteCode);
+        try {
+          // Use the invite
+          const inviteResult = await storage.useInvite(loginData.inviteCode);
+          console.log("Invite use result:", inviteResult);
+          
+          if (!inviteResult) {
+            console.log("Invalid or expired invite code");
+            // We still allow the login to proceed, just note that the invite wasn't valid
+          }
+        } catch (error) {
+          console.error("Error processing invite code:", error);
+          // Continue with login even if invite processing fails
         }
       }
       
