@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 
 // Server Configuration schema
 export const serverConfig = pgTable("server_config", {
@@ -199,6 +200,38 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+// Invites schema
+export const invites = pgTable("invites", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  label: text("label"),
+  userLabel: text("user_label"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  maxUses: integer("max_uses").default(1),
+  usedCount: integer("used_count").default(0),
+  userExpiryEnabled: boolean("user_expiry_enabled").default(false),
+  userExpiryHours: integer("user_expiry_hours").default(0),
+  profileId: text("profile_id"),
+});
+
+export const insertInviteSchema = createInsertSchema(invites).pick({
+  label: true,
+  userLabel: true,
+  createdBy: true,
+  expiresAt: true,
+  maxUses: true,
+  userExpiryEnabled: true,
+  userExpiryHours: true,
+  profileId: true,
+});
+
+// Function to generate a random invite code
+export function generateInviteCode(): string {
+  return randomBytes(16).toString('base64url');
+}
+
 // Define types
 export type ServerConfig = typeof serverConfig.$inferSelect & {
   features?: {
@@ -217,6 +250,9 @@ export type InsertSession = z.infer<typeof insertSessionSchema>;
 
 export type JellyfinCredentials = typeof jellyfinCredentials.$inferSelect;
 export type InsertJellyfinCredentials = z.infer<typeof insertJellyfinCredentialsSchema>;
+
+export type Invite = typeof invites.$inferSelect;
+export type InsertInvite = z.infer<typeof insertInviteSchema>;
 
 export type User = z.infer<typeof userSchema>;
 export type NewUser = z.infer<typeof newUserSchema>;

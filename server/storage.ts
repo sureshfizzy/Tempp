@@ -8,11 +8,14 @@ import {
   Session, 
   InsertSession,
   User,
-  UserActivity
+  UserActivity,
+  Invite,
+  InsertInvite,
+  generateInviteCode
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
-import { serverConfig, jellyfinCredentials, appUsers, sessions } from "@shared/schema";
+import { eq, and, lt, gt, sql } from "drizzle-orm";
+import { serverConfig, jellyfinCredentials, appUsers, sessions, invites } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 

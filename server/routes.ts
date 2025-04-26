@@ -1428,12 +1428,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary`;
       console.log("Fetching item image from:", imageUrl);
       
-      // Forward request to Jellyfin
+      // Forward request to Jellyfin - explicitly disable any local caching
       const response = await fetch(imageUrl, { 
         headers: { 
           "X-Emby-Token": credentials.accessToken || "",
           "Accept": "image/webp,image/jpeg,image/png,*/*"
-        }
+        },
+        cache: "no-store" // Ensure no caching at fetch level
       });
 
       if (!response.ok) {
@@ -1441,13 +1442,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).send(await response.text());
       }
 
-      // Set cache headers to improve performance
-      res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      // Set cache headers for browser caching only, not server storage
+      // Using no-store ensures images are not cached locally on disk
+      res.set('Cache-Control', 'no-store');
+      res.set('Pragma', 'no-cache');
       
       // Copy content type
       res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
       
-      // Stream the image response
+      // Stream the image response directly without saving locally
       if (response.body) {
         response.body.pipe(res);
       } else {
