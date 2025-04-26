@@ -534,6 +534,10 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      // Handle max uses properly (can be null for unlimited)
+      const maxUses = inviteData.maxUses === null ? null : (inviteData.maxUses || 1);
+      const usesRemaining = inviteData.maxUses === null ? null : (inviteData.maxUses || 1);
+      
       // Create the invite
       const [invite] = await db.insert(invites)
         .values({
@@ -541,8 +545,8 @@ export class DatabaseStorage implements IStorage {
           label: inviteData.label || null,
           userLabel: inviteData.userLabel || null,
           profileId: inviteData.profileId || null,
-          maxUses: inviteData.maxUses || 1,
-          usesRemaining: inviteData.maxUses || 1,
+          maxUses: maxUses,
+          usesRemaining: usesRemaining,
           expiresAt,
           userExpiryEnabled: inviteData.userExpiryEnabled || false,
           userExpiryMonths: inviteData.userExpiryMonths || 0,

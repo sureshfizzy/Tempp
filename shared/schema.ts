@@ -256,8 +256,8 @@ export const invites = pgTable("invites", {
   label: text("label"),
   userLabel: text("user_label"),
   profileId: integer("profile_id").references(() => userProfiles.id, { onDelete: 'set null' }),
-  maxUses: integer("max_uses").default(1).notNull(),
-  usesRemaining: integer("uses_remaining").default(1).notNull(),
+  maxUses: integer("max_uses"),
+  usesRemaining: integer("uses_remaining"),
   expiresAt: timestamp("expires_at"),
   userExpiryEnabled: boolean("user_expiry_enabled").default(false).notNull(),
   userExpiryMonths: integer("user_expiry_months").default(0),
@@ -267,17 +267,21 @@ export const invites = pgTable("invites", {
   createdBy: integer("created_by").references(() => appUsers.id),
 });
 
-export const insertInviteSchema = createInsertSchema(invites).pick({
-  label: true,
-  userLabel: true,
-  profileId: true,
-  maxUses: true,
-  userExpiryEnabled: true,
-  userExpiryMonths: true,
-  userExpiryDays: true,
-  userExpiryHours: true,
-  createdBy: true,
-});
+export const insertInviteSchema = createInsertSchema(invites)
+  .pick({
+    label: true,
+    userLabel: true,
+    profileId: true,
+    maxUses: true,
+    userExpiryEnabled: true,
+    userExpiryMonths: true,
+    userExpiryDays: true,
+    userExpiryHours: true,
+    createdBy: true,
+  })
+  .extend({
+    maxUses: z.number().nullable(), // Allow null for unlimited uses
+  });
 
 export type Invite = typeof invites.$inferSelect;
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
