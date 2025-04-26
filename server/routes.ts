@@ -405,11 +405,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
             if (response.ok) {
-              const jellyfinUsers = await response.json();
+              const jellyfinUsers = await response.json() as Array<{
+                Id: string;
+                Name: string;
+                Policy?: {
+                  IsAdministrator?: boolean;
+                }
+              }>;
               console.log("Jellyfin user count:", jellyfinUsers.length);
               
               // See if a user with this username exists in Jellyfin
-              const jellyfinUser = jellyfinUsers.find((u: any) => u.Name.toLowerCase() === loginData.username.toLowerCase());
+              const jellyfinUser = jellyfinUsers.find(u => u.Name.toLowerCase() === loginData.username.toLowerCase());
               console.log("Found Jellyfin user:", jellyfinUser ? "yes" : "no");
               
               if (jellyfinUser) {

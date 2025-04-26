@@ -35,6 +35,9 @@ function Router() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  // Track URL changes to refresh auth state
+  const [location] = useLocation();
+
   useEffect(() => {
     const loadConnectionStatus = async () => {
       const status = await checkConnectionStatus();
@@ -58,7 +61,13 @@ function Router() {
     };
 
     loadConnectionStatus();
-  }, [setLocation]);
+    
+    // Set up an interval to periodically check connection status
+    const intervalId = setInterval(loadConnectionStatus, 5000);
+    
+    // Clean up the interval on unmount
+    return () => clearInterval(intervalId);
+  }, [setLocation, location]);
 
   // Show a loading state while checking connection
   if (connectionStatus === null) {
