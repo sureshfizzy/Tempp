@@ -1022,6 +1022,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch user activity" });
     }
   });
+  
+  // Get user watch history
+  app.get("/api/users/:id/watch-history", async (req: Request, res: Response) => {
+    try {
+      // Check if connected to Jellyfin
+      if (!req.session.connected) {
+        return res.status(401).json({ message: "Not connected to Jellyfin" });
+      }
+
+      const { id } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      // Get credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials || !credentials.accessToken) {
+        return res.status(401).json({ message: "No Jellyfin credentials available" });
+      }
+
+      // Make request to Jellyfin API to get watch history
+      const serverConfig = await storage.getServerConfig();
+      if (!serverConfig) {
+        return res.status(500).json({ message: "Server configuration not found" });
+      }
+      
+      const apiUrl = serverConfig.url.endsWith('/') 
+        ? serverConfig.url.slice(0, -1) 
+        : serverConfig.url;
+      
+      const url = `${apiUrl}/Users/${id}/Items/Resume?Limit=${limit}&Fields=PrimaryImageAspectRatio,BasicSyncInfo&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb`;
+      
+      const response = await fetch(url, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken
+        }
+      });
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ 
+          message: `Failed to fetch watch history from Jellyfin: ${response.statusText}` 
+        });
+      }
+      
+      const watchHistory = await response.json();
+      return res.status(200).json(watchHistory);
+    } catch (error) {
+      console.error("Watch history error:", error);
+      return res.status(500).json({ message: "Failed to get user watch history" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
