@@ -248,3 +248,36 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).pick({
 // User profile related types
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+
+// Schema for invites
+export const invites = pgTable("invites", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  label: text("label"),
+  userLabel: text("user_label"),
+  profileId: integer("profile_id").references(() => userProfiles.id, { onDelete: 'set null' }),
+  maxUses: integer("max_uses").default(1).notNull(),
+  usesRemaining: integer("uses_remaining").default(1).notNull(),
+  expiresAt: timestamp("expires_at"),
+  userExpiryEnabled: boolean("user_expiry_enabled").default(false).notNull(),
+  userExpiryMonths: integer("user_expiry_months").default(0),
+  userExpiryDays: integer("user_expiry_days").default(0),
+  userExpiryHours: integer("user_expiry_hours").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: integer("created_by").references(() => appUsers.id),
+});
+
+export const insertInviteSchema = createInsertSchema(invites).pick({
+  label: true,
+  userLabel: true,
+  profileId: true,
+  maxUses: true,
+  userExpiryEnabled: true,
+  userExpiryMonths: true,
+  userExpiryDays: true,
+  userExpiryHours: true,
+  createdBy: true,
+});
+
+export type Invite = typeof invites.$inferSelect;
+export type InsertInvite = z.infer<typeof insertInviteSchema>;
