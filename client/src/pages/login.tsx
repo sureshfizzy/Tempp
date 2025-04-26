@@ -28,6 +28,12 @@ const loginFormSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginFormSchema>;
 
+// Login response type
+interface LoginResponse {
+  isAdmin: boolean;
+  connected: boolean;
+}
+
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -42,13 +48,16 @@ export default function LoginPage() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      const response = await apiRequest("/api/login", {
+      const response = await apiRequest<LoginResponse>("/api/login", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(data),
       });
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: LoginResponse) => {
       toast({
         title: "Login successful",
         description: "You have been logged in successfully",

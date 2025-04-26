@@ -4,10 +4,11 @@ import { useLocation, Link } from "wouter";
 import { getConnectionStatus, disconnectFromJellyfin } from "@/lib/jellyfin";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { User as JellyfinUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, CheckCircle, Clock, FileText, Film, Home } from "lucide-react";
+import { LogOut, User as UserIcon, CheckCircle, Clock, FileText, Film, Home } from "lucide-react";
 import { formatDate } from "@/lib/jellyfin";
 
 export default function UserProfilePage() {
@@ -18,8 +19,7 @@ export default function UserProfilePage() {
   const userQuery = useQuery({
     queryKey: ["/api/me"],
     queryFn: async () => {
-      const response = await apiRequest("/api/me");
-      return response;
+      return await apiRequest("/api/me") as JellyfinUser;
     },
   });
 
@@ -130,9 +130,9 @@ export default function UserProfilePage() {
             <Card className="md:col-span-1">
               <CardHeader className="pb-0 pt-6 px-6 flex flex-col items-center">
                 <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={userQuery.data?.ImageUrl} />
+                  <AvatarImage src={userQuery.data?.PrimaryImageTag ? `/api/users/${userQuery.data.Id}/image` : undefined} />
                   <AvatarFallback className="text-lg">
-                    {getUserInitials(userQuery.data?.Name)}
+                    {getUserInitials(userQuery.data?.Name || "")}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-xl text-center">{userQuery.data?.Name}</CardTitle>
@@ -146,7 +146,7 @@ export default function UserProfilePage() {
                     <h3 className="font-medium text-sm text-gray-500 mb-2">ACCOUNT DETAILS</h3>
                     <div className="space-y-3">
                       <div className="flex items-start">
-                        <User className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
+                        <UserIcon className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
                         <div>
                           <p className="font-medium">Username</p>
                           <p className="text-sm text-gray-600">{userQuery.data?.Name}</p>
@@ -157,7 +157,7 @@ export default function UserProfilePage() {
                         <div>
                           <p className="font-medium">Last Active</p>
                           <p className="text-sm text-gray-600">
-                            {formatDate(userQuery.data?.LastActivityDate)}
+                            {formatDate(userQuery.data?.LastActivityDate || "")}
                           </p>
                         </div>
                       </div>
