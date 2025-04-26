@@ -218,3 +218,36 @@ export function formatDate(dateString?: string): string {
     return "Invalid date";
   }
 }
+
+// Get user total watch time (in minutes)
+export async function getUserWatchTime(id: string): Promise<number> {
+  try {
+    const response = await fetch(`/api/users/${id}/watch-time`);
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch user watch time");
+    }
+    
+    const data = await response.json();
+    return data.totalMinutes || 0;
+  } catch (error) {
+    console.error(`Error fetching watch time for user ${id}:`, error);
+    return 0; // Return 0 minutes as fallback
+  }
+}
+
+// Format minutes into a readable time string (e.g. 2h 15m)
+export function formatWatchTime(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.floor(minutes % 60);
+  
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  
+  return `${hours}h ${remainingMinutes}m`;
+}
