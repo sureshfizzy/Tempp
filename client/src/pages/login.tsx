@@ -51,9 +51,14 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Get connection status to check if we have a server URL configured
+  // Disable auto-refresh completely with staleTime: Infinity
   const connectionQuery = useQuery({
     queryKey: ["/api/connection-status"],
     queryFn: getConnectionStatus,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false
   });
 
   // Login mutation
