@@ -93,7 +93,7 @@ const sampleActivities: ActivityItem[] = [
   }
 ];
 
-export default function ActivityPage() {
+function ActivityPage() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -299,3 +299,5 @@ export default function ActivityPage() {
     </div>
   );
 }
+
+export default ActivityPage;
