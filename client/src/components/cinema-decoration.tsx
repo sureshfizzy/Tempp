@@ -1,7 +1,58 @@
 import { motion } from 'framer-motion';
 import { Film, Clapperboard, Popcorn, Video, Ticket } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export function CinemaDecoration() {
+interface CinemaDecorationProps {
+  simplified?: boolean; // Prop to control simplified mode (fewer animations)
+}
+
+export function CinemaDecoration({ simplified = false }: CinemaDecorationProps) {
+  const isMobile = useIsMobile();
+  
+  // Use simplified mode if explicitly set or on mobile
+  const useSimplified = simplified || isMobile;
+  
+  // For mobile and simplified mode, show fewer animations with less motion
+  if (useSimplified) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Just two static icons with very subtle motion */}
+        <motion.div 
+          className="absolute top-6 right-6"
+          animate={{ 
+            opacity: [0.4, 0.7, 0.4],
+          }}
+          transition={{ 
+            duration: 4, 
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          <Film className="text-primary/60 h-10 w-10" />
+        </motion.div>
+
+        <motion.div 
+          className="absolute bottom-6 left-6"
+          animate={{ 
+            opacity: [0.4, 0.7, 0.4],
+          }}
+          transition={{ 
+            duration: 4, 
+            repeat: Infinity,
+            repeatType: "reverse",
+            delay: 2
+          }}
+        >
+          <Clapperboard className="text-primary/60 h-8 w-8" />
+        </motion.div>
+
+        {/* Simple static gradient background - very light on performance */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-radial from-primary/5 to-transparent opacity-50"></div>
+      </div>
+    );
+  }
+
+  // Full decorations for desktop
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Animated Film Elements */}

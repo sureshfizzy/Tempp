@@ -163,22 +163,15 @@ export default function LoginPage() {
       {/* Movie background with gradient overlay */}
       <MovieBackground />
       
+      {/* Cinema decoration for ambiance */}
+      <CinemaDecoration />
+      
       {/* Left Panel (Content) */}
       <div className="relative w-full md:w-1/2 flex items-center justify-center p-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          <motion.div 
-            className="mb-8 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-          >
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center fade-in">
             <div className="flex items-center justify-center mb-4">
-              <Film className="h-12 w-12 text-primary" />
+              <Film className="h-14 w-14 text-primary blue-glow" />
             </div>
             <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow">
               Jellyfin Manager
@@ -186,46 +179,48 @@ export default function LoginPage() {
             <p className="text-gray-300">
               Your complete media server management solution
             </p>
-          </motion.div>
+          </div>
           
-          <Card className="cinema-card border-primary/20">
-            <CardContent className="pt-6">
-              {!connectionStatus?.connected ? (
-                <div className="text-center py-4">
-                  {connectionStatus?.configured ? (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Your Jellyfin server is configured but you are not connected.
-                        Please log in with your credentials.
-                      </p>
-                      <LoginForm />
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        You need to connect to a Jellyfin server first before you can log in.
-                      </p>
-                      <Button 
-                        onClick={handleReconnect}
-                        className="bg-primary hover:bg-primary/90 text-white"
-                      >
-                        Connect to Server
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center text-teal-400 mb-4 text-sm">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Connected to {connectionStatus.serverUrl}</span>
+          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
+            <Card className="cinema-card border-primary/30 shadow-lg">
+              <CardContent className="pt-6">
+                {!connectionStatus?.connected ? (
+                  <div className="text-center py-4">
+                    {connectionStatus?.configured ? (
+                      <>
+                        <p className="mb-4 text-gray-300">
+                          Your Jellyfin server is configured but you are not connected.
+                          Please log in with your credentials.
+                        </p>
+                        <LoginForm />
+                      </>
+                    ) : (
+                      <>
+                        <p className="mb-4 text-gray-300">
+                          You need to connect to a Jellyfin server first before you can log in.
+                        </p>
+                        <Button 
+                          onClick={handleReconnect}
+                          className="bg-primary hover:bg-primary/90 text-white"
+                        >
+                          Connect to Server
+                        </Button>
+                      </>
+                    )}
                   </div>
-                  <LoginForm />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+                ) : (
+                  <div>
+                    <div className="flex items-center text-teal-400 mb-4 text-sm">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <span>Connected to {connectionStatus.serverUrl}</span>
+                    </div>
+                    <LoginForm />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
       
       {/* Right Panel (Big hero image) - only on desktop */}
@@ -235,56 +230,38 @@ export default function LoginPage() {
     </div>
   );
 
-  // Mobile render - creative design based on reference
+  // Mobile render - optimized design with static background
   const MobileLogin = () => (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-cinema-dark to-black">
-      {/* Decorative elements */}
-      <CinemaDecoration />
+      {/* Static background for better performance */}
+      <MovieBackground static variant="dark" />
+      
+      {/* Simplified decorative elements */}
+      <CinemaDecoration simplified />
       
       {/* Content */}
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6 z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md text-center mb-8"
-        >
-          <motion.div
-            className="inline-block mb-4"
-            animate={{ 
-              rotate: [0, 5, 0, -5, 0],
-              y: [0, -5, 0, 5, 0] 
-            }}
-            transition={{ 
-              duration: 6, 
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
-          >
+        <div className="w-full max-w-md text-center mb-8 fade-in">
+          <div className="inline-block mb-4">
             <ClapperboardIcon className="h-16 w-16 text-primary" />
-          </motion.div>
+          </div>
           <h1 className="text-3xl font-bold text-white mb-2 blue-text-glow">
             Welcome Back
           </h1>
           <p className="text-gray-300">
             Sign in to manage your Jellyfin server
           </p>
-        </motion.div>
+        </div>
         
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          <Card className="cinema-card">
+        <div className="w-full max-w-md fade-in" style={{ animationDelay: "0.2s" }}>
+          <Card className="cinema-card border-primary/30">
             <CardContent className="pt-6">
               {!connectionStatus?.connected ? (
                 <div className="text-center py-4">
                   {connectionStatus?.configured ? (
                     <>
                       <p className="mb-4 text-gray-300">
-                        Your Jellyfin server is configured but you are not connected.
+                        Server is configured but you are not connected
                       </p>
                       <LoginForm />
                     </>
@@ -313,7 +290,7 @@ export default function LoginPage() {
               )}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
