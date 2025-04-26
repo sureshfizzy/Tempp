@@ -67,7 +67,8 @@ function Router() {
     loadConnectionStatus();
     
     // Set up an interval to periodically check connection status
-    const intervalId = setInterval(loadConnectionStatus, 5000);
+    // Longer interval (30 seconds) to avoid disrupting user interactions
+    const intervalId = setInterval(loadConnectionStatus, 30000);
     
     // Clean up the interval on unmount
     return () => clearInterval(intervalId);

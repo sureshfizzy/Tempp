@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
+import placeholderSvg from '../assets/movie-placeholder.svg';
 
-// Define movie backgrounds - use public URLs instead of imports for simplicity
+// Import movie backgrounds - using both local placeholder and remote URLs
 const movieBackgrounds = [
-  '/movie-backgrounds/movie1.png',
-  '/movie-backgrounds/movie2.png',
-  '/movie-backgrounds/movie3.png',
-  '/movie-backgrounds/movie4.png',
-  '/movie-backgrounds/movie5.png'
+  placeholderSvg, // Placeholder that will always work
+  'https://raw.githubusercontent.com/jellyfin/jellyfin-web/master/src/assets/img/banner-light.jpg',
+  'https://raw.githubusercontent.com/jellyfin/jellyfin-web/master/src/assets/img/banner-dark.jpg',
 ];
 
 interface MovieBackgroundProps {

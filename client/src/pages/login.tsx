@@ -102,8 +102,11 @@ export default function LoginPage() {
     },
   });
 
-  // Submit handler
+  // Submit handler with debounce to prevent accidental multiple submissions
   const onSubmit = async (data: LoginFormData) => {
+    // Prevent submitting if already in progress
+    if (isLoading) return;
+    
     // Clear any previous errors
     setLoginError(null);
     setIsLoading(true);
@@ -113,7 +116,9 @@ export default function LoginPage() {
     } catch (err) {
       console.error("Login error:", err);
     } finally {
-      setIsLoading(false);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Small delay to prevent accidental double-clicks
     }
   };
 
