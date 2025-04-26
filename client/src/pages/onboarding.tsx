@@ -50,8 +50,10 @@ export default function Onboarding() {
         variant: "default",
       });
       
-      // Navigate to dashboard
-      setLocation("/");
+      // Navigate to dashboard after a short delay to allow toast to show
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1000);
     } catch (error) {
       toast({
         title: "Connection failed",

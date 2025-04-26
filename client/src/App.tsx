@@ -50,7 +50,10 @@ function Router() {
       {!isConnected ? (
         <Route path="/" component={Onboarding} />
       ) : (
-        <Route path="/" component={Dashboard} />
+        <>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+        </>
       )}
       <Route component={NotFound} />
     </Switch>
