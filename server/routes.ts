@@ -375,6 +375,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get server settings
+  app.get("/api/system/status", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const serverConfig = await storage.getServerConfig();
+      if (!serverConfig) {
+        return res.status(404).json({ message: "Server configuration not found" });
+      }
+      
+      const jellyfinCreds = await storage.getJellyfinCredentials();
+      if (!jellyfinCreds) {
+        return res.status(404).json({ message: "Jellyfin credentials not found" });
+      }
+      
+      return res.status(200).json({
+        serverName: serverConfig.serverName || "Jellyfin Server",
+        serverUrl: serverConfig.url,
+        apiKey: jellyfinCreds.apiKey,
+        logoUrl: serverConfig.logoUrl || null,
+        features: serverConfig.features || {
+          enableThemeSwitcher: true,
+          enableWatchHistory: true,
+          enableActivityLog: true
+        },
+        inviteDuration: serverConfig.inviteDuration || 24
+      });
+    } catch (error) {
+      console.error("Error fetching server settings:", error);
+      return res.status(500).json({ message: "Failed to get server settings" });
+    }
+  });
+  
+  // Update server settings
+  app.post("/api/system/settings", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { 
+        serverName, 
+        serverUrl, 
+        apiKey, 
+        logoUrl, 
+        enableThemeSwitcher,
+        enableWatchHistory,
+        enableActivityLog,
+        inviteDuration
+      } = req.body;
+      
+      // Start by getting existing config
+      const existingConfig = await storage.getServerConfig();
+      if (!existingConfig) {
+        return res.status(404).json({ message: "Server configuration not found" });
+      }
+      
+      // Prepare features object
+      const features = {
+        enableThemeSwitcher: Boolean(enableThemeSwitcher),
+        enableWatchHistory: Boolean(enableWatchHistory),
+        enableActivityLog: Boolean(enableActivityLog)
+      };
+      
+      // Update server config
+      const updatedConfig = await storage.saveServerConfig({
+        url: serverUrl || existingConfig.url,
+        apiKey: existingConfig.apiKey, // Keep existing API key as it won't change here
+        serverName: serverName || existingConfig.serverName,
+        logoUrl: logoUrl !== undefined ? logoUrl : existingConfig.logoUrl,
+        inviteDuration: inviteDuration || existingConfig.inviteDuration,
+        features
+      });
+      
+      // If API key is changing, also update Jellyfin credentials
+      if (apiKey) {
+        const jellyfinCreds = await storage.getJellyfinCredentials();
+        if (jellyfinCreds) {
+          await storage.saveJellyfinCredentials({
+            ...jellyfinCreds,
+            apiKey,
+            url: serverUrl || jellyfinCreds.url,
+          });
+        }
+      }
+      
+      return res.status(200).json({
+        message: "Settings updated successfully",
+        serverName: updatedConfig.serverName,
+        logoUrl: updatedConfig.logoUrl,
+        features: updatedConfig.features
+      });
+    } catch (error) {
+      console.error("Error updating server settings:", error);
+      return res.status(500).json({ message: "Failed to update server settings" });
+    }
+  });
+  
   // User login
   app.post("/api/login", async (req: Request, res: Response) => {
     try {
