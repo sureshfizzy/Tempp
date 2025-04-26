@@ -30,8 +30,12 @@ type LoginFormData = z.infer<typeof loginFormSchema>;
 
 // Login response type
 interface LoginResponse {
-  isAdmin: boolean;
-  connected: boolean;
+  message: string;
+  user: {
+    id: number;
+    username: string;
+    isAdmin: boolean;
+  };
 }
 
 export default function LoginPage() {
@@ -57,7 +61,7 @@ export default function LoginPage() {
       });
       
       // Redirect based on admin status
-      if (data.isAdmin) {
+      if (data.user.isAdmin) {
         setLocation("/dashboard");
       } else {
         setLocation("/user-profile");
