@@ -1,5 +1,5 @@
 import { pool, db } from "./db";
-import { serverConfig } from "@shared/schema";
+import { serverConfig, userProfiles, invites } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 /**
@@ -26,6 +26,43 @@ export async function runCustomMigrations() {
       END
       $$;
     `);
+
+    // Create user_profiles table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        source_user_id TEXT NOT NULL,
+        source_name TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT FALSE,
+        library_access TEXT DEFAULT '[]',
+        home_layout TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    console.log('user_profiles table created or already exists.');
+    
+    // Create invites table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS invites (
+        id SERIAL PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,
+        label TEXT,
+        user_label TEXT,
+        profile_id INTEGER REFERENCES user_profiles(id) ON DELETE SET NULL,
+        max_uses INTEGER DEFAULT 1 NOT NULL,
+        uses_remaining INTEGER DEFAULT 1 NOT NULL,
+        expires_at TIMESTAMP,
+        user_expiry_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+        user_expiry_months INTEGER DEFAULT 0,
+        user_expiry_days INTEGER DEFAULT 0,
+        user_expiry_hours INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        created_by INTEGER REFERENCES app_users(id)
+      )
+    `);
+    console.log('invites table created or already exists.');
     
     console.log("Custom migrations completed successfully.");
   } catch (error) {

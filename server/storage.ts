@@ -10,11 +10,13 @@ import {
   User,
   UserActivity,
   UserProfile,
-  InsertUserProfile
+  InsertUserProfile,
+  Invite,
+  InsertInvite
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
-import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 
@@ -52,6 +54,15 @@ export interface IStorage {
   createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
   updateUserProfile(id: number, profile: Partial<InsertUserProfile>): Promise<UserProfile | undefined>;
   deleteUserProfile(id: number): Promise<boolean>;
+  
+  // Invites
+  getAllInvites(): Promise<Invite[]>;
+  getInviteById(id: number): Promise<Invite | undefined>;
+  getInviteByCode(code: string): Promise<Invite | undefined>;
+  createInvite(invite: Partial<InsertInvite>, createdById: number): Promise<Invite>;
+  updateInvite(id: number, invite: Partial<InsertInvite>): Promise<Invite | undefined>;
+  deleteInvite(id: number): Promise<boolean>;
+  useInvite(code: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -462,6 +473,148 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error deleting user profile with ID ${id}:`, error);
       return false;
     }
+  }
+
+  // Invite methods
+  async getAllInvites(): Promise<Invite[]> {
+    try {
+      return await db.select().from(invites).orderBy(desc(invites.createdAt));
+    } catch (error) {
+      console.error("Error fetching invites:", error);
+      return [];
+    }
+  }
+
+  async getInviteById(id: number): Promise<Invite | undefined> {
+    try {
+      const result = await db.select().from(invites).where(eq(invites.id, id));
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching invite with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getInviteByCode(code: string): Promise<Invite | undefined> {
+    try {
+      const result = await db.select().from(invites).where(eq(invites.code, code));
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching invite with code ${code}:`, error);
+      return undefined;
+    }
+  }
+
+  async createInvite(inviteData: Partial<InsertInvite>, createdById: number): Promise<Invite> {
+    try {
+      // Generate a unique invite code
+      const code = this.generateInviteCode();
+      
+      // Calculate expiration date if needed
+      let expiresAt: Date | null = null;
+      
+      // If any expiry duration is specified
+      if (
+        (inviteData.userExpiryMonths && inviteData.userExpiryMonths > 0) ||
+        (inviteData.userExpiryDays && inviteData.userExpiryDays > 0) ||
+        (inviteData.userExpiryHours && inviteData.userExpiryHours > 0)
+      ) {
+        expiresAt = new Date();
+        // Add months
+        if (inviteData.userExpiryMonths) {
+          expiresAt.setMonth(expiresAt.getMonth() + inviteData.userExpiryMonths);
+        }
+        // Add days
+        if (inviteData.userExpiryDays) {
+          expiresAt.setDate(expiresAt.getDate() + inviteData.userExpiryDays);
+        }
+        // Add hours
+        if (inviteData.userExpiryHours) {
+          expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
+        }
+      }
+
+      // Create the invite
+      const [invite] = await db.insert(invites)
+        .values({
+          code,
+          label: inviteData.label || null,
+          userLabel: inviteData.userLabel || null,
+          profileId: inviteData.profileId || null,
+          maxUses: inviteData.maxUses || 1,
+          usesRemaining: inviteData.maxUses || 1,
+          expiresAt,
+          userExpiryEnabled: inviteData.userExpiryEnabled || false,
+          userExpiryMonths: inviteData.userExpiryMonths || 0,
+          userExpiryDays: inviteData.userExpiryDays || 0,
+          userExpiryHours: inviteData.userExpiryHours || 0,
+          createdBy: createdById
+        })
+        .returning();
+        
+      return invite;
+    } catch (error) {
+      console.error("Error creating invite:", error);
+      throw error;
+    }
+  }
+
+  async updateInvite(id: number, inviteData: Partial<InsertInvite>): Promise<Invite | undefined> {
+    try {
+      // Update the invite
+      const [updatedInvite] = await db.update(invites)
+        .set(inviteData)
+        .where(eq(invites.id, id))
+        .returning();
+        
+      return updatedInvite;
+    } catch (error) {
+      console.error(`Error updating invite with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteInvite(id: number): Promise<boolean> {
+    try {
+      await db.delete(invites).where(eq(invites.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting invite with ID ${id}:`, error);
+      return false;
+    }
+  }
+
+  async useInvite(code: string): Promise<boolean> {
+    try {
+      // Get the invite
+      const invite = await this.getInviteByCode(code);
+      if (!invite) return false;
+      
+      // Check if expired
+      if (invite.expiresAt && new Date() > invite.expiresAt) {
+        return false;
+      }
+      
+      // Check if any uses remaining
+      if (invite.usesRemaining <= 0) {
+        return false;
+      }
+      
+      // Decrement uses remaining
+      await db.update(invites)
+        .set({ usesRemaining: invite.usesRemaining - 1 })
+        .where(eq(invites.id, invite.id));
+        
+      return true;
+    } catch (error) {
+      console.error(`Error using invite with code ${code}:`, error);
+      return false;
+    }
+  }
+  
+  // Helper method to generate a unique invite code
+  private generateInviteCode(): string {
+    return randomBytes(6).toString('hex').toUpperCase();
   }
 }
 
