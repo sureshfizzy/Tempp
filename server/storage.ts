@@ -51,35 +51,39 @@ export class DatabaseStorage implements IStorage {
     this.sessionTokens = new Map();
   }
 
+  // Helper method to convert DB result to ServerConfig with features
+  private dbConfigToServerConfig(dbConfig: typeof serverConfig.$inferSelect): ServerConfig {
+    // Create default features
+    const defaultFeatures = {
+      enableThemeSwitcher: true,
+      enableWatchHistory: true,
+      enableActivityLog: true
+    };
+    
+    // Parse features from JSON if available
+    let features = defaultFeatures;
+    try {
+      if (dbConfig.featuresJson) {
+        features = JSON.parse(dbConfig.featuresJson);
+      }
+    } catch (e) {
+      console.error("Error parsing features JSON:", e);
+    }
+    
+    // Return the combined object
+    return {
+      ...dbConfig,
+      features
+    };
+  }
+  
   // Server config
   async getServerConfig(): Promise<ServerConfig | undefined> {
     try {
       const configs = await db.select().from(serverConfig).limit(1);
       if (configs.length === 0) return undefined;
       
-      const config = configs[0];
-      
-      // Parse features JSON if available
-      try {
-        if (config.featuresJson) {
-          config.features = JSON.parse(config.featuresJson);
-        } else {
-          config.features = {
-            enableThemeSwitcher: true,
-            enableWatchHistory: true,
-            enableActivityLog: true
-          };
-        }
-      } catch (e) {
-        console.error("Error parsing features JSON:", e);
-        config.features = {
-          enableThemeSwitcher: true,
-          enableWatchHistory: true,
-          enableActivityLog: true
-        };
-      }
-      
-      return config;
+      return this.dbConfigToServerConfig(configs[0]);
     } catch (error) {
       console.error("Error fetching server config:", error);
       return undefined;
@@ -113,31 +117,17 @@ export class DatabaseStorage implements IStorage {
           })
           .where(eq(serverConfig.id, existing.id))
           .returning();
-          
-        // Add features to returned object
-        return {
-          ...updated,
-          features: features || {
-            enableThemeSwitcher: true,
-            enableWatchHistory: true,
-            enableActivityLog: true
-          }
-        };
+        
+        // Use helper method to convert to ServerConfig
+        return this.dbConfigToServerConfig(updated);
       } else {
         // Create new config
         const [newConfig] = await db.insert(serverConfig)
           .values(configToSave)
           .returning();
           
-        // Add features to returned object
-        return {
-          ...newConfig,
-          features: features || {
-            enableThemeSwitcher: true,
-            enableWatchHistory: true,
-            enableActivityLog: true
-          }
-        };
+        // Use helper method to convert to ServerConfig
+        return this.dbConfigToServerConfig(newConfig);
       }
     } catch (error) {
       console.error("Error saving server config:", error);

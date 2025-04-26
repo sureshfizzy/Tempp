@@ -1,6 +1,7 @@
 import { pool, db } from './db';
 import { sql } from 'drizzle-orm';
 import { serverConfig, jellyfinCredentials, appUsers, sessions } from '@shared/schema';
+import { runCustomMigrations } from './db-migration';
 
 /**
  * Initialize database tables if they don't exist
@@ -75,7 +76,10 @@ export async function initializeDatabase() {
     `);
     console.log('session table created or already exists.');
     
-    console.log('All database tables are ready!');
+    // Run custom migrations to add new columns
+    await runCustomMigrations();
+    
+    console.log('Database initialized successfully');
     return true;
   } catch (error) {
     console.error('Error initializing database:', error);

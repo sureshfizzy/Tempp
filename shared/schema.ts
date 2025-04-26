@@ -195,7 +195,13 @@ export const loginSchema = z.object({
 });
 
 // Define types
-export type ServerConfig = typeof serverConfig.$inferSelect;
+export type ServerConfig = typeof serverConfig.$inferSelect & {
+  features?: {
+    enableThemeSwitcher?: boolean;
+    enableWatchHistory?: boolean;
+    enableActivityLog?: boolean;
+  };
+};
 export type InsertServerConfig = z.infer<typeof insertServerConfigSchema>;
 
 export type AppUser = typeof appUsers.$inferSelect;

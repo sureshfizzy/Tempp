@@ -133,11 +133,25 @@ export default function SettingsPage() {
   // Mutation for saving server settings
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: ServerSettingsFormValues) => {
-      const response = await apiRequest("POST", "/api/system/settings", data);
-      if (!response.ok) {
-        throw new Error("Failed to update settings");
+      try {
+        const response = await fetch("/api/system/settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Failed to update settings");
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error("Settings update error:", error);
+        throw error;
       }
-      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/system/status"] });
