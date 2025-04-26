@@ -1841,16 +1841,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const code = req.params.code;
       const invite = await storage.getInviteByCode(code);
       if (invite) {
-        // Return invite details needed for onboarding
+        // Don't return all details, just confirmation it exists and any public info
         res.status(200).json({
-          code: invite.code,
+          valid: true,
           label: invite.label,
-          userLabel: invite.userLabel,
-          maxUses: invite.maxUses,
-          usedCount: invite.usedCount,
-          expiresAt: invite.expiresAt,
-          userExpiryEnabled: invite.userExpiryEnabled,
-          userExpiryHours: invite.userExpiryHours,
           profileId: invite.profileId
         });
       } else {
@@ -1865,98 +1859,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invites/use/:code", async (req: Request, res: Response) => {
     try {
       const code = req.params.code;
-      const { username, password } = req.body;
-      
-      // Validation
-      if (!username || !password) {
-        return res.status(400).json({ error: "Username and password are required" });
-      }
-      
-      // Check if the invite exists and is valid
-      const invite = await storage.getInviteByCode(code);
-      if (!invite) {
-        return res.status(404).json({ error: "Invite not found or expired" });
-      }
-      
-      // Check if invite has exceeded max uses
-      if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
-        return res.status(400).json({ error: "Invite has reached maximum number of uses" });
-      }
-      
-      // Get Jellyfin credentials to create the user
-      const jellyfinCreds = await storage.getJellyfinCredentials();
-      if (!jellyfinCreds) {
-        return res.status(500).json({ error: "Server configuration error" });
-      }
-      
-      try {
-        // Create user in Jellyfin
-        const serverUrl = jellyfinCreds.url;
-        const apiKey = jellyfinCreds.apiKey;
-        const adminUserId = jellyfinCreds.userId;
-        
-        // Make sure we have a valid access token
-        if (!jellyfinCreds.accessToken) {
-          return res.status(500).json({ error: "No valid Jellyfin access token available" });
-        }
-        
-        // Create user in Jellyfin via API
-        const apiResponse = await fetch(`${serverUrl}/Users/New`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Emby-Token': jellyfinCreds.accessToken,
-          },
-          body: JSON.stringify({
-            Name: username,
-            Password: password
-          })
-        });
-        
-        if (!apiResponse.ok) {
-          const errorData = await apiResponse.json();
-          return res.status(400).json({ 
-            error: "Failed to create user in Jellyfin", 
-            details: errorData 
-          });
-        }
-        
-        // Get the created user data
-        const jellyfinUserData = await apiResponse.json();
-        
-        // Type-safe approach - extract the ID
-        const jellyfinUserId = typeof jellyfinUserData === 'object' && jellyfinUserData !== null 
-          ? String(jellyfinUserData.Id || '') 
-          : '';
-          
-        if (!jellyfinUserId) {
-          return res.status(500).json({ error: "Failed to get Jellyfin user ID" });
-        }
-        
-        // Save the user in our local database too
-        const localUser = await storage.createUser({
-          username: username,
-          password: password, // This will be hashed in the storage implementation
-          jellyfinUserId: jellyfinUserId,
-          label: invite.userLabel || null
-        });
-        
-        // Mark the invite as used
-        await storage.useInvite(code);
-        
-        // Return success response with user data
-        res.status(201).json({ 
-          success: true, 
-          message: "User created successfully",
-          username: username,
-          jellyfinUserId: jellyfinUserId
-        });
-      } catch (error) {
-        console.error("Error creating user:", error);
-        res.status(500).json({ 
-          error: "Failed to create user", 
-          details: error instanceof Error ? error.message : String(error)
-        });
+      const result = await storage.useInvite(code);
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(404).json({ error: "Invite not found, expired, or no uses remaining" });
       }
     } catch (error) {
       console.error("Error using invite:", error);

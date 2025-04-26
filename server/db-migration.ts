@@ -50,63 +50,27 @@ export async function runCustomMigrations() {
         code TEXT NOT NULL UNIQUE,
         label TEXT,
         user_label TEXT,
-        profile_id TEXT,
+        profile_id INTEGER REFERENCES user_profiles(id) ON DELETE SET NULL,
         max_uses INTEGER,
-        used_count INTEGER DEFAULT 0,
+        uses_remaining INTEGER,
         expires_at TIMESTAMP,
         user_expiry_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+        user_expiry_months INTEGER DEFAULT 0,
+        user_expiry_days INTEGER DEFAULT 0,
         user_expiry_hours INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        created_by TEXT
+        created_by INTEGER REFERENCES app_users(id)
       )
     `);
     
-    // Add the label column to app_users table
+    // Alter table to allow NULL values for max_uses and uses_remaining columns
     await db.execute(sql`
       DO $$
       BEGIN
         BEGIN
-          ALTER TABLE app_users
-          ADD COLUMN IF NOT EXISTS label TEXT,
-          ALTER COLUMN email DROP NOT NULL;
-        EXCEPTION
-          WHEN undefined_column THEN
-            RAISE NOTICE 'column does not exist or constraints cannot be modified, ignoring';
-        END;
-      END
-      $$;
-    `);
-    console.log('app_users table updated or changes already applied.');
-    
-    // Update invites table schema
-    await db.execute(sql`
-      DO $$
-      BEGIN
-        BEGIN
-          -- Check if uses_remaining exists and rename to used_count if needed
-          IF EXISTS (
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_name = 'invites' AND column_name = 'uses_remaining'
-          ) THEN
-            ALTER TABLE invites
-            RENAME COLUMN uses_remaining TO used_count;
-          END IF;
-          
-          -- Drop the foreign key constraints if they exist
-          ALTER TABLE IF EXISTS invites
-          DROP CONSTRAINT IF EXISTS invites_profile_id_fkey,
-          DROP CONSTRAINT IF EXISTS invites_created_by_fkey;
-          
-          -- Now we can safely alter column types
-          ALTER TABLE invites
-          ALTER COLUMN profile_id TYPE TEXT USING profile_id::TEXT,
-          ALTER COLUMN created_by TYPE TEXT USING created_by::TEXT;
-          
-          -- Drop old expiry columns if they exist
-          ALTER TABLE invites
-          DROP COLUMN IF EXISTS user_expiry_months,
-          DROP COLUMN IF EXISTS user_expiry_days;
+          ALTER TABLE invites 
+          ALTER COLUMN max_uses DROP NOT NULL,
+          ALTER COLUMN uses_remaining DROP NOT NULL;
         EXCEPTION
           WHEN undefined_column THEN
             RAISE NOTICE 'column does not exist, ignoring';
@@ -114,7 +78,7 @@ export async function runCustomMigrations() {
       END
       $$;
     `);
-    console.log('invites table updated or changes already applied.');
+    console.log('invites table created or already exists.');
     
     console.log("Custom migrations completed successfully.");
   } catch (error) {

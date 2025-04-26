@@ -29,7 +29,7 @@ export const appUsers = pgTable("app_users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull(),
   password: text("password").notNull(),
-  email: text("email"),
+  email: text("email").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   jellyfinUserId: text("jellyfin_user_id").notNull(),
   plexEmail: text("plex_email"),
@@ -38,13 +38,12 @@ export const appUsers = pgTable("app_users", {
   discordUsername: text("discord_username"),
   discordId: text("discord_id"),
   notes: text("notes"),
-  label: text("label"), // Added label field to store custom user label
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
     usernameIdx: uniqueIndex("username_idx").on(table.username),
-    // Remove email index since it's now optional
+    emailIdx: uniqueIndex("email_idx").on(table.email),
   };
 });
 
@@ -60,7 +59,6 @@ export const insertAppUserSchema = createInsertSchema(appUsers).pick({
   discordUsername: true,
   discordId: true,
   notes: true,
-  label: true,
 });
 
 // Session schema
