@@ -5,25 +5,26 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 20 14.3% 4.1%;
+    --foreground: 222 47% 11%;
     
     --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
+    --card-foreground: 222 47% 11%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
+    --popover-foreground: 222 47% 11%;
     
-    --primary: 196 100% 47%; /* Blue color from the screenshot */
+    /* Deep blue color scheme */
+    --primary: 210 100% 50%;
     --primary-foreground: 210 40% 98%;
     
-    --secondary: 60 4.8% 95.9%;
-    --secondary-foreground: 24 9.8% 10%;
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 222 47% 11%;
     
-    --muted: 60 4.8% 95.9%;
-    --muted-foreground: 25 5.3% 44.7%;
+    --muted: 220 13% 91%;
+    --muted-foreground: 220 10% 40%;
     
-    --accent: 60 4.8% 95.9%;
-    --accent-foreground: 24 9.8% 10%;
+    --accent: 220 13% 91%;
+    --accent-foreground: 222 47% 11%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 60 9.1% 97.8%;
@@ -31,36 +32,42 @@
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
     
-    --border: 20 5.9% 90%;
-    --input: 20 5.9% 90%;
-    --ring: 20 14.3% 4.1%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 100% 50%;
     
     --radius: 0.5rem;
 
-    --header-bg: 196 100% 47%;
+    --header-bg: 210 100% 50%;
     --header-fg: 0 0% 100%;
+    
+    /* Cinema theme colors */
+    --cinema-dark: 220 40% 7%;
+    --cinema-blue: 210 100% 50%;
+    --cinema-blue-light: 210 100% 70%;
+    --cinema-text: 0 0% 100%;
   }
   
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
+    --background: 220 40% 7%;
+    --foreground: 210 40% 98%;
     
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
+    --card: 220 40% 9%;
+    --card-foreground: 210 40% 98%;
     
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 220 40% 7%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 196 100% 50%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 220 40% 7%;
     
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 75%;
     
-    --accent: 216 34% 17%;
+    --accent: 217 33% 17%;
     --accent-foreground: 210 40% 98%;
     
     --destructive: 0 63% 31%;
@@ -69,12 +76,18 @@
     --success: 142 76% 36%;
     --success-foreground: 210 40% 98%;
     
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 216 34% 17%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 210 100% 50%;
 
-    --header-bg: 222 47% 11%;
-    --header-fg: 213 31% 91%;
+    --header-bg: 220 40% 9%;
+    --header-fg: 210 40% 98%;
+    
+    /* Cinema theme colors */
+    --cinema-dark: 220 40% 7%;
+    --cinema-blue: 210 100% 50%;
+    --cinema-blue-light: 210 100% 70%;
+    --cinema-text: 0 0% 100%;
   }
 }
 
@@ -108,6 +121,54 @@
   animation: pulse 2s infinite;
 }
 
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.glowing {
+  animation: glow 3s infinite alternate;
+}
+
+.cinema-gradient {
+  background: linear-gradient(135deg, hsl(var(--cinema-dark)), hsl(220, 70%, 15%));
+}
+
+/* Glass morphism */
+.glass {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.cinema-card {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 
+              0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.cinema-card-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 
+              0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+.blue-glow {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5),
+              0 0 30px rgba(59, 130, 246, 0.3);
+}
+
+.blue-text-glow {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.7),
+               0 0 20px rgba(59, 130, 246, 0.4);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -132,5 +193,16 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.3)); }
+  to { filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8)); }
 }
 
