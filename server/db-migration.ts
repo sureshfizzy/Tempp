@@ -51,8 +51,8 @@ export async function runCustomMigrations() {
         label TEXT,
         user_label TEXT,
         profile_id INTEGER REFERENCES user_profiles(id) ON DELETE SET NULL,
-        max_uses INTEGER DEFAULT 1 NOT NULL,
-        uses_remaining INTEGER DEFAULT 1 NOT NULL,
+        max_uses INTEGER,
+        uses_remaining INTEGER,
         expires_at TIMESTAMP,
         user_expiry_enabled BOOLEAN DEFAULT FALSE NOT NULL,
         user_expiry_months INTEGER DEFAULT 0,
@@ -61,6 +61,22 @@ export async function runCustomMigrations() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         created_by INTEGER REFERENCES app_users(id)
       )
+    `);
+    
+    // Alter table to allow NULL values for max_uses and uses_remaining columns
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        BEGIN
+          ALTER TABLE invites 
+          ALTER COLUMN max_uses DROP NOT NULL,
+          ALTER COLUMN uses_remaining DROP NOT NULL;
+        EXCEPTION
+          WHEN undefined_column THEN
+            RAISE NOTICE 'column does not exist, ignoring';
+        END;
+      END
+      $$;
     `);
     console.log('invites table created or already exists.');
     

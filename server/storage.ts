@@ -565,9 +565,19 @@ export class DatabaseStorage implements IStorage {
 
   async updateInvite(id: number, inviteData: Partial<InsertInvite>): Promise<Invite | undefined> {
     try {
+      // Handle null values for maxUses and usesRemaining
+      const updates: any = {};
+      
+      // Copy all valid properties from inviteData to updates
+      for (const [key, value] of Object.entries(inviteData)) {
+        // Convert camelCase to snake_case for the database columns
+        const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        updates[dbKey] = value;
+      }
+      
       // Update the invite
       const [updatedInvite] = await db.update(invites)
-        .set(inviteData)
+        .set(updates)
         .where(eq(invites.id, id))
         .returning();
         
@@ -599,8 +609,13 @@ export class DatabaseStorage implements IStorage {
         return false;
       }
       
+      // If maxUses is null, it means unlimited uses
+      if (invite.maxUses === null) {
+        return true; // Always allow if unlimited uses
+      }
+      
       // Check if any uses remaining
-      if (invite.usesRemaining <= 0) {
+      if (invite.usesRemaining === null || invite.usesRemaining <= 0) {
         return false;
       }
       
