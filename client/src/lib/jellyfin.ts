@@ -1,14 +1,14 @@
 import { User, NewUser, UserActivity } from "@shared/schema";
 
-// Connect to Jellyfin API
-export async function connectToJellyfin(url: string, apiKey: string): Promise<boolean> {
+// Connect to Jellyfin API using username/password
+export async function connectToJellyfin(url: string, username: string, password: string): Promise<boolean> {
   try {
     const response = await fetch("/api/connect", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url, apiKey }),
+      body: JSON.stringify({ url, username, password }),
     });
 
     if (!response.ok) {

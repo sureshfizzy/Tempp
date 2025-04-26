@@ -6,12 +6,16 @@ import { z } from "zod";
 export const jellyfinCredentials = pgTable("jellyfin_credentials", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
-  apiKey: text("api_key").notNull(),
+  username: text("username").notNull(),
+  password: text("password").notNull(),
+  accessToken: text("access_token"),
+  userId: text("user_id"),
 });
 
 export const insertJellyfinCredentialsSchema = createInsertSchema(jellyfinCredentials).pick({
   url: true,
-  apiKey: true,
+  username: true,
+  password: true,
 });
 
 // Define the types for Jellyfin users based on their API structure

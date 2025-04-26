@@ -27,37 +27,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const credentials = insertJellyfinCredentialsSchema.parse(req.body);
       
-      // Test the connection by fetching the system info
+      // Format API URL
       const apiUrl = credentials.url.endsWith('/') 
         ? credentials.url.slice(0, -1) 
         : credentials.url;
       
-      const response = await fetch(`${apiUrl}/System/Info`, {
+      // Step 1: Get authentication headers
+      const deviceId = "jellyfin-user-manager";
+      const deviceName = "Jellyfin User Manager";
+      const clientName = "Jellyfin User Manager";
+      const clientVersion = "1.0.0";
+      const authHeaderValue = `MediaBrowser Client="${clientName}", Device="${deviceName}", DeviceId="${deviceId}", Version="${clientVersion}"`;
+      
+      // Step 2: Authenticate to get a token
+      const authResponse = await fetch(`${apiUrl}/Users/AuthenticateByName`, {
+        method: "POST",
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "Content-Type": "application/json",
+          "X-Emby-Authorization": authHeaderValue
         },
+        body: JSON.stringify({
+          Username: credentials.username,
+          Pw: credentials.password
+        })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return res.status(400).json({ 
-          message: `Failed to connect to Jellyfin server: ${response.statusText}`,
+      if (!authResponse.ok) {
+        const errorText = await authResponse.text();
+        return res.status(401).json({ 
+          message: `Authentication failed: ${authResponse.statusText}`,
           details: errorText 
         });
       }
 
-      // Save credentials in storage
-      await storage.saveJellyfinCredentials(credentials);
+      const authData = await authResponse.json();
+      const accessToken = authData.AccessToken;
+      const userId = authData.User.Id;
+
+      // Verify this user has admin privileges
+      if (!authData.User.Policy?.IsAdministrator) {
+        return res.status(403).json({ 
+          message: "You must log in with an administrator account to manage users" 
+        });
+      }
+
+      // Save credentials with token and userId
+      const credentialsToSave = {
+        ...credentials,
+        accessToken,
+        userId
+      };
+
+      await storage.saveJellyfinCredentials(credentialsToSave);
       
       // Store in session
       if (req.session) {
         req.session.connected = true;
       }
 
-      return res.status(200).json({ message: "Connected successfully" });
+      return res.status(200).json({ 
+        message: "Connected successfully",
+        user: {
+          id: userId,
+          name: authData.User.Name
+        }
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        return res.status(500).json({ message: `Failed to connect: ${error.message}` });
       }
       return res.status(500).json({ message: "Failed to connect to Jellyfin server" });
     }
@@ -111,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetch(`${apiUrl}/Users`, {
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -148,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetch(`${apiUrl}/Users/${id}`, {
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken,
         },
       });
 
@@ -188,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken,
         },
         body: JSON.stringify({
           Name: newUser.Name,
@@ -212,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
           body: JSON.stringify({
             Id: userId,
@@ -231,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // First get the current policy
         const policyResponse = await fetch(`${apiUrl}/Users/${userId}/Policy`, {
           headers: {
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
         });
 
@@ -254,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Emby-Token": credentials.apiKey,
+              "X-Emby-Token": credentials.accessToken,
             },
             body: JSON.stringify(currentPolicy),
           });
@@ -268,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the updated user details
       const updatedUserResponse = await fetch(`${apiUrl}/Users/${userId}`, {
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken,
         },
       });
 
@@ -308,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
           body: JSON.stringify({
             Name: updateData.Name,
@@ -328,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
           body: JSON.stringify({
             Id: id,
@@ -348,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // First get the current policy
         const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
           headers: {
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
         });
 
@@ -371,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Emby-Token": credentials.apiKey,
+              "X-Emby-Token": credentials.accessToken,
             },
             body: JSON.stringify(currentPolicy),
           });
@@ -385,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the updated user details
       const updatedUserResponse = await fetch(`${apiUrl}/Users/${id}`, {
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken,
         },
       });
 
@@ -420,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await fetch(`${apiUrl}/Users/${id}`, {
         method: "DELETE",
         headers: {
-          "X-Emby-Token": credentials.apiKey,
+          "X-Emby-Token": credentials.accessToken,
         },
       });
 
@@ -458,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `${apiUrl}/System/ActivityLog/Entries?userId=${id}&limit=${limit}`, 
         {
           headers: {
-            "X-Emby-Token": credentials.apiKey,
+            "X-Emby-Token": credentials.accessToken,
           },
         }
       );

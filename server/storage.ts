@@ -9,7 +9,7 @@ import {
 export interface IStorage {
   // Jellyfin credentials
   getJellyfinCredentials(): Promise<JellyfinCredentials | undefined>;
-  saveJellyfinCredentials(credentials: InsertJellyfinCredentials): Promise<JellyfinCredentials>;
+  saveJellyfinCredentials(credentials: InsertJellyfinCredentials & { accessToken?: string, userId?: string }): Promise<JellyfinCredentials>;
   
   // Session management
   getSessionToken(id: string): Promise<string | undefined>;
@@ -32,10 +32,15 @@ export class MemStorage implements IStorage {
   }
 
   async saveJellyfinCredentials(
-    credentials: InsertJellyfinCredentials
+    credentials: InsertJellyfinCredentials & { accessToken?: string, userId?: string }
   ): Promise<JellyfinCredentials> {
     const id = this.currentId++;
-    this.jellyfinCredentials = { ...credentials, id };
+    this.jellyfinCredentials = { 
+      ...credentials, 
+      id, 
+      accessToken: credentials.accessToken || null,
+      userId: credentials.userId || null
+    };
     return this.jellyfinCredentials;
   }
 

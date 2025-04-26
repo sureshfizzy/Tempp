@@ -20,7 +20,8 @@ import { ArrowRight, CheckCircle, Settings } from "lucide-react";
 
 const formSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
-  apiKey: z.string().min(1, "API key is required"),
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -34,14 +35,15 @@ export default function Onboarding() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       url: "",
-      apiKey: "",
+      username: "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      await connectToJellyfin(data.url, data.apiKey);
+      await connectToJellyfin(data.url, data.username, data.password);
       toast({
         title: "Connected successfully",
         description: "You are now connected to your Jellyfin server.",
@@ -96,19 +98,38 @@ export default function Onboarding() {
 
               <FormField
                 control={form.control}
-                name="apiKey"
+                name="username"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>API Key</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
                       <Input 
-                        type="password" 
-                        placeholder="Your Jellyfin API key" 
+                        placeholder="Your Jellyfin username" 
                         {...field} 
                         disabled={isLoading}
                       />
                     </FormControl>
-                    <p className="text-xs text-neutral-500">Enter your Jellyfin API key. You can find this in your server dashboard.</p>
+                    <p className="text-xs text-neutral-500">Enter your Jellyfin administrator username</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="Your Jellyfin password" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-neutral-500">Enter your Jellyfin administrator password</p>
                     <FormMessage />
                   </FormItem>
                 )}
