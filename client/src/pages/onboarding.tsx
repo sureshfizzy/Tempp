@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { connectToJellyfin, validateJellyfinUrl } from "@/lib/jellyfin";
+import { validateJellyfinUrl } from "@/lib/jellyfin";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,68 +16,94 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowRight, CheckCircle, Settings } from "lucide-react";
+import { ArrowRight, CheckCircle, Settings, Key } from "lucide-react";
 
-// Step 1: Server URL form schema
-const urlFormSchema = z.object({
+// Step 1: Server URL & API Key form schema
+const serverConfigSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
+  apiKey: z.string().min(1, "API Key is required"),
 });
 
-// Step 2: Credentials form schema
+// Step 2: Admin Credentials form schema
 const credentialsFormSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  adminUsername: z.string().min(1, "Username is required"),
+  adminPassword: z.string().min(1, "Password is required"),
 });
 
-type UrlFormData = z.infer<typeof urlFormSchema>;
+type ServerConfigData = z.infer<typeof serverConfigSchema>;
 type CredentialsFormData = z.infer<typeof credentialsFormSchema>;
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
-  const [serverUrl, setServerUrl] = useState("");
+  const [serverConfig, setServerConfig] = useState<{url: string, apiKey: string}>({url: "", apiKey: ""});
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // Use direct API calls
+  const apiRequest = async (endpoint: string, options?: RequestInit) => {
+    const res = await fetch(endpoint, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Request failed with status ${res.status}`);
+    }
+    
+    return res.json();
+  };
 
-  // Step 1: Server URL form
-  const urlForm = useForm<UrlFormData>({
-    resolver: zodResolver(urlFormSchema),
+  // Step 1: Server Configuration form
+  const serverForm = useForm<ServerConfigData>({
+    resolver: zodResolver(serverConfigSchema),
     defaultValues: {
       url: "",
+      apiKey: "",
     },
   });
 
-  // Step 2: Credentials form
+  // Step 2: Admin Credentials form
   const credentialsForm = useForm<CredentialsFormData>({
     resolver: zodResolver(credentialsFormSchema),
     defaultValues: {
-      username: "",
-      password: "",
+      adminUsername: "",
+      adminPassword: "",
     },
   });
 
-  // Handle Step 1 submission (server URL)
-  const onSubmitUrl = async (data: UrlFormData) => {
+  // Handle Step 1 submission (server config)
+  const onSubmitServerConfig = async (data: ServerConfigData) => {
     setIsLoading(true);
     try {
-      // Validate the Jellyfin server URL
+      // First validate the URL is reachable
       await validateJellyfinUrl(data.url);
       
-      // Store the URL for step 2
-      setServerUrl(data.url);
+      // Then save the server configuration to our database
+      await apiRequest("/api/system/setup", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      
+      // Store the config for step 2
+      setServerConfig(data);
       
       // Move to step 2
       setStep(2);
       
       toast({
-        title: "Server validated",
-        description: "Your Jellyfin server is reachable. Please enter your credentials.",
+        title: "Server configured",
+        description: "Your Jellyfin server is properly configured. Please enter your admin credentials.",
         variant: "default",
       });
     } catch (error) {
       toast({
-        title: "Server validation failed",
-        description: error instanceof Error ? error.message : "Failed to validate Jellyfin server URL",
+        title: "Server setup failed",
+        description: error instanceof Error ? error.message : "Failed to set up Jellyfin server",
         variant: "destructive",
       });
     } finally {
@@ -85,11 +111,16 @@ export default function Onboarding() {
     }
   };
 
-  // Handle Step 2 submission (credentials)
+  // Handle Step 2 submission (admin credentials)
   const onSubmitCredentials = async (data: CredentialsFormData) => {
     setIsLoading(true);
     try {
-      await connectToJellyfin(serverUrl, data.username, data.password);
+      // Connect to Jellyfin with admin credentials
+      await apiRequest("/api/connect", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      
       toast({
         title: "Connected successfully",
         description: "You are now connected to your Jellyfin server.",
@@ -141,10 +172,10 @@ export default function Onboarding() {
           </div>
 
           {step === 1 ? (
-            <Form {...urlForm}>
-              <form onSubmit={urlForm.handleSubmit(onSubmitUrl)} className="space-y-4">
+            <Form {...serverForm}>
+              <form onSubmit={serverForm.handleSubmit(onSubmitServerConfig)} className="space-y-4">
                 <FormField
-                  control={urlForm.control}
+                  control={serverForm.control}
                   name="url"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
@@ -157,6 +188,25 @@ export default function Onboarding() {
                         />
                       </FormControl>
                       <p className="text-xs text-neutral-500">Enter the base URL of your Jellyfin server</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={serverForm.control}
+                  name="apiKey"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>API Key</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Your Jellyfin API key" 
+                          {...field} 
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-neutral-500">Enter your Jellyfin API key (found in server dashboard under Advanced/API Keys)</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -187,19 +237,26 @@ export default function Onboarding() {
                 <div className="bg-gray-50 p-3 rounded-md mb-4 flex items-center">
                   <CheckCircle className="text-green-500 mr-2 h-4 w-4" />
                   <span className="text-sm text-gray-700 truncate">
-                    Server: <strong>{serverUrl}</strong>
+                    Server: <strong>{serverConfig.url}</strong>
+                  </span>
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-md mb-4 flex items-center">
+                  <Key className="text-blue-500 mr-2 h-4 w-4" />
+                  <span className="text-sm text-gray-700">
+                    API Key: <strong>••••••{serverConfig.apiKey.slice(-4)}</strong>
                   </span>
                 </div>
               
                 <FormField
                   control={credentialsForm.control}
-                  name="username"
+                  name="adminUsername"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Admin Username</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Your Jellyfin username" 
+                          placeholder="Admin username" 
                           {...field} 
                           disabled={isLoading}
                         />
@@ -212,14 +269,14 @@ export default function Onboarding() {
 
                 <FormField
                   control={credentialsForm.control}
-                  name="password"
+                  name="adminPassword"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>Admin Password</FormLabel>
                       <FormControl>
                         <Input 
                           type="password" 
-                          placeholder="Your Jellyfin password" 
+                          placeholder="Admin password" 
                           {...field} 
                           disabled={isLoading}
                         />

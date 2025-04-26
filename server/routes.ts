@@ -127,15 +127,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const serverInfo = await infoResponse.json();
+      const serverInfo = await infoResponse.json() as { ServerName?: string; Version?: string };
       
       // Save server configuration to database
       await storage.saveServerConfig({ url: apiUrl, apiKey });
       
       return res.status(200).json({ 
         message: "Server configuration saved successfully",
-        serverName: serverInfo.ServerName,
-        version: serverInfo.Version
+        serverName: serverInfo.ServerName || "Jellyfin Server",
+        version: serverInfo.Version || "Unknown"
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Successfully validated
-      const serverInfo = await response.json();
+      const serverInfo = await response.json() as { ServerName?: string; Version?: string };
       return res.status(200).json({ 
         message: "Jellyfin server validated successfully",
         serverName: serverInfo.ServerName || "",
