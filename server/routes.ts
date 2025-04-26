@@ -448,9 +448,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   const jellyfinLoginData = await jellyfinLoginResponse.json();
                   console.log("Jellyfin login successful for new user");
                   
+                  // The password will be hashed by storage.createUser
                   const newLocalUser = await storage.createUser({
                     username: jellyfinUser.Name,
-                    password: loginData.password,
+                    password: loginData.password, // Password will be hashed in storage.createUser
                     email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
                     isAdmin: Boolean(jellyfinUser.Policy?.IsAdministrator),
                     jellyfinUserId: jellyfinUser.Id
@@ -601,10 +602,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Make an educated guess about admin status
             const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
             
+            // Generate a secure random password - it will be hashed by createUser
             const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
             await storage.createUser({
               username: jellyfinUser.Name,
-              password: tempPassword, // Random password for security
+              password: tempPassword, // Random temporary password, will be hashed in storage.createUser
               email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
               isAdmin: isAdmin,
               jellyfinUserId: jellyfinUser.Id
@@ -790,7 +792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also create the user in our local database for authentication
       try {
         const isAdmin = newUser.Role === "Administrator";
-        // When creating a new user, leave the password as is since it will be hashed by storage.createUser
+        // The provided password will be properly hashed by the storage.createUser method
         await storage.createUser({
           username: newUser.Name,
           password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
@@ -942,7 +944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updates.username = updateData.Name;
           }
           
-          // If password is updated, it will be hashed by the updateUser method
+          // If password is updated, it will be properly hashed by the updateUser method
           if (updateData.Password) {
             updates.password = updateData.Password;
           }
