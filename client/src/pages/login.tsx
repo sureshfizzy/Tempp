@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, Settings } from "lucide-react";
 
 // Login form schema
 const loginFormSchema = z.object({
@@ -118,52 +118,129 @@ export default function LoginPage() {
           <CardContent>
             {!connectionQuery.data?.connected ? (
               <div className="text-center py-4">
-                <p className="mb-4 text-gray-600">
-                  You need to connect to a Jellyfin server first before you can log in.
-                </p>
-                <Button onClick={handleReconnect}>
-                  Connect to Server
-                </Button>
+                {connectionQuery.data?.configured ? (
+                  <>
+                    <p className="mb-4 text-gray-600">
+                      Your Jellyfin server is configured but you are not connected.
+                      Please log in with your credentials.
+                    </p>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Username</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter your username" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="Enter your password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button 
+                          type="submit" 
+                          className="w-full mt-4" 
+                          disabled={isLoading}
+                        >
+                          {isLoading ? "Logging in..." : "Login"}
+                          {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+                        </Button>
+                      </form>
+                    </Form>
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Need to connect to a different server?
+                      </p>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={handleReconnect}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Reconfigure Server
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-4 text-gray-600">
+                      You need to connect to a Jellyfin server first before you can log in.
+                    </p>
+                    <Button onClick={handleReconnect}>
+                      Connect to Server
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="Enter your password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button 
+                      type="submit" 
+                      className="w-full mt-4" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Logging in..." : "Login"}
+                      {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  </form>
+                </Form>
+                <div className="mt-4 pt-4 border-t text-center">
+                  <p className="text-sm text-gray-500 mb-2">
+                    Need to connect to a different server?
+                  </p>
                   <Button 
-                    type="submit" 
-                    className="w-full mt-4" 
-                    disabled={isLoading}
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReconnect}
                   >
-                    {isLoading ? "Logging in..." : "Login"}
-                    {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+                    <Settings className="mr-2 h-4 w-4" />
+                    Reconfigure Server
                   </Button>
-                </form>
-              </Form>
+                </div>
+              </>
             )}
           </CardContent>
           <CardFooter className="flex justify-center border-t pt-4">

@@ -16,20 +16,21 @@ import { useToast } from "@/hooks/use-toast";
 const checkConnectionStatus = async () => {
   try {
     const res = await fetch("/api/connection-status");
-    if (!res.ok) return { connected: false, isAdmin: false };
+    if (!res.ok) return { connected: false, isAdmin: false, configured: false };
     
     const data = await res.json();
     return data;
   } catch (error) {
     console.error("Error checking connection status:", error);
-    return { connected: false, isAdmin: false };
+    return { connected: false, isAdmin: false, configured: false };
   }
 };
 
 function Router() {
   const [connectionStatus, setConnectionStatus] = useState<{ 
     connected: boolean; 
-    isAdmin?: boolean; 
+    isAdmin?: boolean;
+    configured?: boolean;
   } | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -42,11 +43,16 @@ function Router() {
       // Handle redirects based on connection status
       const path = window.location.pathname;
       
-      if (!status.connected && path !== '/' && path !== '/login' && path !== '/onboarding') {
-        // If not connected and not on onboarding/login, redirect to login
+      // If system is configured but not on login page, redirect to login instead of onboarding
+      if (!status.connected && status.configured && path === '/onboarding') {
         setLocation('/login');
-      } else if (status.connected && path === '/') {
-        // If connected and on root, redirect to appropriate dashboard
+      }
+      // If not connected and on a protected page, redirect to login
+      else if (!status.connected && path !== '/' && path !== '/login' && path !== '/onboarding') {
+        setLocation('/login');
+      } 
+      // If connected and on root, redirect to appropriate dashboard
+      else if (status.connected && path === '/') {
         setLocation(status.isAdmin ? '/dashboard' : '/user-profile');
       }
     };
@@ -90,7 +96,13 @@ function Router() {
       <Route path="/">
         {() => {
           if (!connectionStatus.connected) {
-            return <LoginPage />;
+            // If not connected but system is configured, go to login
+            if (connectionStatus.configured) {
+              return <LoginPage />;
+            } else {
+              // If not configured, go to onboarding
+              return <Onboarding />;
+            }
           } else if (connectionStatus.isAdmin) {
             return <Dashboard />;
           } else {
