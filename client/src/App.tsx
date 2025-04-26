@@ -13,6 +13,7 @@ import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
 import SettingsPage from "@/pages/settings";
+import JoinInvite from "@/pages/join-invite";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeProvider } from "@/hooks/use-theme";
 
@@ -55,7 +56,11 @@ function Router() {
         setLocation('/login');
       }
       // If not connected and on a protected page, redirect to login
-      else if (!status.connected && path !== '/' && path !== '/login' && path !== '/onboarding') {
+      else if (!status.connected && 
+               path !== '/' && 
+               path !== '/login' && 
+               path !== '/onboarding' && 
+               !path.startsWith('/join/')) {
         setLocation('/login');
       } 
       // If connected and on root, redirect to appropriate dashboard
@@ -94,6 +99,7 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/login" component={LoginPage} />
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/join/:code" component={JoinInvite} />
       
       {/* Protected routes - only when connected */}
       {connectionStatus.connected && (
