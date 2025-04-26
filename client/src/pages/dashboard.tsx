@@ -1,53 +1,30 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { getUsers, disconnectFromJellyfin, getConnectionStatus, getUserRole, deleteUser, formatDate } from "@/lib/jellyfin";
+import { getUsers, disconnectFromJellyfin, getConnectionStatus } from "@/lib/jellyfin";
 import { useToast } from "@/hooks/use-toast";
-import { UserAvatar } from "@/components/user-avatar";
-import { StatusBadge, RoleBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, LogOut, Check, CheckCircle } from "lucide-react";
-import { User } from "@shared/schema";
-import { debounce, filterUsers } from "@/lib/utils";
-import AddUserModal from "@/components/add-user-modal";
-import EditUserModal from "@/components/edit-user-modal";
-import UserDetailsModal from "@/components/user-details-modal";
-import DeleteConfirmationModal from "@/components/delete-confirmation-modal";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LogOut, User, UserCheck, Settings, CheckCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [isEditingUser, setIsEditingUser] = useState(false);
-  const [isViewingUserDetails, setIsViewingUserDetails] = useState(false);
-  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   // Get Jellyfin connection status
-  const connectionStatusQuery = useQuery<{ connected: boolean; url?: string }>({
+  const connectionStatusQuery = useQuery({
     queryKey: ["/api/connection-status"],
+    queryFn: getConnectionStatus,
     staleTime: 300000, // 5 minutes
   });
 
   // Get all users
-  const usersQuery = useQuery<User[]>({
+  const usersQuery = useQuery({
     queryKey: ["/api/users"],
+    queryFn: getUsers,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
-
-  // Handle search debounced
-  const debouncedSearch = debounce((value: string) => {
-    setSearchQuery(value);
-  }, 300);
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    debouncedSearch(e.target.value);
-  };
 
   // Disconnect mutation
   const disconnectMutation = useMutation({
@@ -68,72 +45,22 @@ export default function Dashboard() {
     },
   });
 
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: (userId: string) => deleteUser(userId),
-    onSuccess: () => {
-      toast({
-        title: "User deleted",
-        description: "The user has been deleted successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      setIsDeletingUser(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete user",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Filter users when search query or users change
-  useEffect(() => {
-    if (usersQuery.data && Array.isArray(usersQuery.data)) {
-      setFilteredUsers(filterUsers(usersQuery.data, searchQuery));
-    } else {
-      setFilteredUsers([]);
-    }
-  }, [searchQuery, usersQuery.data]);
-
   // Handle disconnect
   const handleDisconnect = () => {
     disconnectMutation.mutate();
   };
 
-  // Handler for viewing user details
-  const handleViewUser = (user: User) => {
-    setSelectedUser(user);
-    setIsViewingUserDetails(true);
-  };
-
-  // Handler for editing user
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setIsEditingUser(true);
-  };
-
-  // Handler for deleting user
-  const handleDeleteUser = (user: User) => {
-    setSelectedUser(user);
-    setIsDeletingUser(true);
-  };
-
-  // Handler for confirming delete
-  const handleConfirmDelete = () => {
-    if (selectedUser) {
-      deleteUserMutation.mutate(selectedUser.Id);
-    }
-  };
-
+  // Count user types
+  const adminCount = usersQuery.data?.filter(user => user.Policy?.IsAdministrator).length || 0;
+  const regularUserCount = usersQuery.data?.length ? usersQuery.data.length - adminCount : 0;
+  
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Header/Nav */}
       <header className="bg-primary text-white shadow-md">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
           <div className="flex items-center space-x-3">
-            <span className="material-icons text-2xl">people</span>
+            <Settings className="h-6 w-6" />
             <h1 className="text-xl font-semibold">Jellyfin User Management</h1>
           </div>
           
@@ -161,203 +88,124 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        {/* Actions Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 space-y-4 md:space-y-0">
-          <div>
-            <h2 className="text-xl font-semibold text-neutral-800">User Management</h2>
-            <p className="text-neutral-600">Manage your Jellyfin users</p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full md:w-auto">
-            <div className="relative flex-1 sm:flex-none sm:min-w-[260px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-4 w-4" />
-              <Input 
-                type="search" 
-                className="pl-10"
-                placeholder="Search users..."
-                onChange={handleSearch}
-              />
-            </div>
-            
-            <Button 
-              className="bg-primary hover:bg-primary-dark text-white"
-              onClick={() => setIsAddingUser(true)}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              <span>Add User</span>
-            </Button>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-neutral-800">Dashboard</h2>
+          <p className="text-neutral-600">Welcome to your Jellyfin user management dashboard</p>
         </div>
 
-        {/* Loading State */}
-        {usersQuery.isLoading && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-neutral-600">Loading users from Jellyfin...</p>
-          </div>
-        )}
+        {/* Dashboard Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <User className="h-5 w-5 mr-2 text-primary" />
+                Total Users
+              </CardTitle>
+              <CardDescription>All users on your Jellyfin server</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {usersQuery.isLoading ? (
+                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  usersQuery.data?.length || 0
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Error State */}
-        {usersQuery.isError && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="inline-block p-4 rounded-full bg-red-100 mb-4">
-              <span className="material-icons text-4xl text-red-500">error_outline</span>
-            </div>
-            <h3 className="text-lg font-medium text-neutral-800 mb-2">Error Loading Users</h3>
-            <p className="text-neutral-600 mb-6">
-              {usersQuery.error instanceof Error ? usersQuery.error.message : "An error occurred while loading users."}
-            </p>
-            <Button 
-              variant="outline"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/users"] })}
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <UserCheck className="h-5 w-5 mr-2 text-green-500" />
+                Admin Users
+              </CardTitle>
+              <CardDescription>Users with administrator access</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {usersQuery.isLoading ? (
+                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  adminCount
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Empty State */}
-        {!usersQuery.isLoading && !usersQuery.isError && filteredUsers.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="inline-block p-4 rounded-full bg-neutral-100 mb-4">
-              <span className="material-icons text-4xl text-neutral-500">person_off</span>
-            </div>
-            <h3 className="text-lg font-medium text-neutral-800 mb-2">No Users Found</h3>
-            <p className="text-neutral-600 mb-6">
-              {searchQuery ? "Your search returned no results." : "There are no users in your Jellyfin server."}
-            </p>
-            <Button 
-              className="bg-primary hover:bg-primary-dark text-white"
-              onClick={() => setIsAddingUser(true)}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              <span>Add Your First User</span>
-            </Button>
-          </div>
-        )}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <User className="h-5 w-5 mr-2 text-blue-500" />
+                Regular Users
+              </CardTitle>
+              <CardDescription>Users with standard access</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {usersQuery.isLoading ? (
+                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                ) : (
+                  regularUserCount
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Users Table */}
-        {!usersQuery.isLoading && !usersQuery.isError && filteredUsers.length > 0 && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-neutral-50">
-                  <TableRow>
-                    <TableHead className="text-neutral-500">User</TableHead>
-                    <TableHead className="text-neutral-500">Role</TableHead>
-                    <TableHead className="text-neutral-500">Last Active</TableHead>
-                    <TableHead className="text-neutral-500">Status</TableHead>
-                    <TableHead className="text-right text-neutral-500">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.Id} className="hover:bg-neutral-50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center">
-                          <UserAvatar user={user} />
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-neutral-900">{user.Name}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <RoleBadge role={getUserRole(user)} />
-                      </TableCell>
-                      <TableCell className="text-sm text-neutral-500">
-                        {formatDate(user.LastActivityDate)}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge user={user} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-neutral-600 hover:text-primary hover:bg-neutral-100"
-                            onClick={() => handleViewUser(user)}
-                            title="View Details"
-                          >
-                            <span className="material-icons text-xl">visibility</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-neutral-600 hover:text-primary hover:bg-neutral-100"
-                            onClick={() => handleEditUser(user)}
-                            title="Edit User"
-                          >
-                            <span className="material-icons text-xl">edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-neutral-600 hover:text-destructive hover:bg-neutral-100"
-                            onClick={() => handleDeleteUser(user)}
-                            title="Delete User"
-                          >
-                            <span className="material-icons text-xl">delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="px-6 py-3 bg-white border-t flex items-center justify-between">
-              <div className="text-sm text-neutral-500">
-                Showing <span className="font-medium">{filteredUsers.length}</span> of{" "}
-                <span className="font-medium">{usersQuery.data && Array.isArray(usersQuery.data) ? usersQuery.data.length : 0}</span> users
+        {/* Server Status Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Server Status</CardTitle>
+            <CardDescription>Information about your Jellyfin server connection</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <span className="text-sm text-neutral-500">Server URL</span>
+                  <span className="font-medium">{connectionStatusQuery.data?.url || "Not available"}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm text-neutral-500">Connection Status</span>
+                  <span className="font-medium flex items-center">
+                    {connectionStatusQuery.data?.connected ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        Connected
+                      </>
+                    ) : (
+                      <>
+                        <span className="h-4 w-4 text-red-500 mr-1">●</span>
+                        Disconnected
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="flex justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/connection-status"] })}
+                    className="mr-2"
+                  >
+                    Refresh Status
+                  </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={handleDisconnect}
+                    disabled={disconnectMutation.isPending}
+                  >
+                    {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </main>
-
-      {/* Modals */}
-      <AddUserModal
-        isOpen={isAddingUser}
-        onClose={() => setIsAddingUser(false)}
-      />
-
-      {selectedUser && (
-        <>
-          <EditUserModal
-            isOpen={isEditingUser}
-            user={selectedUser}
-            onClose={() => {
-              setIsEditingUser(false);
-              setSelectedUser(null);
-            }}
-          />
-
-          <UserDetailsModal
-            isOpen={isViewingUserDetails}
-            user={selectedUser}
-            onClose={() => {
-              setIsViewingUserDetails(false);
-              setSelectedUser(null);
-            }}
-            onEdit={() => {
-              setIsViewingUserDetails(false);
-              setIsEditingUser(true);
-            }}
-          />
-
-          <DeleteConfirmationModal
-            isOpen={isDeletingUser}
-            user={selectedUser}
-            isDeleting={deleteUserMutation.isPending}
-            onConfirm={handleConfirmDelete}
-            onCancel={() => {
-              setIsDeletingUser(false);
-              setSelectedUser(null);
-            }}
-          />
-        </>
-      )}
     </div>
   );
 }
