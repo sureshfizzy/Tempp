@@ -11,6 +11,7 @@ import UsersPage from "@/pages/users";
 import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
+import SettingsPage from "@/pages/settings";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeProvider } from "@/hooks/use-theme";
 
@@ -99,6 +100,7 @@ function Router() {
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/users" component={UsersPage} />
               <Route path="/activity" component={ActivityPage} />
+              <Route path="/settings" component={SettingsPage} />
             </>
           )}
         </>
