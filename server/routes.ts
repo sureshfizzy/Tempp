@@ -8,7 +8,8 @@ import {
   newUserSchema, 
   userActivitySchema, 
   insertServerConfigSchema,
-  loginSchema
+  loginSchema,
+  InsertAppUser
 } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
@@ -636,6 +637,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await updatedUserResponse.json();
+      
+      // Also create the user in our local database for authentication
+      try {
+        const isAdmin = newUser.Role === "Administrator";
+        await storage.createUser({
+          username: newUser.Name,
+          password: newUser.Password || "changeme", // Default password if none provided
+          email: newUser.Email || `${newUser.Name}@jellyfin.local`, // Placeholder email if none provided
+          isAdmin: isAdmin,
+          jellyfinUserId: userId
+        });
+        
+        console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
+      } catch (err) {
+        console.error("Error creating local user:", err);
+        // Continue even if local user creation fails - we'll still return the Jellyfin user
+      }
+      
       return res.status(201).json(updatedUser);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -758,6 +777,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await updatedUserResponse.json();
+      
+      // Update user in our local database too if they exist
+      try {
+        // Find the local user by jellyfin ID
+        const allUsers = await storage.getAllUsers();
+        const localUser = allUsers.find(user => user.jellyfinUserId === id);
+        
+        if (localUser) {
+          // Update relevant fields in local database
+          const updates: Partial<InsertAppUser> = {};
+          
+          if (updateData.Name) {
+            updates.username = updateData.Name;
+          }
+          
+          if (updateData.Password) {
+            updates.password = updateData.Password;
+          }
+          
+          if (updateData.Role) {
+            updates.isAdmin = updateData.Role === "Administrator";
+          }
+          
+          if (Object.keys(updates).length > 0) {
+            await storage.updateUser(localUser.id, updates);
+            console.log(`Updated local user ${localUser.username} with Jellyfin ID ${id}`);
+          }
+        } else {
+          console.log(`Local user not found for Jellyfin ID ${id}`);
+        }
+      } catch (err) {
+        console.error("Error updating local user:", err);
+        // Continue even if local user update fails - we'll still return the Jellyfin user
+      }
+      
       return res.status(200).json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -790,6 +844,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).json({ 
           message: `Failed to delete user: ${response.statusText}` 
         });
+      }
+
+      // Also delete the user from our local database if they exist
+      try {
+        // Find the local user by jellyfin ID
+        const allUsers = await storage.getAllUsers();
+        const localUser = allUsers.find(user => user.jellyfinUserId === id);
+        
+        if (localUser) {
+          await storage.deleteUser(localUser.id);
+          console.log(`Deleted local user ${localUser.username} with Jellyfin ID ${id}`);
+        }
+      } catch (err) {
+        console.error("Error deleting local user:", err);
+        // Continue even if local user deletion fails - we'll still return success
       }
 
       return res.status(200).json({ message: "User deleted successfully" });
