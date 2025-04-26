@@ -1,6 +1,6 @@
 import { pool, db } from './db';
 import { sql } from 'drizzle-orm';
-import { serverConfig, jellyfinCredentials, appUsers, sessions } from '@shared/schema';
+import { serverConfig, jellyfinCredentials, appUsers, sessions, invites } from '@shared/schema';
 import { runCustomMigrations } from './db-migration';
 
 /**
@@ -75,6 +75,25 @@ export async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
     `);
     console.log('session table created or already exists.');
+    
+    // Create invites table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "invites" (
+        "id" SERIAL PRIMARY KEY,
+        "code" TEXT NOT NULL UNIQUE,
+        "label" TEXT,
+        "user_label" TEXT,
+        "created_by" TEXT NOT NULL,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        "expires_at" TIMESTAMP NOT NULL,
+        "max_uses" INTEGER DEFAULT 1,
+        "used_count" INTEGER DEFAULT 0,
+        "user_expiry_enabled" BOOLEAN DEFAULT FALSE,
+        "user_expiry_hours" INTEGER DEFAULT 0,
+        "profile_id" TEXT
+      )
+    `);
+    console.log('invites table created or already exists.');
     
     // Run custom migrations to add new columns
     await runCustomMigrations();

@@ -38,6 +38,15 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   validatePassword(user: AppUser, password: string): Promise<boolean>;
 
+  // Invite management
+  getAllInvites(): Promise<Invite[]>;
+  getActiveInvites(): Promise<Invite[]>;
+  getInviteByCode(code: string): Promise<Invite | undefined>;
+  createInvite(invite: Partial<InsertInvite>): Promise<Invite>;
+  updateInvite(id: number, data: Partial<Invite>): Promise<Invite | undefined>;
+  deleteInvite(id: number): Promise<boolean>;
+  markInviteUsed(code: string): Promise<Invite | undefined>;
+
   // Session management
   createSession(userId: number): Promise<Session>;
   getSessionByToken(token: string): Promise<Session | undefined>;
@@ -362,6 +371,117 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSessionToken(id: string): Promise<void> {
     this.sessionTokens.delete(id);
+  }
+
+  // Invite management methods
+  async getAllInvites(): Promise<Invite[]> {
+    try {
+      return await db.select().from(invites);
+    } catch (error) {
+      console.error("Error fetching all invites:", error);
+      return [];
+    }
+  }
+
+  async getActiveInvites(): Promise<Invite[]> {
+    try {
+      const now = new Date();
+      return await db.select()
+        .from(invites)
+        .where(
+          and(
+            gt(invites.expiresAt, now),
+            sql`${invites.maxUses} > ${invites.usedCount} OR ${invites.maxUses} = 0`
+          )
+        );
+    } catch (error) {
+      console.error("Error fetching active invites:", error);
+      return [];
+    }
+  }
+
+  async getInviteByCode(code: string): Promise<Invite | undefined> {
+    try {
+      const result = await db.select().from(invites).where(eq(invites.code, code));
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching invite with code ${code}:`, error);
+      return undefined;
+    }
+  }
+
+  async createInvite(inviteData: Partial<InsertInvite>): Promise<Invite> {
+    try {
+      // Generate a unique invite code
+      const code = generateInviteCode();
+      
+      // Calculate expiration date based on current time plus duration
+      const expiresAt = inviteData.expiresAt || new Date(Date.now() + (24 * 60 * 60 * 1000)); // Default 24 hours
+      
+      // Create the invite
+      const [newInvite] = await db.insert(invites)
+        .values({
+          code,
+          label: inviteData.label || null,
+          userLabel: inviteData.userLabel || null,
+          createdBy: inviteData.createdBy!,
+          expiresAt,
+          maxUses: inviteData.maxUses || 1,
+          userExpiryEnabled: inviteData.userExpiryEnabled || false,
+          userExpiryHours: inviteData.userExpiryHours || 0,
+          profileId: inviteData.profileId || null
+        })
+        .returning();
+        
+      return newInvite;
+    } catch (error) {
+      console.error("Error creating invite:", error);
+      throw error;
+    }
+  }
+
+  async updateInvite(id: number, data: Partial<Invite>): Promise<Invite | undefined> {
+    try {
+      const [updatedInvite] = await db.update(invites)
+        .set(data)
+        .where(eq(invites.id, id))
+        .returning();
+        
+      return updatedInvite;
+    } catch (error) {
+      console.error(`Error updating invite with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteInvite(id: number): Promise<boolean> {
+    try {
+      await db.delete(invites).where(eq(invites.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting invite with ID ${id}:`, error);
+      return false;
+    }
+  }
+
+  async markInviteUsed(code: string): Promise<Invite | undefined> {
+    try {
+      const invite = await this.getInviteByCode(code);
+      if (!invite) return undefined;
+      
+      // Increment used count
+      const [updatedInvite] = await db.update(invites)
+        .set({ 
+          usedCount: (invite.usedCount || 0) + 1 
+        })
+        .where(eq(invites.code, code))
+        .returning();
+        
+      return updatedInvite;
+    } catch (error) {
+      console.error(`Error marking invite ${code} as used:`, error);
+      return undefined;
+    }
   }
 }
 
