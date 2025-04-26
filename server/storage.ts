@@ -55,15 +55,52 @@ export class DatabaseStorage implements IStorage {
   async getServerConfig(): Promise<ServerConfig | undefined> {
     try {
       const configs = await db.select().from(serverConfig).limit(1);
-      return configs.length > 0 ? configs[0] : undefined;
+      if (configs.length === 0) return undefined;
+      
+      const config = configs[0];
+      
+      // Parse features JSON if available
+      try {
+        if (config.featuresJson) {
+          config.features = JSON.parse(config.featuresJson);
+        } else {
+          config.features = {
+            enableThemeSwitcher: true,
+            enableWatchHistory: true,
+            enableActivityLog: true
+          };
+        }
+      } catch (e) {
+        console.error("Error parsing features JSON:", e);
+        config.features = {
+          enableThemeSwitcher: true,
+          enableWatchHistory: true,
+          enableActivityLog: true
+        };
+      }
+      
+      return config;
     } catch (error) {
       console.error("Error fetching server config:", error);
       return undefined;
     }
   }
 
-  async saveServerConfig(config: InsertServerConfig): Promise<ServerConfig> {
+  async saveServerConfig(config: InsertServerConfig & { 
+    features?: {
+      enableThemeSwitcher?: boolean;
+      enableWatchHistory?: boolean;
+      enableActivityLog?: boolean;
+    } 
+  }): Promise<ServerConfig> {
     try {
+      // Extract features and convert to JSON string
+      const { features, ...configData } = config;
+      const configToSave: InsertServerConfig = {
+        ...configData,
+        featuresJson: features ? JSON.stringify(features) : "{}"
+      };
+      
       // Check if a config already exists
       const existing = await this.getServerConfig();
       
@@ -71,18 +108,36 @@ export class DatabaseStorage implements IStorage {
         // Update existing config
         const [updated] = await db.update(serverConfig)
           .set({ 
-            ...config, 
+            ...configToSave, 
             updatedAt: new Date() 
           })
           .where(eq(serverConfig.id, existing.id))
           .returning();
-        return updated;
+          
+        // Add features to returned object
+        return {
+          ...updated,
+          features: features || {
+            enableThemeSwitcher: true,
+            enableWatchHistory: true,
+            enableActivityLog: true
+          }
+        };
       } else {
         // Create new config
         const [newConfig] = await db.insert(serverConfig)
-          .values(config)
+          .values(configToSave)
           .returning();
-        return newConfig;
+          
+        // Add features to returned object
+        return {
+          ...newConfig,
+          features: features || {
+            enableThemeSwitcher: true,
+            enableWatchHistory: true,
+            enableActivityLog: true
+          }
+        };
       }
     } catch (error) {
       console.error("Error saving server config:", error);

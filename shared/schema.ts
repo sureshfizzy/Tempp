@@ -7,6 +7,10 @@ export const serverConfig = pgTable("server_config", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
   apiKey: text("api_key").notNull(),
+  serverName: text("server_name").default("Jellyfin Server"),
+  logoUrl: text("logo_url"),
+  featuresJson: text("features_json").default("{}"), // Stored as JSON string
+  inviteDuration: integer("invite_duration").default(24), // In hours
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -14,6 +18,10 @@ export const serverConfig = pgTable("server_config", {
 export const insertServerConfigSchema = createInsertSchema(serverConfig).pick({
   url: true,
   apiKey: true,
+  serverName: true,
+  logoUrl: true,
+  featuresJson: true,
+  inviteDuration: true,
 });
 
 // App User schema (these are users of our application, not Jellyfin users)
