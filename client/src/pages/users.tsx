@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { getUsers, deleteUser, getUserRole } from "@/lib/jellyfin";
+import { 
+  getUsers, 
+  deleteUser, 
+  getUserRole, 
+  getUserWatchTime,
+  formatWatchTime
+} from "@/lib/jellyfin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,7 +27,8 @@ import {
   LogOut,
   Users,
   Settings,
-  Menu
+  Menu,
+  Clock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
