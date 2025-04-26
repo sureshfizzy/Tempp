@@ -496,11 +496,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Password valid:", isPasswordValid);
       
       if (!isPasswordValid) {
-        // For security reasons, we don't want to distinguish between nonexistent users and bad passwords
-        return res.status(401).json({ 
-          message: "Invalid username or password",
-          details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
-        });
+        // Try Jellyfin authentication as a fallback
+        try {
+          console.log("Local password validation failed, trying Jellyfin authentication as fallback");
+          const credentials = await storage.getJellyfinCredentials();
+          
+          if (credentials) {
+            const apiUrl = credentials.url.endsWith('/') 
+              ? credentials.url.slice(0, -1) 
+              : credentials.url;
+              
+            // Try to authenticate directly with Jellyfin
+            const jellyfinLoginResponse = await fetch(`${apiUrl}/Users/AuthenticateByName`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Authorization": `MediaBrowser Client="Jellyfin Web", Device="Browser", DeviceId="TempDevice", Version="10.8.0"`
+              },
+              body: JSON.stringify({
+                Username: loginData.username,
+                Pw: loginData.password
+              })
+            });
+            
+            if (jellyfinLoginResponse.ok) {
+              // Jellyfin authentication succeeded but local password didn't match
+              // Update local password to match
+              console.log("Jellyfin authentication succeeded, updating local password to match");
+              await storage.updateUser(user.id, {
+                password: loginData.password // Will be hashed by updateUser
+              });
+              
+              // Continue with login since Jellyfin auth worked
+              console.log("Updated local password hash for user", user.username);
+            } else {
+              // Both local and Jellyfin authentication failed
+              console.log("Both local and Jellyfin authentication failed");
+              return res.status(401).json({ 
+                message: "Invalid username or password",
+                details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
+              });
+            }
+          } else {
+            // No Jellyfin credentials, can't try fallback
+            console.log("No Jellyfin credentials available for fallback authentication");
+            return res.status(401).json({ 
+              message: "Invalid username or password",
+              details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
+            });
+          }
+        } catch (err) {
+          console.error("Error during fallback authentication:", err);
+          return res.status(401).json({ 
+            message: "Invalid username or password",
+            details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
+          });
+        }
       }
       
       // Setup session
