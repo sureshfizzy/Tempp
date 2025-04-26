@@ -61,19 +61,40 @@ export async function initializeDatabase() {
     `);
     console.log('jellyfin_credentials table created or already exists.');
     
-    // Create session table for connect-pg-simple
+    // Create session table for connect-pg-simple - do this in a way that avoids constraint errors
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL COLLATE "default",
         "sess" json NOT NULL,
-        "expire" timestamp(6) NOT NULL,
-        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+        "expire" timestamp(6) NOT NULL
       )
     `);
     
-    await db.execute(sql`
-      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
+    // Check if primary key exists before adding it
+    const checkPkResult = await db.execute(sql`
+      SELECT 1 FROM pg_constraint 
+      WHERE conname = 'session_pkey' 
+      LIMIT 1
     `);
+    
+    if ((checkPkResult as any).rowCount === 0) {
+      await db.execute(sql`
+        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      `);
+    }
+    
+    // Check if index exists before adding it
+    const checkIdxResult = await db.execute(sql`
+      SELECT 1 FROM pg_indexes 
+      WHERE indexname = 'IDX_session_expire' 
+      LIMIT 1
+    `);
+    
+    if ((checkIdxResult as any).rowCount === 0) {
+      await db.execute(sql`
+        CREATE INDEX "IDX_session_expire" ON "session" ("expire")
+      `);
+    }
     console.log('session table created or already exists.');
     
     // Create invites table
