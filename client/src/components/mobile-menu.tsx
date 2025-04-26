@@ -1,75 +1,125 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { Users, Home, Server, Activity, LogOut } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Users, 
+  Home, 
+  Settings, 
+  Activity, 
+  LogOut, 
+  Film,
+  UserCircle2,
+  History
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface MobileMenuProps {
   onClose?: () => void;
   onDisconnect: () => void;
   isDisconnecting: boolean;
+  isAdmin?: boolean;
 }
 
-export function MobileMenu({ onClose, onDisconnect, isDisconnecting }: MobileMenuProps) {
+export function MobileMenu({ onClose, onDisconnect, isDisconnecting, isAdmin = false }: MobileMenuProps) {
   const [location] = useLocation();
 
   const isActive = (path: string) => {
-    return location === path;
+    return location === path || location.startsWith(path + '/');
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Navigation</CardTitle>
-        <CardDescription>
-          Navigate to other sections
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1">
+      {/* Main navigation */}
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Main Menu</h3>
+        
         <Link 
-          href="/" 
+          href="/dashboard" 
           onClick={onClose}
-          className={`flex items-center space-x-2 rounded-md p-3 ${isActive("/") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          className={`flex items-center rounded-md p-3 ${isActive("/dashboard") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
         >
-          <Home className="h-5 w-5" />
+          <Home className="h-5 w-5 mr-3" />
           <span>Dashboard</span>
         </Link>
+        
         <Link 
           href="/users" 
           onClick={onClose}
-          className={`flex items-center space-x-2 rounded-md p-3 ${isActive("/users") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          className={`flex items-center rounded-md p-3 ${isActive("/users") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
         >
-          <Users className="h-5 w-5" />
+          <Users className="h-5 w-5 mr-3" />
           <span>Users</span>
         </Link>
+        
         <Link 
           href="/activity" 
           onClick={onClose}
-          className={`flex items-center space-x-2 rounded-md p-3 ${isActive("/activity") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          className={`flex items-center rounded-md p-3 ${isActive("/activity") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
         >
-          <Activity className="h-5 w-5" />
+          <Activity className="h-5 w-5 mr-3" />
           <span>Activity</span>
         </Link>
+        
+        <Link 
+          href="/user-profile" 
+          onClick={onClose}
+          className={`flex items-center rounded-md p-3 ${isActive("/user-profile") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+        >
+          <UserCircle2 className="h-5 w-5 mr-3" />
+          <span>My Profile</span>
+        </Link>
+      </div>
+      
+      <Separator className="my-4" />
+      
+      {/* Admin section */}
+      <div className="space-y-1">
+        <div className="flex items-center px-1 mb-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Admin</h3>
+          {isAdmin && <Badge className="ml-2 bg-primary/10 text-primary border-primary/20">Admin</Badge>}
+        </div>
+        
         <Link 
           href="/settings" 
           onClick={onClose}
-          className={`flex items-center space-x-2 rounded-md p-3 ${isActive("/settings") ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          className={`flex items-center rounded-md p-3 ${isActive("/settings") ? "bg-primary/10 text-primary" : isAdmin ? "hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"}`}
+          aria-disabled={!isAdmin}
         >
-          <Server className="h-5 w-5" />
+          <Settings className="h-5 w-5 mr-3" />
           <span>Settings</span>
         </Link>
         
-        <button
-          className="flex items-center space-x-2 rounded-md p-3 text-destructive hover:bg-destructive/10 mt-4"
+        <Link 
+          href="/history" 
+          onClick={onClose}
+          className={`flex items-center rounded-md p-3 ${isActive("/history") ? "bg-primary/10 text-primary" : isAdmin ? "hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"}`}
+          aria-disabled={!isAdmin}
+        >
+          <History className="h-5 w-5 mr-3" />
+          <span>Watch History</span>
+        </Link>
+      </div>
+      
+      <Separator className="my-4" />
+      
+      {/* Account actions */}
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">Account</h3>
+        
+        <Button
+          variant="ghost"
+          className="flex items-center justify-start w-full rounded-md p-3 hover:bg-destructive/10 hover:text-destructive"
           onClick={onDisconnect}
           disabled={isDisconnecting}
         >
-          <LogOut className="h-5 w-5" />
-          <span>Disconnect from Server</span>
+          <LogOut className="h-5 w-5 mr-3" />
+          <span>Disconnect Server</span>
           {isDisconnecting && (
             <span className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
           )}
-        </button>
-      </CardContent>
-    </Card>
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -66,12 +66,18 @@ function Router() {
 
     loadConnectionStatus();
     
-    // Set up an interval to periodically check connection status
-    // Longer interval (30 seconds) to avoid disrupting user interactions
-    const intervalId = setInterval(loadConnectionStatus, 30000);
+    // Only set up interval if NOT on login page to prevent refreshing
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    if (window.location.pathname !== '/login') {
+      // Set up an interval to periodically check connection status (30s)
+      intervalId = setInterval(loadConnectionStatus, 30000);
+    }
     
     // Clean up the interval on unmount
-    return () => clearInterval(intervalId);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [setLocation, location]);
 
   // Show a loading state while checking connection
