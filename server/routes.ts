@@ -1072,6 +1072,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ---- Activity Logging Endpoints ----
+  
+  // Get activity logs
+  app.get("/api/activity", async (req: Request, res: Response) => {
+    try {
+      if (!req.session.connected) {
+        return res.status(401).json({ message: "Not connected to Jellyfin" });
+      }
+      
+      if (!req.session.isAdmin) {
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+      
+      // For a first version, let's return sample data
+      // In the future, we'll update the schema.ts and storage.ts to handle this data
+      const sampleActivities = [
+        {
+          id: "1",
+          type: "account_created",
+          message: "Account created: Mrcoffee",
+          timestamp: "4/26/2025 01:29 PM",
+          username: "Mrcoffee",
+          inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
+          bgColor: "bg-blue-500",
+          textColor: "text-white"
+        },
+        {
+          id: "2",
+          type: "invite_expired",
+          message: "Invite expired: TNyWg96ZGdwu8gkEiPViRR",
+          timestamp: "4/26/2025 01:29 PM",
+          inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
+          createdBy: "JFA-GO",
+          bgColor: "bg-amber-500",
+          textColor: "text-white"
+        },
+        {
+          id: "3",
+          type: "invite_created",
+          message: "Invite created: TNyWg96ZGdwu8gkEiPViRR",
+          timestamp: "4/26/2025 11:30 AM",
+          inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
+          createdBy: "blackhat",
+          bgColor: "bg-blue-500",
+          textColor: "text-white"
+        },
+        {
+          id: "4",
+          type: "invite_expired",
+          message: "Invite expired: vqeRwjEBUftTLhi5MSgc4C",
+          timestamp: "4/26/2025 10:51 AM",
+          inviteCode: "vqeRwjEBUftTLhi5MSgc4C",
+          createdBy: "JFA-GO",
+          bgColor: "bg-amber-500",
+          textColor: "text-white"
+        },
+        {
+          id: "5",
+          type: "account_created",
+          message: "Account created: Gaurav",
+          timestamp: "4/26/2025 12:25 AM",
+          username: "Gaurav",
+          inviteCode: "gsxK79GDwB69eUjVFYRs39",
+          bgColor: "bg-blue-500",
+          textColor: "text-white"
+        },
+        {
+          id: "6",
+          type: "invite_expired",
+          message: "Invite expired: gsxK79GDwB69eUjVFYRs39",
+          timestamp: "4/26/2025 12:25 AM",
+          inviteCode: "gsxK79GDwB69eUjVFYRs39",
+          createdBy: "JFA-GO",
+          bgColor: "bg-amber-500",
+          textColor: "text-white"
+        }
+      ];
+      
+      res.json(sampleActivities);
+    } catch (error) {
+      console.error("Error getting activity logs:", error);
+      res.status(500).json({ message: "Error getting activity logs" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -29,69 +29,14 @@ interface ActivityItem {
   textColor: string;
 }
 
-// Sample activity data (will be replaced with API call)
-const sampleActivities: ActivityItem[] = [
-  {
-    id: "1",
-    type: "account_created",
-    message: "Account created: Mrcoffee",
-    timestamp: "4/26/2025 01:29 PM",
-    username: "Mrcoffee",
-    inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-    bgColor: "bg-blue-500",
-    textColor: "text-white"
-  },
-  {
-    id: "2",
-    type: "invite_expired",
-    message: "Invite expired: TNyWg96ZGdwu8gkEiPViRR",
-    timestamp: "4/26/2025 01:29 PM",
-    inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-    createdBy: "JFA-GO",
-    bgColor: "bg-amber-500",
-    textColor: "text-white"
-  },
-  {
-    id: "3",
-    type: "invite_created",
-    message: "Invite created: TNyWg96ZGdwu8gkEiPViRR",
-    timestamp: "4/26/2025 11:30 AM",
-    inviteCode: "TNyWg96ZGdwu8gkEiPViRR",
-    createdBy: "blackhat",
-    bgColor: "bg-blue-500",
-    textColor: "text-white"
-  },
-  {
-    id: "4",
-    type: "invite_expired",
-    message: "Invite expired: vqeRwjEBUftTLhi5MSgc4C",
-    timestamp: "4/26/2025 10:51 AM",
-    inviteCode: "vqeRwjEBUftTLhi5MSgc4C",
-    createdBy: "JFA-GO",
-    bgColor: "bg-amber-500",
-    textColor: "text-white"
-  },
-  {
-    id: "5",
-    type: "account_created",
-    message: "Account created: Gaurav",
-    timestamp: "4/26/2025 12:25 AM",
-    username: "Gaurav",
-    inviteCode: "gsxK79GDwB69eUjVFYRs39",
-    bgColor: "bg-blue-500",
-    textColor: "text-white"
-  },
-  {
-    id: "6",
-    type: "invite_expired",
-    message: "Invite expired: gsxK79GDwB69eUjVFYRs39",
-    timestamp: "4/26/2025 12:25 AM",
-    inviteCode: "gsxK79GDwB69eUjVFYRs39",
-    createdBy: "JFA-GO",
-    bgColor: "bg-amber-500",
-    textColor: "text-white"
+// Function to fetch activities from API
+const fetchActivities = async (): Promise<ActivityItem[]> => {
+  const response = await fetch('/api/activity');
+  if (!response.ok) {
+    throw new Error('Failed to fetch activity logs');
   }
-];
+  return response.json();
+};
 
 function ActivityPage() {
   const [, setLocation] = useLocation();
@@ -103,6 +48,13 @@ function ActivityPage() {
     queryKey: ["/api/connection-status"],
     queryFn: getConnectionStatus,
     staleTime: 300000, // 5 minutes
+  });
+  
+  // Fetch activity data
+  const activityQuery = useQuery({
+    queryKey: ["/api/activity"],
+    queryFn: fetchActivities,
+    staleTime: 60000, // 1 minute
   });
 
   // Handle disconnect
@@ -117,8 +69,11 @@ function ActivityPage() {
     }
   };
 
+  // Process activities data
+  const activities = activityQuery.data || [];
+  
   // Filter activities based on search query
-  const filteredActivities = sampleActivities.filter(activity => {
+  const filteredActivities = activities.filter((activity: ActivityItem) => {
     if (!searchQuery) return true;
     
     const query = searchQuery.toLowerCase();
