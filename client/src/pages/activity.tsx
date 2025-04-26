@@ -209,46 +209,63 @@ function ActivityPage() {
             </CardContent>
           </Card>
 
-          {/* Activity Listing */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-4">
-              {filteredActivities.length} TOTAL RECORDS {filteredActivities.length} LOADED {filteredActivities.length} SHOWN
+          {/* Loading state */}
+          {activityQuery.isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="ml-3 text-muted-foreground">Loading activity logs...</p>
             </div>
-            
-            <div className="space-y-4">
-              {sortedActivities.map((activity) => (
-                <div 
-                  key={activity.id} 
-                  className={`${activity.bgColor} ${activity.textColor} p-4 rounded-md shadow-sm transition-all hover:shadow-md`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{activity.message}</h3>
-                      {activity.type === "account_created" && (
-                        <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
-                      )}
-                      {(activity.type === "invite_expired" || activity.type === "invite_created") && activity.createdBy && (
-                        <p className="text-sm opacity-90">BY {activity.createdBy}</p>
-                      )}
-                    </div>
-                    <div className="text-sm opacity-80">{activity.timestamp}</div>
-                  </div>
-                  
-                  <div className="flex justify-end mt-2">
-                    <button className="p-1 rounded-full bg-black/10 hover:bg-black/20">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+          )}
+
+          {/* Error state */}
+          {activityQuery.isError && (
+            <div className="text-center py-8 bg-destructive/10 rounded-md text-destructive">
+              <p>Error loading activity logs. Please try again later.</p>
+            </div>
+          )}
+
+          {/* Activity Listing - only show when data is loaded */}
+          {activityQuery.isSuccess && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-4">
+                {filteredActivities.length} TOTAL RECORDS {filteredActivities.length} LOADED {filteredActivities.length} SHOWN
+              </div>
               
-              {filteredActivities.length === 0 && (
-                <div className="text-center py-8 bg-card rounded-md">
-                  <p className="text-muted-foreground">No activities found matching your search</p>
-                </div>
-              )}
+              <div className="space-y-4">
+                {sortedActivities.map((activity) => (
+                  <div 
+                    key={activity.id} 
+                    className={`${activity.bgColor} ${activity.textColor} p-4 rounded-md shadow-sm transition-all hover:shadow-md`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{activity.message}</h3>
+                        {activity.type === "account_created" && (
+                          <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
+                        )}
+                        {(activity.type === "invite_expired" || activity.type === "invite_created") && activity.createdBy && (
+                          <p className="text-sm opacity-90">BY {activity.createdBy}</p>
+                        )}
+                      </div>
+                      <div className="text-sm opacity-80">{activity.timestamp}</div>
+                    </div>
+                    
+                    <div className="flex justify-end mt-2">
+                      <button className="p-1 rounded-full bg-black/10 hover:bg-black/20">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {filteredActivities.length === 0 && (
+                  <div className="text-center py-8 bg-card rounded-md">
+                    <p className="text-muted-foreground">No activities found matching your search</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
     </div>
