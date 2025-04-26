@@ -439,7 +439,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (!jellyfinLoginResponse.ok) {
                     console.log("Jellyfin login failed for new user");
-                    return res.status(401).json({ message: "Invalid username or password" });
+                    return res.status(401).json({ 
+                      message: "Invalid username or password", 
+                      details: "The credentials you provided could not be verified with the Jellyfin server."
+                    });
                   }
                   
                   const jellyfinLoginData = await jellyfinLoginResponse.json();
@@ -481,7 +484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error checking Jellyfin users during login:", err);
         }
         
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ 
+          message: "Invalid username or password",
+          details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
+        });
       }
       
       // Verify password

@@ -9,9 +9,17 @@ async function throwIfResNotOk(res: Response) {
       if (contentType.includes("application/json")) {
         const jsonResponse = await res.json();
         
-        // Extract the message from the JSON response
+        // Extract the message and details from the JSON response
         const errorMessage = jsonResponse.message || jsonResponse.error || JSON.stringify(jsonResponse);
-        throw new Error(errorMessage);
+        const errorDetails = jsonResponse.details || '';
+        
+        // Create a more descriptive error message if details are available
+        const fullMessage = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
+        
+        const error = new Error(fullMessage);
+        // Add the original response data to the error object for reference
+        (error as any).responseData = jsonResponse;
+        throw error;
       } else {
         // For non-JSON responses, use text content
         const text = await res.text() || res.statusText;

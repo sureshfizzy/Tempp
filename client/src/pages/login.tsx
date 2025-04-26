@@ -71,12 +71,19 @@ export default function LoginPage() {
       }
     },
     onError: (error) => {
+      // Extract the main error message
       const errorMessage = error instanceof Error ? error.message : "Invalid username or password";
-      setLoginError(errorMessage);
+      
+      // Check if the error contains additional details (set in queryClient.ts)
+      const responseData = (error as any).responseData;
+      const errorDetails = responseData?.details;
+      
+      // Set the user-facing error message (prefer details if available)
+      setLoginError(errorDetails || errorMessage);
       
       toast({
         title: "Login failed",
-        description: errorMessage,
+        description: errorDetails || errorMessage,
         variant: "destructive",
       });
     },
