@@ -24,7 +24,6 @@ declare module 'express-session' {
     userId?: number;
     isAdmin?: boolean;
     jellyfinUserId?: string;
-    username?: string;
   }
 }
 
@@ -296,7 +295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.session.userId = appUser.id;
           req.session.isAdmin = true;
           req.session.jellyfinUserId = userId;
-          req.session.username = appUser.username;
         }
       } else {
         // Set session with existing user
@@ -450,12 +448,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const jellyfinCreds = await storage.getJellyfinCredentials();
         if (jellyfinCreds) {
           await storage.saveJellyfinCredentials({
+            ...jellyfinCreds,
             apiKey,
             url: serverUrl || jellyfinCreds.url,
-            adminUsername: jellyfinCreds.adminUsername,
-            adminPassword: jellyfinCreds.adminPassword,
-            accessToken: jellyfinCreds.accessToken,
-            userId: jellyfinCreds.userId
           });
         }
       }
@@ -562,7 +557,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     req.session.userId = newLocalUser.id;
                     req.session.isAdmin = newLocalUser.isAdmin;
                     req.session.jellyfinUserId = newLocalUser.jellyfinUserId;
-                    req.session.username = newLocalUser.username;
                   }
                   
                   return res.status(200).json({
@@ -658,7 +652,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId = user.id;
         req.session.isAdmin = user.isAdmin;
         req.session.jellyfinUserId = user.jellyfinUserId;
-        req.session.username = user.username;
       }
       
       return res.status(200).json({
@@ -1435,13 +1428,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary`;
       console.log("Fetching item image from:", imageUrl);
       
-      // Forward request to Jellyfin - explicitly disable any local caching
+      // Forward request to Jellyfin
       const response = await fetch(imageUrl, { 
         headers: { 
           "X-Emby-Token": credentials.accessToken || "",
           "Accept": "image/webp,image/jpeg,image/png,*/*"
-        },
-        cache: "no-store" // Ensure no caching at fetch level
+        }
       });
 
       if (!response.ok) {
@@ -1449,15 +1441,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(response.status).send(await response.text());
       }
 
-      // Set cache headers for browser caching only, not server storage
-      // Using no-store ensures images are not cached locally on disk
-      res.set('Cache-Control', 'no-store');
-      res.set('Pragma', 'no-cache');
+      // Set cache headers to improve performance
+      res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
       
       // Copy content type
       res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
       
-      // Stream the image response directly without saving locally
+      // Stream the image response
       if (response.body) {
         response.body.pipe(res);
       } else {
@@ -1466,151 +1456,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching item image:", error);
       res.status(500).send({ error: "Failed to fetch item image" });
-    }
-  });
-  
-  // Invite system routes
-  // Get all invites
-  app.get("/api/invites", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const invites = await storage.getAllInvites();
-      res.json(invites);
-    } catch (error) {
-      console.error("Error getting invites:", error);
-      res.status(500).json({ message: "Error getting invites" });
-    }
-  });
-
-  // Get active invites
-  app.get("/api/invites/active", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const invites = await storage.getActiveInvites();
-      res.json(invites);
-    } catch (error) {
-      console.error("Error getting active invites:", error);
-      res.status(500).json({ message: "Error getting active invites" });
-    }
-  });
-
-  // Get an invite by code
-  app.get("/api/invites/:code", async (req: Request, res: Response) => {
-    try {
-      const invite = await storage.getInviteByCode(req.params.code);
-      if (!invite) {
-        return res.status(404).json({ message: "Invite not found" });
-      }
-      
-      // Check if invite is expired
-      const now = new Date();
-      if (invite.expiresAt < now) {
-        return res.status(410).json({ message: "Invite has expired" });
-      }
-      
-      // Check if invite is at max usage
-      const maxUses1 = invite.maxUses ?? 0;
-      const usedCount1 = invite.usedCount ?? 0;
-      if (maxUses1 !== 0 && usedCount1 >= maxUses1) {
-        return res.status(410).json({ message: "Invite has reached maximum usage" });
-      }
-      
-      res.json(invite);
-    } catch (error) {
-      console.error(`Error getting invite ${req.params.code}:`, error);
-      res.status(500).json({ message: "Error getting invite" });
-    }
-  });
-
-  // Create a new invite
-  app.post("/api/invites", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { 
-        label,
-        userLabel,
-        months = 0,
-        days = 0, 
-        hours = 24,
-        minutes = 0,
-        maxUses = 1,
-        userExpiryEnabled = false,
-        userExpiryHours = 0,
-        profileId = null
-      } = req.body;
-      
-      // Calculate expiration time
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + Number(months));
-      expiresAt.setDate(expiresAt.getDate() + Number(days));
-      expiresAt.setHours(expiresAt.getHours() + Number(hours));
-      expiresAt.setMinutes(expiresAt.getMinutes() + Number(minutes));
-      
-      // Create the invite
-      const newInvite = await storage.createInvite({
-        label,
-        userLabel,
-        createdBy: (req.session as any).username || "Admin",
-        expiresAt,
-        maxUses: Number(maxUses),
-        userExpiryEnabled,
-        userExpiryHours: Number(userExpiryHours),
-        profileId
-      });
-      
-      // Log activity
-      console.log(`Invite created: ${newInvite.code} by ${newInvite.createdBy}`);
-      
-      res.status(201).json(newInvite);
-    } catch (error) {
-      console.error("Error creating invite:", error);
-      res.status(500).json({ message: "Error creating invite" });
-    }
-  });
-
-  // Delete an invite
-  app.delete("/api/invites/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await storage.deleteInvite(id);
-      
-      if (result) {
-        res.status(204).send();
-      } else {
-        res.status(404).json({ message: "Invite not found" });
-      }
-    } catch (error) {
-      console.error(`Error deleting invite ${req.params.id}:`, error);
-      res.status(500).json({ message: "Error deleting invite" });
-    }
-  });
-
-  // Mark an invite as used
-  app.post("/api/invites/:code/use", async (req: Request, res: Response) => {
-    try {
-      const invite = await storage.getInviteByCode(req.params.code);
-      
-      if (!invite) {
-        return res.status(404).json({ message: "Invite not found" });
-      }
-      
-      // Check if invite is expired
-      const now = new Date();
-      if (invite.expiresAt < now) {
-        return res.status(410).json({ message: "Invite has expired" });
-      }
-      
-      // Check if invite is at max usage
-      const maxUses2 = invite.maxUses ?? 0;
-      const usedCount2 = invite.usedCount ?? 0;
-      if (maxUses2 !== 0 && usedCount2 >= maxUses2) {
-        return res.status(410).json({ message: "Invite has reached maximum usage" });
-      }
-      
-      // Mark invite as used
-      const updatedInvite = await storage.markInviteUsed(req.params.code);
-      
-      res.json(updatedInvite);
-    } catch (error) {
-      console.error(`Error using invite ${req.params.code}:`, error);
-      res.status(500).json({ message: "Error using invite" });
     }
   });
   

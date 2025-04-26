@@ -132,7 +132,7 @@ export default function LoginPage() {
     },
   });
 
-  // Submit handler with complete prevention of refresh
+  // Submit handler with debounce to prevent accidental multiple submissions
   const onSubmit = async (data: LoginFormData) => {
     // Prevent submitting if already in progress
     if (isLoading) return;
@@ -142,45 +142,13 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      // Force synchronous handling to prevent keyboard disappearing
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Login failed');
-      }
-      
-      const responseData = await response.json();
-      
-      // Handle success manually without any refresh
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully",
-      });
-      
-      // Force an immediate navigation based on admin status
-      if (responseData.user.isAdmin) {
-        window.location.href = "/dashboard";
-      } else {
-        window.location.href = "/user-profile";
-      }
+      await loginMutation.mutateAsync(data);
     } catch (err) {
       console.error("Login error:", err);
-      setLoginError(err instanceof Error ? err.message : 'Login failed');
-      
-      toast({
-        title: "Login failed",
-        description: err instanceof Error ? err.message : 'Invalid username or password',
-        variant: "destructive",
-      });
     } finally {
-      setIsLoading(false);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Small delay to prevent accidental double-clicks
     }
   };
 

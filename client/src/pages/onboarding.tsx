@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { validateJellyfinUrl } from "@/lib/jellyfin";
@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -17,15 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { 
-  ArrowRight, 
-  CheckCircle, 
-  Settings, 
-  Key, 
-  Ticket, 
-  AlertCircle, 
-  User
-} from "lucide-react";
+import { ArrowRight, CheckCircle, Settings, Key } from "lucide-react";
 
 // Step 1: Server URL & API Key form schema
 const serverConfigSchema = z.object({
@@ -42,67 +33,12 @@ const credentialsFormSchema = z.object({
 type ServerConfigData = z.infer<typeof serverConfigSchema>;
 type CredentialsFormData = z.infer<typeof credentialsFormSchema>;
 
-// Add interface for invite data
-interface InviteData {
-  id: number;
-  code: string;
-  label: string | null;
-  userLabel: string | null;
-  createdBy: string;
-  createdAt: string;
-  expiresAt: string;
-  maxUses: number;
-  usedCount: number;
-  userExpiryEnabled: boolean;
-  userExpiryHours: number;
-  isExpired: boolean;
-  isFullyUsed: boolean;
-}
-
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [serverConfig, setServerConfig] = useState<{url: string, apiKey: string}>({url: "", apiKey: ""});
   const [isLoading, setIsLoading] = useState(false);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [inviteData, setInviteData] = useState<InviteData | null>(null);
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [location, setLocation] = useLocation();
-  
-  // Extract invite code from URL if present
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('invite');
-    
-    if (code) {
-      setInviteCode(code);
-      fetchInviteData(code);
-    }
-  }, []);
-  
-  // Fetch invite details if code is present
-  const fetchInviteData = async (code: string) => {
-    setInviteLoading(true);
-    setInviteError(null);
-    
-    try {
-      const data = await apiRequest(`/api/invites/${code}`);
-      setInviteData(data);
-      
-      // If invite is invalid (expired/used up), show error
-      if (data.isExpired || data.isFullyUsed) {
-        setInviteError(data.isExpired 
-          ? "This invite has expired." 
-          : "This invite has reached its maximum usage limit.");
-      }
-    } catch (error) {
-      setInviteError("Invalid or expired invite code.");
-      console.error("Error fetching invite:", error);
-    } finally {
-      setInviteLoading(false);
-    }
-  };
+  const [, setLocation] = useLocation();
   
   // Use direct API calls
   const apiRequest = async (endpoint: string, options?: RequestInit) => {
@@ -179,35 +115,15 @@ export default function Onboarding() {
   const onSubmitCredentials = async (data: CredentialsFormData) => {
     setIsLoading(true);
     try {
-      // If connecting with an invite code, include it in the request
-      const requestBody = inviteCode 
-        ? { ...data, inviteCode } 
-        : data;
-      
       // Connect to Jellyfin with admin credentials
       await apiRequest("/api/connect", {
         method: "POST",
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(data),
       });
-      
-      // If this was an invite, try to use/redeem it
-      if (inviteCode && !inviteError) {
-        try {
-          await apiRequest(`/api/invites/${inviteCode}/use`, {
-            method: "POST",
-            body: JSON.stringify({ username: data.adminUsername }),
-          });
-        } catch (error) {
-          console.error("Failed to process invite:", error);
-          // Continue even if invite processing fails
-        }
-      }
       
       toast({
         title: "Connected successfully",
-        description: inviteCode && !inviteError 
-          ? "You have successfully joined the Jellyfin server via invite." 
-          : "You are now connected to your Jellyfin server.",
+        description: "You are now connected to your Jellyfin server.",
         variant: "default",
       });
       
@@ -232,66 +148,10 @@ export default function Onboarding() {
         <CardContent className="pt-6">
           <div className="text-center mb-8">
             <div className="mx-auto w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4">
-              {inviteCode && !inviteError ? (
-                <Ticket className="text-white h-10 w-10" />
-              ) : (
-                <Settings className="text-white h-10 w-10" />
-              )}
+              <Settings className="text-white h-10 w-10" />
             </div>
-            <h1 className="text-2xl font-semibold text-neutral-800">
-              {inviteCode && !inviteError ? "Join Jellyfin Server" : "Jellyfin User Management"}
-            </h1>
-            <p className="text-neutral-600 mt-2">
-              {inviteCode && !inviteError
-                ? "You've been invited to join a Jellyfin server"
-                : "Connect to your Jellyfin server to manage users"}
-            </p>
-            
-            {/* Invite information section */}
-            {inviteCode && (
-              <div className="mt-4">
-                {inviteLoading ? (
-                  <div className="flex justify-center items-center py-4">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-primary"></div>
-                    <span className="ml-2 text-sm text-neutral-600">Validating invite...</span>
-                  </div>
-                ) : inviteError ? (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Invalid Invite</AlertTitle>
-                    <AlertDescription>{inviteError}</AlertDescription>
-                  </Alert>
-                ) : inviteData && (
-                  <div className="bg-primary/5 rounded-md p-4 border border-primary/20 mt-2 mb-4">
-                    <div className="flex items-center mb-2">
-                      <Ticket className="h-5 w-5 text-primary mr-2" />
-                      <h3 className="font-medium text-sm">Valid Invite</h3>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      {inviteData.label && (
-                        <p className="text-left">
-                          <span className="text-neutral-500">Invite name:</span> {inviteData.label}
-                        </p>
-                      )}
-                      <p className="text-left">
-                        <span className="text-neutral-500">Created by:</span> {inviteData.createdBy}
-                      </p>
-                      {inviteData.userLabel && (
-                        <p className="text-left">
-                          <span className="text-neutral-500">User role:</span> {inviteData.userLabel}
-                        </p>
-                      )}
-                      <p className="text-left">
-                        <span className="text-neutral-500">Expires:</span> {new Date(inviteData.expiresAt).toLocaleDateString()}
-                      </p>
-                      <p className="text-left">
-                        <span className="text-neutral-500">Uses:</span> {inviteData.usedCount}/{inviteData.maxUses === 0 ? "∞" : inviteData.maxUses}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <h1 className="text-2xl font-semibold text-neutral-800">Jellyfin User Management</h1>
+            <p className="text-neutral-600 mt-2">Connect to your Jellyfin server to manage users</p>
             
             {/* Step indicator */}
             <div className="flex justify-center items-center mt-4">

@@ -8,8 +8,7 @@ import {
   LogOut, 
   Settings,
   Menu as MenuIcon,
-  Film,
-  Ticket
+  Film
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -125,21 +124,12 @@ export function AppHeader({
             </Link>
 
             {isAdmin && (
-              <>
-                <Link href="/invites" className={`px-3 py-2 rounded-md transition-colors ${isActive("/invites") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
-                  <div className="flex items-center gap-1.5">
-                    <Ticket className="h-4 w-4" />
-                    <span>Invites</span>
-                  </div>
-                </Link>
-                
-                <Link href="/settings" className={`px-3 py-2 rounded-md transition-colors ${isActive("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
-                  <div className="flex items-center gap-1.5">
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </div>
-                </Link>
-              </>
+              <Link href="/settings" className={`px-3 py-2 rounded-md transition-colors ${isActive("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
+                <div className="flex items-center gap-1.5">
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </div>
+              </Link>
             )}
           </nav>
         </div>

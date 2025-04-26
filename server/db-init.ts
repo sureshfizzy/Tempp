@@ -1,6 +1,6 @@
 import { pool, db } from './db';
 import { sql } from 'drizzle-orm';
-import { serverConfig, jellyfinCredentials, appUsers, sessions, invites } from '@shared/schema';
+import { serverConfig, jellyfinCredentials, appUsers, sessions } from '@shared/schema';
 import { runCustomMigrations } from './db-migration';
 
 /**
@@ -61,60 +61,20 @@ export async function initializeDatabase() {
     `);
     console.log('jellyfin_credentials table created or already exists.');
     
-    // Create session table for connect-pg-simple - do this in a way that avoids constraint errors
+    // Create session table for connect-pg-simple
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL COLLATE "default",
         "sess" json NOT NULL,
-        "expire" timestamp(6) NOT NULL
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
       )
     `);
     
-    // Check if primary key exists before adding it
-    const checkPkResult = await db.execute(sql`
-      SELECT 1 FROM pg_constraint 
-      WHERE conname = 'session_pkey' 
-      LIMIT 1
-    `);
-    
-    if ((checkPkResult as any).rowCount === 0) {
-      await db.execute(sql`
-        ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
-      `);
-    }
-    
-    // Check if index exists before adding it
-    const checkIdxResult = await db.execute(sql`
-      SELECT 1 FROM pg_indexes 
-      WHERE indexname = 'IDX_session_expire' 
-      LIMIT 1
-    `);
-    
-    if ((checkIdxResult as any).rowCount === 0) {
-      await db.execute(sql`
-        CREATE INDEX "IDX_session_expire" ON "session" ("expire")
-      `);
-    }
-    console.log('session table created or already exists.');
-    
-    // Create invites table
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS "invites" (
-        "id" SERIAL PRIMARY KEY,
-        "code" TEXT NOT NULL UNIQUE,
-        "label" TEXT,
-        "user_label" TEXT,
-        "created_by" TEXT NOT NULL,
-        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        "expires_at" TIMESTAMP NOT NULL,
-        "max_uses" INTEGER DEFAULT 1,
-        "used_count" INTEGER DEFAULT 0,
-        "user_expiry_enabled" BOOLEAN DEFAULT FALSE,
-        "user_expiry_hours" INTEGER DEFAULT 0,
-        "profile_id" TEXT
-      )
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
     `);
-    console.log('invites table created or already exists.');
+    console.log('session table created or already exists.');
     
     // Run custom migrations to add new columns
     await runCustomMigrations();
