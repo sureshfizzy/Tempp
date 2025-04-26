@@ -247,7 +247,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-background">
       <AppHeader 
         title="Jellyfin User Management"
-        subtitle={connectionQuery.data?.url}
+        subtitle={connectionQuery.data?.serverUrl}
         user={userQuery.data}
         onDisconnect={handleDisconnect}
         isDisconnecting={disconnectMutation.isPending}
