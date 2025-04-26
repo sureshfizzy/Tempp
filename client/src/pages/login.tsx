@@ -6,8 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import { 
-  getConnectionStatus,
-  Login
+  getConnectionStatus
 } from "@/lib/jellyfin";
 import { 
   Form, 

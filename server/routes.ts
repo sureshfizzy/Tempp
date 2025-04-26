@@ -1370,21 +1370,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get credentials
       const credentials = await storage.getJellyfinCredentials();
-      if (!credentials) {
-        return res.status(404).send({ error: "No Jellyfin credentials found" });
+      if (!credentials || !credentials.url) {
+        return res.status(404).send({ error: "No valid Jellyfin server URL found" });
       }
 
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
+      
       // Forward request to Jellyfin
-      const response = await fetch(
-        `${credentials.serverUrl}/Users/${req.params.id}/Images/Primary`, 
-        { 
-          headers: { 
-            "X-Emby-Token": credentials.accessToken 
-          } 
+      const imageUrl = `${apiUrl}/Users/${req.params.id}/Images/Primary`;
+      console.log("Fetching user image from:", imageUrl);
+      
+      const response = await fetch(imageUrl, { 
+        headers: { 
+          "X-Emby-Token": credentials.accessToken || "",
+          "Accept": "image/webp,image/jpeg,image/png,*/*"
         }
-      );
+      });
 
       if (!response.ok) {
+        console.error(`Failed to fetch user image: ${response.status} ${response.statusText}`);
         return res.status(response.status).send(await response.text());
       }
 
@@ -1392,7 +1398,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
       
       // Stream the image response
-      response.body.pipe(res);
+      if (response.body) {
+        response.body.pipe(res);
+      } else {
+        res.status(500).send({ error: "Failed to fetch user image - empty response" });
+      }
     } catch (error) {
       console.error("Error fetching user image:", error);
       res.status(500).send({ error: "Failed to fetch user image" });
@@ -1404,23 +1414,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get credentials
       const credentials = await storage.getJellyfinCredentials();
-      if (!credentials) {
-        return res.status(404).send({ error: "No Jellyfin credentials found" });
+      if (!credentials || !credentials.url) {
+        return res.status(404).send({ error: "No valid Jellyfin server URL found" });
       }
+      
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
       
       const { itemId } = req.params;
       
       // Construct the URL for the primary image
-      const imageUrl = `${credentials.serverUrl}/Items/${itemId}/Images/Primary`;
+      const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary`;
+      console.log("Fetching item image from:", imageUrl);
       
       // Forward request to Jellyfin
       const response = await fetch(imageUrl, { 
         headers: { 
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
           "Accept": "image/webp,image/jpeg,image/png,*/*"
-        },
-        // Add caching to improve performance
-        cache: "force-cache"
+        }
       });
 
       if (!response.ok) {
@@ -1435,7 +1448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
       
       // Stream the image response
-      response.body.pipe(res);
+      if (response.body) {
+        response.body.pipe(res);
+      } else {
+        res.status(500).send({ error: "Failed to fetch item image - empty response" });
+      }
     } catch (error) {
       console.error("Error fetching item image:", error);
       res.status(500).send({ error: "Failed to fetch item image" });

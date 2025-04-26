@@ -238,9 +238,15 @@ export default function UserProfilePage() {
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   // Fallback if image fails to load
-                                  e.currentTarget.onerror = null;
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                  const img = e.currentTarget as HTMLImageElement;
+                                  img.onerror = null;
+                                  img.style.display = 'none';
+                                  
+                                  // Find the fallback container and display it
+                                  const fallbackEl = img.nextElementSibling as HTMLElement;
+                                  if (fallbackEl) {
+                                    fallbackEl.style.display = 'flex';
+                                  }
                                 }}
                               />
                               <div className="h-full w-full rounded-md bg-blue-500/10 hidden items-center justify-center">

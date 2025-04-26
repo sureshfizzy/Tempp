@@ -179,13 +179,18 @@ export const newUserSchema = z.object({
 
 // Define Jellyfin User Activity schema
 export const userActivitySchema = z.object({
-  Id: z.number(),
+  Id: z.string(),
   Name: z.string(),
   Type: z.string(),
-  UserId: z.string(),
+  UserId: z.string().optional(),
   ItemId: z.string().optional(),
   Date: z.string(),
-  Severity: z.string(),
+  Severity: z.string().optional(),
+  // Additional fields for media item details
+  SeriesName: z.string().optional(),
+  SeasonName: z.string().optional(),
+  ProductionYear: z.number().optional(),
+  ImageTag: z.string().optional(),
 });
 
 // Login schema
