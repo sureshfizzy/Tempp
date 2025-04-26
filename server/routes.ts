@@ -1365,6 +1365,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get user image
+  app.get("/api/users/:id/image", async (req: Request, res: Response) => {
+    try {
+      // Get credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(404).send({ error: "No Jellyfin credentials found" });
+      }
+
+      // Forward request to Jellyfin
+      const response = await fetch(
+        `${credentials.serverUrl}/Users/${req.params.id}/Images/Primary`, 
+        { 
+          headers: { 
+            "X-Emby-Token": credentials.accessToken 
+          } 
+        }
+      );
+
+      if (!response.ok) {
+        return res.status(response.status).send(await response.text());
+      }
+
+      // Copy content type
+      res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
+      
+      // Stream the image response
+      response.body.pipe(res);
+    } catch (error) {
+      console.error("Error fetching user image:", error);
+      res.status(500).send({ error: "Failed to fetch user image" });
+    }
+  });
+  
+  // Get media item image
+  app.get("/api/users/:userId/item-image/:itemId", async (req: Request, res: Response) => {
+    try {
+      // Get credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(404).send({ error: "No Jellyfin credentials found" });
+      }
+      
+      const { itemId } = req.params;
+      
+      // Construct the URL for the primary image
+      const imageUrl = `${credentials.serverUrl}/Items/${itemId}/Images/Primary`;
+      
+      // Forward request to Jellyfin
+      const response = await fetch(imageUrl, { 
+        headers: { 
+          "X-Emby-Token": credentials.accessToken,
+          "Accept": "image/webp,image/jpeg,image/png,*/*"
+        },
+        // Add caching to improve performance
+        cache: "force-cache"
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to fetch image for item ${itemId}:`, response.status, response.statusText);
+        return res.status(response.status).send(await response.text());
+      }
+
+      // Set cache headers to improve performance
+      res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      
+      // Copy content type
+      res.set('Content-Type', response.headers.get('Content-Type') || 'image/jpeg');
+      
+      // Stream the image response
+      response.body.pipe(res);
+    } catch (error) {
+      console.error("Error fetching item image:", error);
+      res.status(500).send({ error: "Failed to fetch item image" });
+    }
+  });
+  
   // Get activity logs
   app.get("/api/activity", async (req: Request, res: Response) => {
     try {
