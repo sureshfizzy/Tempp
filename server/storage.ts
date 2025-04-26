@@ -14,7 +14,7 @@ import {
   Invite,
   InsertInvite
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
@@ -478,7 +478,7 @@ export class DatabaseStorage implements IStorage {
   // Invite methods
   async getAllInvites(): Promise<Invite[]> {
     try {
-      // Use explicit column selection to avoid referencing columns that might not exist
+      // Use explicit column selection to match the actual database structure
       return await db.select({
         id: invites.id,
         code: invites.code,
@@ -486,10 +486,9 @@ export class DatabaseStorage implements IStorage {
         userLabel: invites.userLabel,
         profileId: invites.profileId,
         maxUses: invites.maxUses,
+        usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
-        userExpiryMonths: invites.userExpiryMonths,
-        userExpiryDays: invites.userExpiryDays,
         userExpiryHours: invites.userExpiryHours,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
@@ -504,7 +503,7 @@ export class DatabaseStorage implements IStorage {
 
   async getInviteById(id: number): Promise<Invite | undefined> {
     try {
-      // Use explicit column selection to avoid referencing columns that might not exist
+      // Use explicit column selection to match the actual database structure
       const result = await db.select({
         id: invites.id,
         code: invites.code,
@@ -512,10 +511,9 @@ export class DatabaseStorage implements IStorage {
         userLabel: invites.userLabel,
         profileId: invites.profileId,
         maxUses: invites.maxUses,
+        usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
-        userExpiryMonths: invites.userExpiryMonths,
-        userExpiryDays: invites.userExpiryDays,
         userExpiryHours: invites.userExpiryHours,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
@@ -532,7 +530,7 @@ export class DatabaseStorage implements IStorage {
 
   async getInviteByCode(code: string): Promise<Invite | undefined> {
     try {
-      // Use explicit column selection to avoid referencing columns that might not exist
+      // Use explicit column selection to match the actual database structure
       const result = await db.select({
         id: invites.id,
         code: invites.code,
@@ -540,10 +538,9 @@ export class DatabaseStorage implements IStorage {
         userLabel: invites.userLabel,
         profileId: invites.profileId,
         maxUses: invites.maxUses,
+        usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
-        userExpiryMonths: invites.userExpiryMonths,
-        userExpiryDays: invites.userExpiryDays,
         userExpiryHours: invites.userExpiryHours,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
@@ -566,25 +563,10 @@ export class DatabaseStorage implements IStorage {
       // Calculate expiration date if needed
       let expiresAt: Date | null = null;
       
-      // If any expiry duration is specified
-      if (
-        (inviteData.userExpiryMonths && inviteData.userExpiryMonths > 0) ||
-        (inviteData.userExpiryDays && inviteData.userExpiryDays > 0) ||
-        (inviteData.userExpiryHours && inviteData.userExpiryHours > 0)
-      ) {
+      // Use the hours for expiry (only field available in our schema)
+      if (inviteData.userExpiryHours && inviteData.userExpiryHours > 0) {
         expiresAt = new Date();
-        // Add months
-        if (inviteData.userExpiryMonths) {
-          expiresAt.setMonth(expiresAt.getMonth() + inviteData.userExpiryMonths);
-        }
-        // Add days
-        if (inviteData.userExpiryDays) {
-          expiresAt.setDate(expiresAt.getDate() + inviteData.userExpiryDays);
-        }
-        // Add hours
-        if (inviteData.userExpiryHours) {
-          expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
-        }
+        expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
       }
 
       // Handle max uses properly (can be null for unlimited)
@@ -597,20 +579,45 @@ export class DatabaseStorage implements IStorage {
         user_label: inviteData.userLabel || null,
         profile_id: inviteData.profileId || null,
         max_uses: maxUses,
+        used_count: 0, // Start with 0 uses
         expires_at: expiresAt,
         user_expiry_enabled: inviteData.userExpiryEnabled || false,
-        user_expiry_months: inviteData.userExpiryMonths || 0,
-        user_expiry_days: inviteData.userExpiryDays || 0,
         user_expiry_hours: inviteData.userExpiryHours || 0,
-        created_by: createdById
+        created_by: createdById.toString() // Convert to string as the DB expects it
       };
       
-      // Create the invite - use SQL directly to ensure we only use columns that exist
-      const [invite] = await db.insert(invites)
-        .values(values)
-        .returning();
-        
-      return invite;
+      // Use the pool to execute raw SQL directly
+      const sql = `
+        INSERT INTO invites (
+          code, label, user_label, profile_id, max_uses, used_count, 
+          expires_at, user_expiry_enabled, user_expiry_hours, created_by
+        ) 
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        )
+        RETURNING *
+      `;
+      
+      const result = await pool.query(sql, [
+        values.code,
+        values.label,
+        values.user_label,
+        values.profile_id,
+        values.max_uses,
+        values.used_count,
+        values.expires_at,
+        values.user_expiry_enabled,
+        values.user_expiry_hours,
+        values.created_by
+      ]);
+      
+      if (result.rows && result.rows.length > 0) {
+        // Convert the result to our Invite type
+        const invite = result.rows[0] as unknown as Invite;
+        return invite;
+      }
+      
+      throw new Error("Failed to create invite");
     } catch (error) {
       console.error("Error creating invite:", error);
       throw error;
