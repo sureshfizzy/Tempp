@@ -119,14 +119,26 @@ export default function InvitePage() {
     mutationFn: async (data: RegisterFormData) => {
       if (!inviteCode) throw new Error("No invite code provided");
       
-      // Extract the fields needed for the API
-      const payload = {
-        username: data.username,
-        password: data.password,
-        email: data.email || undefined
-      };
+      // Use fetch directly to avoid type issues
+      const response = await fetch(`/api/invites/register/${inviteCode}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+          email: data.email || undefined
+        }),
+        credentials: 'include',
+      });
       
-      return apiRequest("POST", `/api/invites/register/${inviteCode}`, payload);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Registration failed: ${response.status}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       setRegistrationComplete(true);

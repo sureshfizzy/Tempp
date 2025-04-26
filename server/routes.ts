@@ -1992,7 +1992,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: email || `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
         isAdmin: false, // Default to regular user
         jellyfinUserId: jellyfinUser.Id,
-        userLabel: invite.userLabel || null,
+        // Store user label in notes field (since we don't have userLabel in schema)
+        notes: invite.userLabel || null,
       });
       
       console.log("Created local user with ID:", newLocalUser.id);
