@@ -29,13 +29,13 @@ export default function Dashboard() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   // Get Jellyfin connection status
-  const connectionStatusQuery = useQuery({
+  const connectionStatusQuery = useQuery<{ connected: boolean; url?: string }>({
     queryKey: ["/api/connection-status"],
     staleTime: 300000, // 5 minutes
   });
 
   // Get all users
-  const usersQuery = useQuery({
+  const usersQuery = useQuery<User[]>({
     queryKey: ["/api/users"],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -90,8 +90,10 @@ export default function Dashboard() {
 
   // Filter users when search query or users change
   useEffect(() => {
-    if (usersQuery.data) {
+    if (usersQuery.data && Array.isArray(usersQuery.data)) {
       setFilteredUsers(filterUsers(usersQuery.data, searchQuery));
+    } else {
+      setFilteredUsers([]);
     }
   }, [searchQuery, usersQuery.data]);
 
@@ -307,7 +309,7 @@ export default function Dashboard() {
             <div className="px-6 py-3 bg-white border-t flex items-center justify-between">
               <div className="text-sm text-neutral-500">
                 Showing <span className="font-medium">{filteredUsers.length}</span> of{" "}
-                <span className="font-medium">{usersQuery.data?.length || 0}</span> users
+                <span className="font-medium">{usersQuery.data && Array.isArray(usersQuery.data) ? usersQuery.data.length : 0}</span> users
               </div>
             </div>
           </div>
