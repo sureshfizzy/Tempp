@@ -65,24 +65,7 @@ export function UserProfiles() {
 
   // Get profiles
   const { data: profiles, isLoading: isLoadingProfiles } = useQuery<UserProfile[]>({
-    queryKey: ["/api/user-profiles"],
-    // This is temporary until we implement the backend endpoint
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/user-profiles");
-        if (!response.ok) {
-          if (response.status === 404) {
-            // API endpoint not implemented yet, return empty array
-            return [];
-          }
-          throw new Error("Failed to fetch user profiles");
-        }
-        return await response.json();
-      } catch (error) {
-        console.error("Error fetching profiles:", error);
-        return [];
-      }
-    }
+    queryKey: ["/api/user-profiles"]
   });
 
   // Form definition

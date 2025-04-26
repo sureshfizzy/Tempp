@@ -1750,34 +1750,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get the default user profile
-  app.get("/api/user-profiles/default", requireAuth, requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const defaultProfile = await storage.getDefaultUserProfile();
-      
-      if (!defaultProfile) {
-        return res.status(404).json({ message: "No default user profile found" });
-      }
-      
-      // Parse library access
-      let libraryCount = 0;
-      try {
-        const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
-        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-      } catch (e) {
-        console.error("Error parsing library access:", e);
-      }
-      
-      res.json({
-        ...defaultProfile,
-        libraryCount
-      });
-    } catch (error) {
-      console.error("Error fetching default user profile:", error);
-      res.status(500).json({ message: "Error fetching default user profile" });
-    }
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
