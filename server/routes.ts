@@ -9,7 +9,9 @@ import {
   userActivitySchema, 
   insertServerConfigSchema,
   loginSchema,
-  InsertAppUser
+  InsertAppUser,
+  insertUserProfileSchema,
+  UserProfile
 } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
@@ -1527,6 +1529,252 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting activity logs:", error);
       res.status(500).json({ message: "Error getting activity logs" });
+    }
+  });
+
+  // User Profiles API Endpoints
+  // Get all user profiles
+  app.get("/api/user-profiles", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const profiles = await storage.getAllUserProfiles();
+      
+      // Add library count to each profile
+      const profilesWithLibraryCounts = profiles.map(profile => {
+        let libraryCount = 0;
+        try {
+          const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+        } catch (e) {
+          console.error("Error parsing library access:", e);
+        }
+        
+        return {
+          ...profile,
+          libraryCount
+        };
+      });
+      
+      res.json(profilesWithLibraryCounts);
+    } catch (error) {
+      console.error("Error fetching user profiles:", error);
+      res.status(500).json({ message: "Error fetching user profiles" });
+    }
+  });
+
+  // Get the default user profile
+  app.get("/api/user-profiles/default", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const defaultProfile = await storage.getDefaultUserProfile();
+      
+      if (!defaultProfile) {
+        return res.status(404).json({ message: "No default user profile found" });
+      }
+      
+      // Parse library access
+      let libraryCount = 0;
+      try {
+        const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
+        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+      } catch (e) {
+        console.error("Error parsing library access:", e);
+      }
+      
+      res.json({
+        ...defaultProfile,
+        libraryCount
+      });
+    } catch (error) {
+      console.error("Error fetching default user profile:", error);
+      res.status(500).json({ message: "Error fetching default user profile" });
+    }
+  });
+
+  // Get a specific user profile by ID
+  app.get("/api/user-profiles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const profileId = parseInt(req.params.id, 10);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ message: "Invalid profile ID" });
+      }
+      
+      const profile = await storage.getUserProfileById(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Parse library access
+      let libraryCount = 0;
+      try {
+        const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+      } catch (e) {
+        console.error("Error parsing library access:", e);
+      }
+      
+      res.json({
+        ...profile,
+        libraryCount
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Error fetching user profile" });
+    }
+  });
+
+  // Create a new user profile
+  app.post("/api/user-profiles", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Validate request body using zod schema
+      const validatedData = insertUserProfileSchema.parse(req.body);
+      
+      // Get Jellyfin credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials || !credentials.accessToken) {
+        return res.status(401).json({ message: "Not connected to Jellyfin" });
+      }
+      
+      // Get the source user from Jellyfin to verify it exists and get their name
+      const sourceUserId = validatedData.sourceUserId;
+      const apiUrl = credentials.url;
+      
+      const sourceUserResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken
+        }
+      });
+      
+      if (!sourceUserResponse.ok) {
+        return res.status(400).json({ message: "Source user not found in Jellyfin" });
+      }
+      
+      const sourceUser = await sourceUserResponse.json() as { Name: string };
+      
+      // Create the profile with the source user's name
+      const newProfile = await storage.createUserProfile({
+        ...validatedData,
+        sourceName: sourceUser.Name
+      });
+      
+      res.status(201).json(newProfile);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      console.error("Error creating user profile:", error);
+      res.status(500).json({ message: "Error creating user profile" });
+    }
+  });
+
+  // Update an existing user profile
+  app.patch("/api/user-profiles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const profileId = parseInt(req.params.id, 10);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ message: "Invalid profile ID" });
+      }
+      
+      // Check if profile exists
+      const existingProfile = await storage.getUserProfileById(profileId);
+      if (!existingProfile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Validate request body (partial schema for update)
+      const partialSchema = insertUserProfileSchema.partial();
+      const validatedData = partialSchema.parse(req.body);
+      
+      // If updating source user, verify it exists
+      if (validatedData.sourceUserId) {
+        // Get Jellyfin credentials
+        const credentials = await storage.getJellyfinCredentials();
+        if (!credentials || !credentials.accessToken) {
+          return res.status(401).json({ message: "Not connected to Jellyfin" });
+        }
+        
+        // Get the source user from Jellyfin
+        const sourceUserId = validatedData.sourceUserId;
+        const apiUrl = credentials.url;
+        
+        const sourceUserResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
+          headers: {
+            "X-Emby-Token": credentials.accessToken
+          }
+        });
+        
+        if (!sourceUserResponse.ok) {
+          return res.status(400).json({ message: "Source user not found in Jellyfin" });
+        }
+        
+        const sourceUser = await sourceUserResponse.json() as { Name: string };
+        validatedData.sourceName = sourceUser.Name;
+      }
+      
+      // Update the profile
+      const updatedProfile = await storage.updateUserProfile(profileId, validatedData);
+      
+      res.json(updatedProfile);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Error updating user profile" });
+    }
+  });
+
+  // Delete a user profile
+  app.delete("/api/user-profiles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const profileId = parseInt(req.params.id, 10);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ message: "Invalid profile ID" });
+      }
+      
+      // Check if profile exists
+      const existingProfile = await storage.getUserProfileById(profileId);
+      if (!existingProfile) {
+        return res.status(404).json({ message: "User profile not found" });
+      }
+      
+      // Delete the profile
+      const success = await storage.deleteUserProfile(profileId);
+      
+      if (success) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: "Failed to delete user profile" });
+      }
+    } catch (error) {
+      console.error("Error deleting user profile:", error);
+      res.status(500).json({ message: "Error deleting user profile" });
+    }
+  });
+
+  // Get the default user profile
+  app.get("/api/user-profiles/default", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const defaultProfile = await storage.getDefaultUserProfile();
+      
+      if (!defaultProfile) {
+        return res.status(404).json({ message: "No default user profile found" });
+      }
+      
+      // Parse library access
+      let libraryCount = 0;
+      try {
+        const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
+        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+      } catch (e) {
+        console.error("Error parsing library access:", e);
+      }
+      
+      res.json({
+        ...defaultProfile,
+        libraryCount
+      });
+    } catch (error) {
+      console.error("Error fetching default user profile:", error);
+      res.status(500).json({ message: "Error fetching default user profile" });
     }
   });
 

@@ -8,11 +8,13 @@ import {
   Session, 
   InsertSession,
   User,
-  UserActivity
+  UserActivity,
+  UserProfile,
+  InsertUserProfile
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
-import { serverConfig, jellyfinCredentials, appUsers, sessions } from "@shared/schema";
+import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 
@@ -42,6 +44,14 @@ export interface IStorage {
   getSessionToken(id: string): Promise<string | undefined>;
   saveSessionToken(id: string, token: string): Promise<void>;
   deleteSessionToken(id: string): Promise<void>;
+  
+  // User profiles
+  getAllUserProfiles(): Promise<UserProfile[]>;
+  getUserProfileById(id: number): Promise<UserProfile | undefined>;
+  getDefaultUserProfile(): Promise<UserProfile | undefined>;
+  createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
+  updateUserProfile(id: number, profile: Partial<InsertUserProfile>): Promise<UserProfile | undefined>;
+  deleteUserProfile(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -359,6 +369,99 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSessionToken(id: string): Promise<void> {
     this.sessionTokens.delete(id);
+  }
+
+  // User Profiles methods
+  async getAllUserProfiles(): Promise<UserProfile[]> {
+    try {
+      return await db.select().from(userProfiles);
+    } catch (error) {
+      console.error("Error fetching user profiles:", error);
+      return [];
+    }
+  }
+
+  async getUserProfileById(id: number): Promise<UserProfile | undefined> {
+    try {
+      const profiles = await db.select().from(userProfiles).where(eq(userProfiles.id, id));
+      return profiles.length > 0 ? profiles[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching user profile with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getDefaultUserProfile(): Promise<UserProfile | undefined> {
+    try {
+      const profiles = await db.select().from(userProfiles).where(eq(userProfiles.isDefault, true));
+      return profiles.length > 0 ? profiles[0] : undefined;
+    } catch (error) {
+      console.error("Error fetching default user profile:", error);
+      return undefined;
+    }
+  }
+
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    try {
+      // If this profile is being set as default, unset any other defaults
+      if (profile.isDefault) {
+        await db.update(userProfiles)
+          .set({ isDefault: false })
+          .where(eq(userProfiles.isDefault, true));
+      }
+      
+      // Create the new profile
+      const [newProfile] = await db.insert(userProfiles)
+        .values({
+          name: profile.name,
+          sourceUserId: profile.sourceUserId,
+          sourceName: profile.sourceName,
+          isDefault: profile.isDefault ?? false,
+          libraryAccess: profile.libraryAccess || "[]",
+          homeLayout: profile.homeLayout || "[]"
+        })
+        .returning();
+        
+      return newProfile;
+    } catch (error) {
+      console.error("Error creating user profile:", error);
+      throw error;
+    }
+  }
+
+  async updateUserProfile(id: number, profile: Partial<InsertUserProfile>): Promise<UserProfile | undefined> {
+    try {
+      // If this profile is being set as default, unset any other defaults
+      if (profile.isDefault) {
+        await db.update(userProfiles)
+          .set({ isDefault: false })
+          .where(eq(userProfiles.isDefault, true));
+      }
+      
+      // Update the profile
+      const [updatedProfile] = await db.update(userProfiles)
+        .set({ 
+          ...profile,
+          updatedAt: new Date() 
+        })
+        .where(eq(userProfiles.id, id))
+        .returning();
+        
+      return updatedProfile;
+    } catch (error) {
+      console.error(`Error updating user profile with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteUserProfile(id: number): Promise<boolean> {
+    try {
+      await db.delete(userProfiles).where(eq(userProfiles.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting user profile with ID ${id}:`, error);
+      return false;
+    }
   }
 }
 
