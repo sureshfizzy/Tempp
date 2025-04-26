@@ -63,11 +63,16 @@ export default function LoginPage() {
         description: "You have been logged in successfully",
       });
       
+      console.log("Login successful, redirecting user based on role:", data.user.isAdmin ? "admin" : "regular user");
+      
+      // Force an immediate navigation
       // Redirect based on admin status
       if (data.user.isAdmin) {
-        setLocation("/dashboard");
+        // Force hard navigation for admin
+        window.location.href = "/dashboard";
       } else {
-        setLocation("/user-profile");
+        // Force hard navigation for regular users
+        window.location.href = "/user-profile";
       }
     },
     onError: (error) => {
