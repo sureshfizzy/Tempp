@@ -61,15 +61,8 @@ interface LoginResponse {
   };
 }
 
-interface LoginPageProps {
-  params?: {
-    code?: string;
-  };
-}
-
-export default function LoginPage(props: LoginPageProps) {
+export default function LoginPage() {
   const [, setLocation] = useLocation();
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -78,21 +71,6 @@ export default function LoginPage(props: LoginPageProps) {
   // Get connection status to check if we have a server URL configured
   // Disable auto-refresh completely with fetched data
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
-  
-  // Check for invite code in URL path
-  useEffect(() => {
-    // Check if we have code from route params
-    if (props.params?.code) {
-      setInviteCode(props.params.code);
-    } else {
-      // Check if we have '/invite/' in the path
-      const path = window.location.pathname;
-      const inviteMatch = path.match(/\/invite\/([A-Za-z0-9]+)/);
-      if (inviteMatch && inviteMatch[1]) {
-        setInviteCode(inviteMatch[1]);
-      }
-    }
-  }, [props.params]);
   
   // One-time fetch on component mount only, no refetching or polling
   useEffect(() => {
@@ -164,12 +142,7 @@ export default function LoginPage(props: LoginPageProps) {
     setIsLoading(true);
     
     try {
-      // Include invite code if available
-      const loginData = inviteCode 
-        ? { ...data, inviteCode }
-        : data;
-        
-      await loginMutation.mutateAsync(loginData);
+      await loginMutation.mutateAsync(data);
     } catch (err) {
       console.error("Login error:", err);
     } finally {
@@ -316,13 +289,6 @@ export default function LoginPage(props: LoginPageProps) {
         <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-800 text-white">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{loginError}</AlertDescription>
-        </Alert>
-      )}
-      
-      {inviteCode && (
-        <Alert className="mb-4 bg-blue-900/50 border-blue-800 text-white">
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>You're joining with an invite code</AlertDescription>
         </Alert>
       )}
       <Form {...form}>

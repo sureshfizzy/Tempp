@@ -10,7 +10,6 @@ import Dashboard from "@/pages/dashboard";
 // Import the new users page instead of the old one
 import UsersPage from "@/pages/users-new";
 import LoginPage from "@/pages/login";
-import InviteSignupPage from "@/pages/invite-signup";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
 import SettingsPage from "@/pages/settings";
@@ -56,12 +55,7 @@ function Router() {
         setLocation('/login');
       }
       // If not connected and on a protected page, redirect to login
-      // But allow the invite page to remain accessible when not connected
-      else if (!status.connected && 
-              path !== '/' && 
-              path !== '/login' && 
-              path !== '/onboarding' && 
-              !path.startsWith('/invite/')) {
+      else if (!status.connected && path !== '/' && path !== '/login' && path !== '/onboarding') {
         setLocation('/login');
       } 
       // If connected and on root, redirect to appropriate dashboard
@@ -100,7 +94,6 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/login" component={LoginPage} />
       <Route path="/onboarding" component={Onboarding} />
-      <Route path="/invite/:code" component={InviteSignupPage} />
       
       {/* Protected routes - only when connected */}
       {connectionStatus.connected && (
