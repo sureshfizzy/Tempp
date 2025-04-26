@@ -1871,6 +1871,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint for registering a user via invite code
+  app.post("/api/invites/register/:code", async (req: Request, res: Response) => {
+    try {
+      const code = req.params.code;
+      const { username, password, email } = req.body;
+      
+      // Basic validation
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      if (username.length < 3) {
+        return res.status(400).json({ error: "Username must be at least 3 characters long" });
+      }
+      
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters long" });
+      }
+      
+      // Check if invite exists and is valid
+      const invite = await storage.getInviteByCode(code);
+      if (!invite) {
+        return res.status(404).json({ error: "Invalid or expired invite" });
+      }
+      
+      if (invite.expiresAt && new Date() > invite.expiresAt) {
+        return res.status(400).json({ error: "This invite has expired" });
+      }
+      
+      if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+        return res.status(400).json({ error: "This invite has reached its maximum number of uses" });
+      }
+      
+      // Check if username already exists in the local database
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      
+      // Get Jellyfin API credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(500).json({ error: "Jellyfin server not configured" });
+      }
+      
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
+      
+      // Create user in Jellyfin
+      const createUserResponse = await fetch(`${apiUrl}/Users/New`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Emby-Token": credentials.accessToken || "",
+        },
+        body: JSON.stringify({
+          Name: username,
+          Password: password,
+        }),
+      });
+      
+      if (!createUserResponse.ok) {
+        console.error("Failed to create user in Jellyfin:", await createUserResponse.text());
+        return res.status(500).json({ error: "Failed to create user in Jellyfin server" });
+      }
+      
+      const jellyfinUser = await createUserResponse.json() as {
+        Id: string; 
+        Name: string;
+        Policy?: {
+          IsAdministrator?: boolean;
+        }
+      };
+      console.log("Created Jellyfin user:", jellyfinUser.Id);
+      
+      // If the invite has a user profile associated, apply those permissions
+      if (invite.profileId) {
+        try {
+          const profile = await storage.getUserProfileById(parseInt(invite.profileId));
+          if (profile) {
+            // Apply profile settings to the Jellyfin user
+            // In this version we'll assign simple permissions, but this can be expanded
+            await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+              body: JSON.stringify({
+                IsAdministrator: false,
+                EnableUserPreferenceAccess: true,
+                EnableRemoteControlOfOtherUsers: false,
+                // Default permissions for regular users
+                EnableLiveTvManagement: false,
+                EnableLiveTvAccess: true,
+                EnableMediaPlayback: true,
+                EnableAudioPlaybackTranscoding: true,
+                EnableVideoPlaybackTranscoding: true,
+                EnableContentDeletion: false,
+                EnableContentDownloading: true,
+                EnableSyncTranscoding: true,
+                EnableMediaConversion: false,
+                EnableAllDevices: true,
+              }),
+            });
+            
+            console.log("Applied profile permissions to user:", jellyfinUser.Id);
+          }
+        } catch (profileError) {
+          console.error("Error applying profile permissions:", profileError);
+        }
+      }
+      
+      // Create local user in our database
+      const newLocalUser = await storage.createUser({
+        username: username,
+        password: password, // Will be hashed in storage.createUser
+        email: email || `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+        isAdmin: false, // Default to regular user
+        jellyfinUserId: jellyfinUser.Id,
+        userLabel: invite.userLabel || null,
+      });
+      
+      console.log("Created local user with ID:", newLocalUser.id);
+      
+      // Mark invite as used
+      await storage.useInvite(code);
+      
+      // Return success response
+      res.status(201).json({
+        message: "User registered successfully",
+        user: {
+          id: newLocalUser.id,
+          username: newLocalUser.username,
+          isAdmin: newLocalUser.isAdmin
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error registering user with invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
