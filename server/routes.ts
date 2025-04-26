@@ -449,10 +449,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (apiKey) {
         const jellyfinCreds = await storage.getJellyfinCredentials();
         if (jellyfinCreds) {
+          // Only pass the fields that are expected by the storage method
           await storage.saveJellyfinCredentials({
-            ...jellyfinCreds,
             apiKey,
             url: serverUrl || jellyfinCreds.url,
+            adminUsername: jellyfinCreds.adminUsername,
+            adminPassword: jellyfinCreds.adminPassword,
+            // Convert null to undefined to match the interface
+            accessToken: jellyfinCreds.accessToken === null ? undefined : jellyfinCreds.accessToken,
+            userId: jellyfinCreds.userId === null ? undefined : jellyfinCreds.userId
           });
         }
       }
