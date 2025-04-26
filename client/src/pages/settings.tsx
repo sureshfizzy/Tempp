@@ -18,8 +18,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Server, Brush, Globe, Users, Home, LogOut, AlertTriangle, Menu } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Upload, Server, Brush, Globe, Users, AlertTriangle } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 
 // Define a form schema for server settings
 const serverSettingsSchema = z.object({
@@ -245,82 +245,14 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-sm">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            {/* Mobile menu button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="md:hidden"
-              onClick={() => setActiveTab("menu")}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            
-            <Link href="/" className="flex items-center gap-2">
-              <Home className="h-5 w-5" />
-              <span className="font-semibold">Dashboard</span>
-            </Link>
-            
-            {/* Desktop navigation */}
-            <nav className="hidden md:flex items-center gap-5 text-sm">
-              <Link href="/users" className="text-muted-foreground hover:text-foreground transition-colors">
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>Users</span>
-                </div>
-              </Link>
-              <Link href="/activity" className="text-muted-foreground hover:text-foreground transition-colors">
-                <div className="flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="22 12 16 12 14 15 10 9 8 12 2 12"></polyline></svg>
-                  <span>Activity</span>
-                </div>
-              </Link>
-              <Link href="/settings" className="font-medium text-primary">
-                <div className="flex items-center gap-1">
-                  <Server className="h-4 w-4" />
-                  <span>Settings</span>
-                </div>
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <ThemeToggle />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleDisconnect}
-              disabled={disconnectMutation.isPending}
-              className="hidden md:flex"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Disconnect</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDisconnect}
-              disabled={disconnectMutation.isPending}
-              className="md:hidden px-2"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={userQuery.data?.jellyfinUserId ? `/api/users/${userQuery.data.jellyfinUserId}/image` : undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {userQuery.data?.username?.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden text-sm font-medium md:inline-block">
-                {userQuery.data?.username}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader 
+        title="Jellyfin User Management"
+        subtitle={connectionQuery.data?.url}
+        user={userQuery.data}
+        onDisconnect={handleDisconnect}
+        isDisconnecting={disconnectMutation.isPending}
+        isAdmin={userQuery.data?.isAdmin}
+      />
 
       {/* Main content */}
       <main className="container py-6">
@@ -590,55 +522,7 @@ export default function SettingsPage() {
                   </Card>
                 </TabsContent>
                 
-                {/* Mobile Navigation Menu */}
-                <TabsContent value="menu" className="md:hidden space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Navigation</CardTitle>
-                      <CardDescription>
-                        Navigate to other sections
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-2">
-                      <Link 
-                        href="/dashboard" 
-                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
-                      >
-                        <Home className="h-5 w-5" />
-                        <span>Dashboard</span>
-                      </Link>
-                      <Link 
-                        href="/users" 
-                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
-                      >
-                        <Users className="h-5 w-5" />
-                        <span>Users</span>
-                      </Link>
-                      <Link 
-                        href="/activity" 
-                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 9 8 12 2 12"></polyline></svg>
-                        <span>Activity</span>
-                      </Link>
-                      <Link 
-                        href="/settings" 
-                        className="flex items-center space-x-2 rounded-md p-3 bg-primary/10 text-primary"
-                      >
-                        <Server className="h-5 w-5" />
-                        <span>Settings</span>
-                      </Link>
-                      <button
-                        className="flex items-center space-x-2 rounded-md p-3 text-destructive hover:bg-destructive/10 mt-4"
-                        onClick={handleDisconnect}
-                        disabled={disconnectMutation.isPending}
-                      >
-                        <LogOut className="h-5 w-5" />
-                        <span>Disconnect from Server</span>
-                      </button>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+
 
                 <div className="flex justify-end">
                   <Button 
