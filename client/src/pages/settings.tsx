@@ -18,7 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Server, Brush, Globe, Users, Home, LogOut, AlertTriangle } from "lucide-react";
+import { Upload, Server, Brush, Globe, Users, Home, LogOut, AlertTriangle, Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 // Define a form schema for server settings
@@ -249,10 +249,22 @@ export default function SettingsPage() {
       <header className="border-b bg-card shadow-sm">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
+            {/* Mobile menu button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden"
+              onClick={() => setActiveTab("menu")}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            
             <Link href="/" className="flex items-center gap-2">
               <Home className="h-5 w-5" />
               <span className="font-semibold">Dashboard</span>
             </Link>
+            
+            {/* Desktop navigation */}
             <nav className="hidden md:flex items-center gap-5 text-sm">
               <Link href="/users" className="text-muted-foreground hover:text-foreground transition-colors">
                 <div className="flex items-center gap-1">
@@ -274,16 +286,26 @@ export default function SettingsPage() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <ThemeToggle />
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleDisconnect}
               disabled={disconnectMutation.isPending}
+              className="hidden md:flex"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Disconnect</span>
+              <span>Disconnect</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDisconnect}
+              disabled={disconnectMutation.isPending}
+              className="md:hidden px-2"
+            >
+              <LogOut className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
@@ -504,6 +526,22 @@ export default function SettingsPage() {
                         )}
                       />
                     </CardContent>
+                    <CardFooter>
+                      <Button 
+                        type="submit" 
+                        className="ml-auto"
+                        disabled={updateSettingsMutation.isPending}
+                      >
+                        {updateSettingsMutation.isPending ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Appearance Settings"
+                        )}
+                      </Button>
+                    </CardFooter>
                   </Card>
                 </TabsContent>
 
@@ -532,6 +570,72 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        type="submit" 
+                        className="ml-auto"
+                        disabled={updateSettingsMutation.isPending}
+                      >
+                        {updateSettingsMutation.isPending ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Invite Settings"
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Mobile Navigation Menu */}
+                <TabsContent value="menu" className="md:hidden space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Navigation</CardTitle>
+                      <CardDescription>
+                        Navigate to other sections
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2">
+                      <Link 
+                        href="/dashboard" 
+                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
+                      >
+                        <Home className="h-5 w-5" />
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link 
+                        href="/users" 
+                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
+                      >
+                        <Users className="h-5 w-5" />
+                        <span>Users</span>
+                      </Link>
+                      <Link 
+                        href="/activity" 
+                        className="flex items-center space-x-2 rounded-md p-3 hover:bg-muted"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 9 8 12 2 12"></polyline></svg>
+                        <span>Activity</span>
+                      </Link>
+                      <Link 
+                        href="/settings" 
+                        className="flex items-center space-x-2 rounded-md p-3 bg-primary/10 text-primary"
+                      >
+                        <Server className="h-5 w-5" />
+                        <span>Settings</span>
+                      </Link>
+                      <button
+                        className="flex items-center space-x-2 rounded-md p-3 text-destructive hover:bg-destructive/10 mt-4"
+                        onClick={handleDisconnect}
+                        disabled={disconnectMutation.isPending}
+                      >
+                        <LogOut className="h-5 w-5" />
+                        <span>Disconnect from Server</span>
+                      </button>
                     </CardContent>
                   </Card>
                 </TabsContent>
