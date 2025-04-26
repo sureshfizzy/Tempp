@@ -89,12 +89,20 @@
     --cinema-blue-light: 210 100% 70%;
     --cinema-text: 0 0% 100%;
   }
-}
-
-@layer base {
+  
+  @keyframes spotlight {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+  }
+  
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--tw-gradient-stops));
+  }
+  
   * {
     @apply border-border;
   }
+  
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }

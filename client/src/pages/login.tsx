@@ -157,96 +157,136 @@ export default function LoginPage() {
     setLocation("/onboarding");
   };
 
-  // Desktop render
+  // Desktop render - Cinema Inspired Theme
   const DesktopLogin = () => (
-    <div className="min-h-screen flex overflow-hidden">
-      {/* Movie background with gradient overlay */}
+    <div className="min-h-screen flex overflow-hidden bg-black">
+      {/* Movie background with dynamic theater-style overlays */}
       <MovieBackground />
       
-      {/* Left Panel (Content) */}
-      <div className="relative w-full md:w-1/2 flex items-center justify-center p-8">
+      {/* Cinema Decorations */}
+      <div className="absolute inset-0 z-0 opacity-60">
+        <CinemaDecoration />
+      </div>
+      
+      {/* Content with theater-inspired design */}
+      <div className="relative w-full md:w-1/2 flex items-center justify-center p-8 z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.8 }}
           className="w-full max-w-md"
         >
+          {/* Logo header with spotlight effect */}
           <motion.div 
-            className="mb-8 text-center"
+            className="mb-8 text-center relative"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
           >
-            <div className="flex items-center justify-center mb-4">
-              <Film className="h-12 w-12 text-primary" />
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow">
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-80 h-80 bg-gradient-radial from-blue-600/20 via-transparent to-transparent rounded-full opacity-70 animate-pulse"></div>
+            
+            <motion.div
+              className="flex items-center justify-center mb-4 relative"
+              animate={{ 
+                y: [0, -5, 0, 5, 0] 
+              }}
+              transition={{ 
+                duration: 4, 
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+            >
+              <Film className="h-16 w-16 text-primary blue-glow" />
+            </motion.div>
+            
+            <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow tracking-wider">
               Jellyfin Manager
             </h1>
-            <p className="text-gray-300">
+            <p className="text-gray-300 text-lg">
               Your complete media server management solution
             </p>
           </motion.div>
           
-          <Card className="cinema-card border-primary/20">
-            <CardContent className="pt-6">
-              {!connectionStatus?.connected ? (
-                <div className="text-center py-4">
-                  {connectionStatus?.configured ? (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Your Jellyfin server is configured but you are not connected.
-                        Please log in with your credentials.
-                      </p>
-                      <LoginForm />
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        You need to connect to a Jellyfin server first before you can log in.
-                      </p>
-                      <Button 
-                        onClick={handleReconnect}
-                        className="bg-primary hover:bg-primary/90 text-white"
-                      >
-                        Connect to Server
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center text-teal-400 mb-4 text-sm">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Connected to {connectionStatus.serverUrl}</span>
+          {/* Glass-morphism login card with cinema style */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+          >
+            <Card className="cinema-card border-primary/20">
+              <CardContent className="pt-6">
+                {!connectionStatus?.connected ? (
+                  <div className="text-center py-4">
+                    {connectionStatus?.configured ? (
+                      <>
+                        <p className="mb-4 text-gray-300">
+                          Your Jellyfin server is configured but you are not connected.
+                          Please log in with your credentials.
+                        </p>
+                        <LoginForm />
+                      </>
+                    ) : (
+                      <>
+                        <p className="mb-4 text-gray-300">
+                          You need to connect to a Jellyfin server first before you can log in.
+                        </p>
+                        <Button 
+                          onClick={handleReconnect}
+                          className="bg-primary hover:bg-primary/90 text-white blue-glow"
+                        >
+                          Connect to Server
+                        </Button>
+                      </>
+                    )}
                   </div>
-                  <LoginForm />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div>
+                    <div className="flex items-center text-teal-400 mb-4 text-sm">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <span>Connected to {connectionStatus.serverUrl}</span>
+                    </div>
+                    <LoginForm />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
       </div>
       
-      {/* Right Panel (Big hero image) - only on desktop */}
-      <div className="hidden md:block relative w-1/2">
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/80 z-10" />
+      {/* Right Panel - Theater Screen Effect */}
+      <div className="hidden md:block relative w-1/2 z-0">
+        {/* Theater screen frame */}
+        <div className="absolute inset-y-0 inset-x-10 border-4 border-gray-800 rounded-lg shadow-2xl m-8 overflow-hidden">
+          {/* Theater curtain effect */}
+          <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black to-transparent"></div>
+          <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black to-transparent"></div>
+          <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-black to-transparent"></div>
+          <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-black to-transparent"></div>
+          
+          {/* Gradient overlay for better visibility */}
+          <div className="absolute inset-0 bg-gradient-to-l from-transparent to-black/80 z-10" />
+        </div>
       </div>
     </div>
   );
 
-  // Mobile render - creative design based on reference
+  // Mobile render - Cinema Theme
   const MobileLogin = () => (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-cinema-dark to-black">
-      {/* Decorative elements */}
+      {/* Animated cinema decoration elements */}
       <CinemaDecoration />
       
-      {/* Content */}
+      {/* Content with cinema theater styling */}
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6 z-10">
+        {/* Spotlight effect */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vh] h-[150vh] bg-gradient-radial from-blue-600/10 via-transparent to-transparent rounded-full"></div>
+        
+        {/* Logo and header area */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
           className="w-full max-w-md text-center mb-8"
         >
           <motion.div
@@ -261,23 +301,25 @@ export default function LoginPage() {
               repeatType: "reverse"
             }}
           >
-            <ClapperboardIcon className="h-16 w-16 text-primary" />
+            <ClapperboardIcon className="h-16 w-16 text-primary blue-glow" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2 blue-text-glow">
+          
+          <h1 className="text-3xl font-bold text-white mb-2 blue-text-glow tracking-wider">
             Welcome Back
           </h1>
-          <p className="text-gray-300">
+          <p className="text-gray-300 text-lg">
             Sign in to manage your Jellyfin server
           </p>
         </motion.div>
         
+        {/* Login card with cinema styling */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
           className="w-full max-w-md"
         >
-          <Card className="cinema-card">
+          <Card className="cinema-card border-primary/20">
             <CardContent className="pt-6">
               {!connectionStatus?.connected ? (
                 <div className="text-center py-4">
@@ -295,7 +337,7 @@ export default function LoginPage() {
                       </p>
                       <Button 
                         onClick={handleReconnect}
-                        className="bg-primary hover:bg-primary/90 text-white"
+                        className="bg-primary hover:bg-primary/90 text-white blue-glow"
                       >
                         Connect Server
                       </Button>
