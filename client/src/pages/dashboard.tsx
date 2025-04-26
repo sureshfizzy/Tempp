@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { getUsers, disconnectFromJellyfin, getConnectionStatus } from "@/lib/jellyfin";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LogOut, User, UserCheck, Settings, CheckCircle } from "lucide-react";
+import { LogOut, User, UserCheck, Settings, CheckCircle, Users } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 export default function Dashboard() {
@@ -34,7 +34,8 @@ export default function Dashboard() {
         title: "Disconnected",
         description: "You have been disconnected from the Jellyfin server",
       });
-      setLocation("/");
+      // Instead of going to onboarding, redirect to login page
+      setLocation("/login");
     },
     onError: (error) => {
       toast({
@@ -86,126 +87,143 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-neutral-800">Dashboard</h2>
-          <p className="text-neutral-600">Welcome to your Jellyfin user management dashboard</p>
-        </div>
+      {/* Sidebar and Main Content */}
+      <div className="flex flex-col md:flex-row">
+        <aside className="w-full md:w-64 bg-white border-r shadow-sm p-4">
+          <nav className="space-y-1">
+            <Link to="/dashboard" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-primary bg-opacity-10 text-primary">
+              <Settings className="mr-2 h-5 w-5" />
+              Dashboard
+            </Link>
+            
+            <Link to="/users" className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-100">
+              <Users className="mr-2 h-5 w-5" />
+              User Accounts
+            </Link>
+          </nav>
+        </aside>
 
-        {/* Dashboard Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Main Content */}
+        <main className="flex-1 p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-neutral-800">Dashboard</h2>
+            <p className="text-neutral-600">Welcome to your Jellyfin user management dashboard</p>
+          </div>
+
+          {/* Dashboard Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <User className="h-5 w-5 mr-2 text-primary" />
+                  Total Users
+                </CardTitle>
+                <CardDescription>All users on your Jellyfin server</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {usersQuery.isLoading ? (
+                    <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                  ) : (
+                    usersQuery.data?.length || 0
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <UserCheck className="h-5 w-5 mr-2 text-green-500" />
+                  Admin Users
+                </CardTitle>
+                <CardDescription>Users with administrator access</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {usersQuery.isLoading ? (
+                    <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                  ) : (
+                    adminCount
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <User className="h-5 w-5 mr-2 text-blue-500" />
+                  Regular Users
+                </CardTitle>
+                <CardDescription>Users with standard access</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {usersQuery.isLoading ? (
+                    <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                  ) : (
+                    regularUserCount
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Server Status Card */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <User className="h-5 w-5 mr-2 text-primary" />
-                Total Users
-              </CardTitle>
-              <CardDescription>All users on your Jellyfin server</CardDescription>
+            <CardHeader>
+              <CardTitle>Server Status</CardTitle>
+              <CardDescription>Information about your Jellyfin server connection</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
-                {usersQuery.isLoading ? (
-                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
-                ) : (
-                  usersQuery.data?.length || 0
-                )}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-neutral-500">Server URL</span>
+                    <span className="font-medium">{connectionStatusQuery.data?.url || "Not available"}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-neutral-500">Connection Status</span>
+                    <span className="font-medium flex items-center">
+                      {connectionStatusQuery.data?.connected ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                          Connected
+                        </>
+                      ) : (
+                        <>
+                          <span className="h-4 w-4 text-red-500 mr-1">●</span>
+                          Disconnected
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/connection-status"] })}
+                      className="mr-2"
+                    >
+                      Refresh Status
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={handleDisconnect}
+                      disabled={disconnectMutation.isPending}
+                    >
+                      {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <UserCheck className="h-5 w-5 mr-2 text-green-500" />
-                Admin Users
-              </CardTitle>
-              <CardDescription>Users with administrator access</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {usersQuery.isLoading ? (
-                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
-                ) : (
-                  adminCount
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <User className="h-5 w-5 mr-2 text-blue-500" />
-                Regular Users
-              </CardTitle>
-              <CardDescription>Users with standard access</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {usersQuery.isLoading ? (
-                  <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
-                ) : (
-                  regularUserCount
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Server Status Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Server Status</CardTitle>
-            <CardDescription>Information about your Jellyfin server connection</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <span className="text-sm text-neutral-500">Server URL</span>
-                  <span className="font-medium">{connectionStatusQuery.data?.url || "Not available"}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm text-neutral-500">Connection Status</span>
-                  <span className="font-medium flex items-center">
-                    {connectionStatusQuery.data?.connected ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                        Connected
-                      </>
-                    ) : (
-                      <>
-                        <span className="h-4 w-4 text-red-500 mr-1">●</span>
-                        Disconnected
-                      </>
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/connection-status"] })}
-                    className="mr-2"
-                  >
-                    Refresh Status
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    onClick={handleDisconnect}
-                    disabled={disconnectMutation.isPending}
-                  >
-                    {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
