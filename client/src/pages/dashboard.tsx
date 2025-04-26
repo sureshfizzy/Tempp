@@ -1,17 +1,39 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { getUsers, disconnectFromJellyfin, getConnectionStatus } from "@/lib/jellyfin";
+import { 
+  getUsers, 
+  disconnectFromJellyfin, 
+  getConnectionStatus, 
+  getUserProfiles,
+  createInvite,
+  getInvites,
+  formatExpiryTime 
+} from "@/lib/jellyfin";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LogOut, User, UserCheck, Settings, CheckCircle, Users, Film } from "lucide-react";
+import { LogOut, User, UserCheck, Settings, CheckCircle, Users, Film, Infinity } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { AppHeader } from "@/components/app-header";
+import { Switch } from "@/components/ui/switch";
+import { InsertInvite } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Invite form state
+  const [inviteMonths, setInviteMonths] = useState<number>(0);
+  const [inviteDays, setInviteDays] = useState<number>(7);
+  const [inviteHours, setInviteHours] = useState<number>(0);
+  const [inviteMinutes, setInviteMinutes] = useState<number>(0);
+  const [inviteLabel, setInviteLabel] = useState<string>("");
+  const [userLabel, setUserLabel] = useState<string>("");
+  const [numberOfUses, setNumberOfUses] = useState<number | null>(1);
+  const [isInfiniteUses, setIsInfiniteUses] = useState<boolean>(false);
+  const [userExpiryEnabled, setUserExpiryEnabled] = useState<boolean>(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
 
   // Get Jellyfin connection status
   const connectionStatusQuery = useQuery({
@@ -25,6 +47,53 @@ export default function Dashboard() {
     queryKey: ["/api/users"],
     queryFn: getUsers,
     refetchInterval: 30000, // Refetch every 30 seconds
+  });
+  
+  // Get all invites
+  const invitesQuery = useQuery({
+    queryKey: ["/api/invites"],
+    queryFn: getInvites,
+    enabled: connectionStatusQuery.data?.isAdmin === true,
+  });
+  
+  // Get user profiles
+  const profilesQuery = useQuery({
+    queryKey: ["/api/user-profiles"],
+    queryFn: getUserProfiles,
+    enabled: connectionStatusQuery.data?.isAdmin === true,
+  });
+
+  // Create invite mutation
+  const createInviteMutation = useMutation({
+    mutationFn: (data: Partial<InsertInvite>) => createInvite(data),
+    onSuccess: () => {
+      toast({
+        title: "Invite Created",
+        description: "New invite has been created successfully",
+      });
+      
+      // Reset form
+      setInviteMonths(0);
+      setInviteDays(7);
+      setInviteHours(0);
+      setInviteMinutes(0);
+      setInviteLabel("");
+      setUserLabel("");
+      setNumberOfUses(1);
+      setIsInfiniteUses(false);
+      setUserExpiryEnabled(false);
+      setSelectedProfileId(null);
+      
+      // Refresh invites list
+      queryClient.invalidateQueries({ queryKey: ["/api/invites"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create invite",
+        variant: "destructive",
+      });
+    }
   });
 
   // Disconnect mutation
@@ -57,6 +126,38 @@ export default function Dashboard() {
   // Handle disconnect
   const handleDisconnect = () => {
     disconnectMutation.mutate();
+  };
+  
+  // Handle create invite
+  const handleCreateInvite = () => {
+    // Validate form
+    if (isInfiniteUses && numberOfUses !== null) {
+      // If infinite uses is selected, set numberOfUses to null
+      setNumberOfUses(null);
+    }
+    
+    if (!isInfiniteUses && (!numberOfUses || numberOfUses < 1)) {
+      toast({
+        title: "Validation Error",
+        description: "Number of uses must be at least 1",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create invite data
+    const inviteData: Partial<InsertInvite> = {
+      maxUses: isInfiniteUses ? null : numberOfUses,
+      label: inviteLabel || null,
+      userLabel: userLabel || null,
+      userExpiryEnabled,
+      userExpiryMonths: inviteMonths,
+      userExpiryDays: inviteDays,
+      userExpiryHours: inviteHours,
+      profileId: selectedProfileId
+    };
+    
+    createInviteMutation.mutate(inviteData);
   };
 
   // Count user types
@@ -162,7 +263,37 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-6">
               <div className="bg-muted/50 rounded-md p-4">
-                <p className="text-muted-foreground text-sm">None</p>
+                {invitesQuery.isLoading ? (
+                  <p className="text-muted-foreground text-sm">Loading invites...</p>
+                ) : invitesQuery.error ? (
+                  <p className="text-muted-foreground text-sm">Error loading invites</p>
+                ) : invitesQuery.data && invitesQuery.data.length > 0 ? (
+                  <div className="space-y-3">
+                    {invitesQuery.data.map(invite => (
+                      <div key={invite.id} className="flex justify-between items-center p-3 border rounded-md bg-card">
+                        <div>
+                          <p className="font-medium">{invite.label || `Invite #${invite.id}`}</p>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <p>Code: {invite.code}</p>
+                            <p>Uses: {invite.remainingUses === null ? 'Unlimited' : `${invite.remainingUses} remaining`}</p>
+                            <p>Expires in: {formatExpiryTime(invite.expiresInMonths || 0, invite.expiresInDays || 0, invite.expiresInHours || 0)}</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => {
+                            // Implement delete function
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No invites have been created yet</p>
+                )}
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4">Create</h3>
@@ -174,44 +305,60 @@ export default function Dashboard() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">MONTHS</label>
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                            <option>0</option>
-                            <option>1</option>
-                            <option>3</option>
-                            <option>6</option>
-                            <option>12</option>
+                          <select 
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={inviteMonths}
+                            onChange={(e) => setInviteMonths(parseInt(e.target.value))}
+                          >
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="3">3</option>
+                            <option value="6">6</option>
+                            <option value="12">12</option>
                           </select>
                         </div>
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">DAYS</label>
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                            <option>0</option>
-                            <option>1</option>
-                            <option>7</option>
-                            <option>14</option>
-                            <option>30</option>
+                          <select 
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={inviteDays}
+                            onChange={(e) => setInviteDays(parseInt(e.target.value))}
+                          >
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="7">7</option>
+                            <option value="14">14</option>
+                            <option value="30">30</option>
                           </select>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 mt-2">
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">HOURS</label>
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                            <option>0</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>6</option>
-                            <option>12</option>
-                            <option>24</option>
+                          <select 
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={inviteHours}
+                            onChange={(e) => setInviteHours(parseInt(e.target.value))}
+                          >
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="6">6</option>
+                            <option value="12">12</option>
+                            <option value="24">24</option>
                           </select>
                         </div>
                         <div>
                           <label className="text-xs text-muted-foreground block mb-1">MINUTES</label>
-                          <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                            <option>0</option>
-                            <option>15</option>
-                            <option>30</option>
-                            <option>45</option>
+                          <select 
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={inviteMinutes}
+                            onChange={(e) => setInviteMinutes(parseInt(e.target.value))}
+                          >
+                            <option value="0">0</option>
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                            <option value="45">45</option>
                           </select>
                         </div>
                       </div>
@@ -220,7 +367,12 @@ export default function Dashboard() {
                     <div>
                       <h4 className="text-sm font-medium mb-2">USER EXPIRY</h4>
                       <div className="flex items-center mb-4">
-                        <input type="checkbox" id="userExpiry" className="mr-2" />
+                        <Switch 
+                          id="userExpiry" 
+                          checked={userExpiryEnabled}
+                          onCheckedChange={setUserExpiryEnabled}
+                          className="mr-2"
+                        />
                         <label htmlFor="userExpiry" className="text-sm">Enabled</label>
                       </div>
                       <p className="text-xs text-muted-foreground">A specified amount of time after each signup, the account will be disabled.</p>
@@ -228,13 +380,25 @@ export default function Dashboard() {
                     
                     <div>
                       <h4 className="text-sm font-medium mb-2">LABEL</h4>
-                      <input type="text" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Label for this invite (optional)" />
+                      <input 
+                        type="text" 
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+                        placeholder="Label for this invite (optional)"
+                        value={inviteLabel}
+                        onChange={(e) => setInviteLabel(e.target.value)}
+                      />
                     </div>
                     
                     <div>
                       <h4 className="text-sm font-medium mb-2">USER LABEL</h4>
                       <p className="text-xs text-muted-foreground mb-2">Label to apply to users created with this invite.</p>
-                      <input type="text" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="User label (optional)" />
+                      <input 
+                        type="text" 
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+                        placeholder="User label (optional)"
+                        value={userLabel}
+                        onChange={(e) => setUserLabel(e.target.value)}
+                      />
                     </div>
                   </div>
                   
@@ -242,25 +406,47 @@ export default function Dashboard() {
                     <div>
                       <h4 className="text-sm font-medium mb-2">NUMBER OF USES</h4>
                       <div className="flex items-center space-x-2">
-                        <input type="number" min="1" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="1" />
-                        <button className="rounded-md border border-input bg-background p-2">
-                          <span className="text-xl">∞</span>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+                          value={numberOfUses === null ? '' : numberOfUses}
+                          onChange={(e) => setNumberOfUses(e.target.value ? parseInt(e.target.value) : 1)}
+                          disabled={isInfiniteUses}
+                        />
+                        <button 
+                          className={`rounded-md border p-2 ${isInfiniteUses ? 'bg-primary text-white' : 'bg-background'}`}
+                          onClick={() => setIsInfiniteUses(!isInfiniteUses)}
+                          type="button"
+                        >
+                          <Infinity className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
                     
                     <div>
                       <h4 className="text-sm font-medium mb-2">PROFILE</h4>
-                      <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                        <option>Basic Profile</option>
-                        <option>Advanced Profile</option>
-                        <option>Family Profile</option>
+                      <select 
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={selectedProfileId || ''}
+                        onChange={(e) => setSelectedProfileId(e.target.value ? parseInt(e.target.value) : null)}
+                      >
+                        <option value="">No profile (use default)</option>
+                        {profilesQuery.data && profilesQuery.data.map(profile => (
+                          <option key={profile.id} value={profile.id}>
+                            {profile.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     
                     <div className="flex justify-end mt-8">
-                      <Button className="bg-primary text-white w-full mt-8">
-                        CREATE
+                      <Button 
+                        className="bg-primary text-white w-full mt-8"
+                        onClick={handleCreateInvite}
+                        disabled={createInviteMutation.isPending}
+                      >
+                        {createInviteMutation.isPending ? 'CREATING...' : 'CREATE'}
                       </Button>
                     </div>
                   </div>

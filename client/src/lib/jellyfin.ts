@@ -1,4 +1,4 @@
-import { User, NewUser, UserActivity } from "@shared/schema";
+import { User, NewUser, UserActivity, Invite, InsertInvite, UserProfile } from "@shared/schema";
 
 // Validate Jellyfin server URL is reachable
 export async function validateJellyfinUrl(url: string): Promise<boolean> {
@@ -250,4 +250,98 @@ export function formatWatchTime(minutes: number): string {
   }
   
   return `${hours}h ${remainingMinutes}m`;
+}
+
+// Get all user profiles
+export async function getUserProfiles(): Promise<UserProfile[]> {
+  try {
+    const response = await fetch('/api/user-profiles');
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch user profiles");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user profiles:", error);
+    throw error;
+  }
+}
+
+// Get all invites
+export async function getInvites(): Promise<Invite[]> {
+  try {
+    const response = await fetch('/api/invites');
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch invites");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching invites:", error);
+    throw error;
+  }
+}
+
+// Create a new invite
+export async function createInvite(inviteData: Partial<InsertInvite>): Promise<Invite> {
+  try {
+    const response = await fetch('/api/invites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(inviteData)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to create invite");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating invite:", error);
+    throw error;
+  }
+}
+
+// Delete an invite
+export async function deleteInvite(id: number): Promise<void> {
+  try {
+    const response = await fetch(`/api/invites/${id}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error("Failed to delete invite");
+    }
+  } catch (error) {
+    console.error("Error deleting invite:", error);
+    throw error;
+  }
+}
+
+// Format expiration time for display
+export function formatExpiryTime(months: number = 0, days: number = 0, hours: number = 0): string {
+  if (months === 0 && days === 0 && hours === 0) {
+    return "Never expires";
+  }
+  
+  const parts = [];
+  
+  if (months > 0) {
+    parts.push(`${months} month${months > 1 ? 's' : ''}`);
+  }
+  
+  if (days > 0) {
+    parts.push(`${days} day${days > 1 ? 's' : ''}`);
+  }
+  
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+  }
+  
+  return parts.join(', ');
 }
