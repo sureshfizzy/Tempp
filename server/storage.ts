@@ -168,10 +168,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveJellyfinCredentials(
-    credentials: Partial<InsertJellyfinCredentials> & { 
-      accessToken?: string | null, 
-      userId?: string | null 
-    }
+    credentials: Partial<InsertJellyfinCredentials> & { accessToken?: string, userId?: string }
   ): Promise<JellyfinCredentials> {
     try {
       // Check if credentials already exist
