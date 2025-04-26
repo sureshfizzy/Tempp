@@ -1,21 +1,91 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Jellyfin credential schema
+// Server Configuration schema
+export const serverConfig = pgTable("server_config", {
+  id: serial("id").primaryKey(),
+  url: text("url").notNull(),
+  apiKey: text("api_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertServerConfigSchema = createInsertSchema(serverConfig).pick({
+  url: true,
+  apiKey: true,
+});
+
+// App User schema (these are users of our application, not Jellyfin users)
+export const appUsers = pgTable("app_users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  password: text("password").notNull(),
+  email: text("email").notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
+  jellyfinUserId: text("jellyfin_user_id").notNull(),
+  plexEmail: text("plex_email"),
+  embyEmail: text("emby_email"),
+  paypalEmail: text("paypal_email"),
+  discordUsername: text("discord_username"),
+  discordId: text("discord_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    usernameIdx: uniqueIndex("username_idx").on(table.username),
+    emailIdx: uniqueIndex("email_idx").on(table.email),
+  };
+});
+
+export const insertAppUserSchema = createInsertSchema(appUsers).pick({
+  username: true,
+  password: true, 
+  email: true,
+  isAdmin: true,
+  jellyfinUserId: true,
+  plexEmail: true,
+  embyEmail: true,
+  paypalEmail: true,
+  discordUsername: true,
+  discordId: true,
+  notes: true,
+});
+
+// Session schema
+export const sessions = pgTable("sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => appUsers.id),
+  token: text("token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSessionSchema = createInsertSchema(sessions).pick({
+  userId: true,
+  token: true,
+  expiresAt: true,
+});
+
+// Jellyfin credential schema (one for the overall system)
 export const jellyfinCredentials = pgTable("jellyfin_credentials", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
-  username: text("username").notNull(),
-  password: text("password").notNull(),
+  apiKey: text("api_key").notNull(),
+  adminUsername: text("admin_username").notNull(),
+  adminPassword: text("admin_password").notNull(),
   accessToken: text("access_token"),
   userId: text("user_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertJellyfinCredentialsSchema = createInsertSchema(jellyfinCredentials).pick({
   url: true,
-  username: true,
-  password: true,
+  apiKey: true,
+  adminUsername: true,
+  adminPassword: true,
 });
 
 // Define the types for Jellyfin users based on their API structure
@@ -110,8 +180,26 @@ export const userActivitySchema = z.object({
   Severity: z.string(),
 });
 
+// Login schema
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+// Define types
+export type ServerConfig = typeof serverConfig.$inferSelect;
+export type InsertServerConfig = z.infer<typeof insertServerConfigSchema>;
+
+export type AppUser = typeof appUsers.$inferSelect;
+export type InsertAppUser = z.infer<typeof insertAppUserSchema>;
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+
 export type JellyfinCredentials = typeof jellyfinCredentials.$inferSelect;
 export type InsertJellyfinCredentials = z.infer<typeof insertJellyfinCredentialsSchema>;
+
 export type User = z.infer<typeof userSchema>;
 export type NewUser = z.infer<typeof newUserSchema>;
 export type UserActivity = z.infer<typeof userActivitySchema>;
+export type Login = z.infer<typeof loginSchema>;

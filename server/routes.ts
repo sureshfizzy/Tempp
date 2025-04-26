@@ -1,33 +1,154 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import fetch from "node-fetch";
-import { insertJellyfinCredentialsSchema, userSchema, newUserSchema, userActivitySchema } from "@shared/schema";
+import { 
+  insertJellyfinCredentialsSchema, 
+  userSchema, 
+  newUserSchema, 
+  userActivitySchema, 
+  insertServerConfigSchema,
+  loginSchema
+} from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 
 // Extend the session type to include our custom properties
 declare module 'express-session' {
   interface SessionData {
     connected?: boolean;
+    userId?: number;
+    isAdmin?: boolean;
+    jellyfinUserId?: string;
   }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configure session middleware
-  const MemoryStoreSession = MemoryStore(session);
+  // Configure session middleware with PostgreSQL
+  const PgSession = connectPgSimple(session);
+  
   app.use(
     session({
+      store: new PgSession({
+        pool,
+        tableName: 'sessions', // Match our schema
+        createTableIfMissing: true
+      }),
       secret: "jellyfin-manager-secret",
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: process.env.NODE_ENV === "production", maxAge: 24 * 60 * 60 * 1000 },
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
+      cookie: { secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 days
     })
   );
+  
+  // Middleware to check if user is authenticated for protected routes
+  const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    // Check if session user exists in database
+    const user = await storage.getUserById(req.session.userId);
+    if (!user) {
+      // Clear invalid session
+      req.session.destroy((err) => {
+        if (err) console.error("Error destroying session:", err);
+      });
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    next();
+  };
+  
+  // Middleware to check if user is admin
+  const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session?.userId || !req.session.isAdmin) {
+      return res.status(403).json({ message: "Admin privileges required" });
+    }
+    
+    // Double-check admin status from database
+    const user = await storage.getUserById(req.session.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Admin privileges required" });
+    }
+    
+    next();
+  };
+
+  // Check if system has been configured
+  app.get("/api/system/status", async (req: Request, res: Response) => {
+    try {
+      const serverConfig = await storage.getServerConfig();
+      const jellyfinCreds = await storage.getJellyfinCredentials();
+      
+      // Check if the user is logged in
+      const isAuthenticated = Boolean(req.session?.userId);
+      
+      return res.status(200).json({
+        configured: Boolean(serverConfig && jellyfinCreds),
+        authenticated: isAuthenticated,
+        isAdmin: Boolean(req.session?.isAdmin)
+      });
+    } catch (error) {
+      console.error("Error checking system status:", error);
+      return res.status(500).json({ message: "Failed to check system status" });
+    }
+  });
+
+  // Initial server setup - only available if not configured
+  app.post("/api/system/setup", async (req: Request, res: Response) => {
+    try {
+      // Check if already configured
+      const existingConfig = await storage.getServerConfig();
+      if (existingConfig) {
+        return res.status(400).json({ message: "System already configured" });
+      }
+      
+      // Validate server config
+      const { url, apiKey } = insertServerConfigSchema.parse(req.body);
+      
+      // Format API URL
+      const apiUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+      
+      // Verify the Jellyfin server is reachable
+      const infoResponse = await fetch(`${apiUrl}/System/Info/Public`, {
+        headers: {
+          "Accept": "application/json",
+          "X-MediaBrowser-Token": apiKey
+        }
+      });
+      
+      if (!infoResponse.ok) {
+        return res.status(400).json({ 
+          message: `Could not connect to Jellyfin server: ${infoResponse.statusText}` 
+        });
+      }
+      
+      const serverInfo = await infoResponse.json();
+      
+      // Save server configuration to database
+      await storage.saveServerConfig({ url: apiUrl, apiKey });
+      
+      return res.status(200).json({ 
+        message: "Server configuration saved successfully",
+        serverName: serverInfo.ServerName,
+        version: serverInfo.Version
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        return res.status(500).json({ 
+          message: `Failed to configure server: ${error.message}` 
+        });
+      }
+      return res.status(500).json({ message: "Failed to configure server" });
+    }
+  });
 
   // Validate Jellyfin server URL
   app.post("/api/validate-url", async (req: Request, res: Response) => {
@@ -60,8 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serverInfo = await response.json();
       return res.status(200).json({ 
         message: "Jellyfin server validated successfully",
-        serverName: serverInfo.ServerName,
-        version: serverInfo.Version
+        serverName: serverInfo.ServerName || "",
+        version: serverInfo.Version || ""
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -75,15 +196,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Connect to Jellyfin API - save credentials and test connection
+  // Connect to Jellyfin API - save admin credentials
   app.post("/api/connect", async (req: Request, res: Response) => {
     try {
-      const credentials = insertJellyfinCredentialsSchema.parse(req.body);
+      // Get server config first (required for connection)
+      const serverConfig = await storage.getServerConfig();
+      if (!serverConfig) {
+        return res.status(400).json({ message: "Server not configured. Please set up the server first." });
+      }
       
-      // Format API URL
-      const apiUrl = credentials.url.endsWith('/') 
-        ? credentials.url.slice(0, -1) 
-        : credentials.url;
+      // Extract API URL and key
+      const apiUrl = serverConfig.url;
+      const apiKey = serverConfig.apiKey;
+      
+      // Extract admin credentials from request
+      const { adminUsername, adminPassword } = req.body;
+      
+      if (!adminUsername || !adminPassword) {
+        return res.status(400).json({ message: "Admin username and password are required" });
+      }
       
       // Step 1: Get authentication headers
       const deviceId = "jellyfin-user-manager";
@@ -100,8 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "X-Emby-Authorization": authHeaderValue
         },
         body: JSON.stringify({
-          Username: credentials.username,
-          Pw: credentials.password
+          Username: adminUsername,
+          Pw: adminPassword
         })
       });
 
@@ -134,18 +265,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Save credentials with token and userId
-      const credentialsToSave = {
-        ...credentials,
+      // Save Jellyfin credentials with token and userId
+      await storage.saveJellyfinCredentials({
+        url: apiUrl,
+        apiKey,
+        adminUsername,
+        adminPassword,
         accessToken,
         userId
-      };
-
-      await storage.saveJellyfinCredentials(credentialsToSave);
+      });
       
-      // Store in session
-      if (req.session) {
-        req.session.connected = true;
+      // Create admin user in our system if it doesn't exist
+      const existingUser = await storage.getUserByUsername(adminUsername);
+      
+      if (!existingUser) {
+        // Create an admin user in our system
+        const appUser = await storage.createUser({
+          username: adminUsername,
+          password: adminPassword,
+          email: `${adminUsername}@admin.local`, // Placeholder email
+          isAdmin: true,
+          jellyfinUserId: userId
+        });
+        
+        // Set session
+        if (req.session) {
+          req.session.connected = true;
+          req.session.userId = appUser.id;
+          req.session.isAdmin = true;
+          req.session.jellyfinUserId = userId;
+        }
+      } else {
+        // Set session with existing user
+        if (req.session) {
+          req.session.connected = true;
+          req.session.userId = existingUser.id;
+          req.session.isAdmin = existingUser.isAdmin;
+          req.session.jellyfinUserId = existingUser.jellyfinUserId;
+        }
       }
 
       return res.status(200).json({ 
@@ -183,24 +340,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check connection status
   app.get("/api/connection-status", async (req: Request, res: Response) => {
     try {
-      const isConnected = req.session?.connected === true;
-      const credentials = await storage.getJellyfinCredentials();
+      const isAuthenticated = Boolean(req.session?.userId);
+      const isAdmin = Boolean(req.session?.isAdmin);
+      const serverConfig = await storage.getServerConfig();
+      const jellyfinCreds = await storage.getJellyfinCredentials();
       
-      if (isConnected && credentials) {
-        return res.status(200).json({ 
-          connected: true,
-          url: credentials.url
-        });
-      }
-      
-      return res.status(200).json({ connected: false });
+      return res.status(200).json({ 
+        connected: isAuthenticated,
+        isAdmin,
+        configured: Boolean(serverConfig && jellyfinCreds),
+        serverUrl: serverConfig?.url
+      });
     } catch (error) {
       return res.status(500).json({ message: "Failed to get connection status" });
     }
   });
+  
+  // User login
+  app.post("/api/login", async (req: Request, res: Response) => {
+    try {
+      // Validate login data
+      const loginData = loginSchema.parse(req.body);
+      
+      // Verify user exists
+      const user = await storage.getUserByUsername(loginData.username);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Verify password
+      const isPasswordValid = await storage.validatePassword(user, loginData.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Setup session
+      if (req.session) {
+        req.session.connected = true;
+        req.session.userId = user.id;
+        req.session.isAdmin = user.isAdmin;
+        req.session.jellyfinUserId = user.jellyfinUserId;
+      }
+      
+      return res.status(200).json({
+        message: "Login successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      console.error("Login error:", error);
+      return res.status(500).json({ message: "Failed to login" });
+    }
+  });
+  
+  // Get current user info
+  app.get("/api/me", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session!.userId!;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.status(200).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        jellyfinUserId: user.jellyfinUserId
+      });
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      return res.status(500).json({ message: "Failed to fetch user information" });
+    }
+  });
 
   // Get all users
-  app.get("/api/users", async (req: Request, res: Response) => {
+  app.get("/api/users", requireAuth, async (req: Request, res: Response) => {
     try {
       const credentials = await storage.getJellyfinCredentials();
       
@@ -208,13 +431,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Not connected to Jellyfin server" });
       }
 
-      const apiUrl = credentials.url.endsWith('/') 
-        ? credentials.url.slice(0, -1) 
-        : credentials.url;
+      const apiUrl = credentials.url;
       
       const response = await fetch(`${apiUrl}/Users`, {
         headers: {
-          "X-Emby-Token": credentials.accessToken || "" || "",
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -228,7 +449,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the response with zod
       const parsedUsers = z.array(userSchema).parse(users);
       
-      return res.status(200).json(parsedUsers);
+      // If admin, return all users
+      // If regular user, only return own info
+      if (req.session?.isAdmin) {
+        return res.status(200).json(parsedUsers);
+      } else {
+        // Only return the current user's data
+        const jellyfinUserId = req.session?.jellyfinUserId;
+        const currentUserData = parsedUsers.find(user => user.Id === jellyfinUserId);
+        
+        if (!currentUserData) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        return res.status(200).json([currentUserData]);
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       return res.status(500).json({ message: "Failed to fetch users" });
