@@ -5,8 +5,9 @@ import { getUsers, disconnectFromJellyfin, getConnectionStatus } from "@/lib/jel
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LogOut, User, UserCheck, Settings, CheckCircle, Users } from "lucide-react";
+import { LogOut, User, UserCheck, Settings, CheckCircle, Users, FileBarChart } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -80,6 +81,7 @@ export default function Dashboard() {
                 {connectionStatusQuery.data?.serverUrl || "Jellyfin Server"}
               </span>
             </div>
+            <ThemeToggle />
             <Button 
               variant="ghost" 
               size="sm"
@@ -176,6 +178,123 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Invite System Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Invites</CardTitle>
+              <CardDescription>Create and manage server joining invitations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="bg-muted/50 rounded-md p-4">
+                  <p className="text-muted-foreground text-sm">None</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Create</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">INVITE DURATION</h4>
+                        <p className="text-xs text-muted-foreground mb-2">A specified amount of time after creation, the invite will expire.</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-1">MONTHS</label>
+                            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                              <option>0</option>
+                              <option>1</option>
+                              <option>3</option>
+                              <option>6</option>
+                              <option>12</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-1">DAYS</label>
+                            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                              <option>0</option>
+                              <option>1</option>
+                              <option>7</option>
+                              <option>14</option>
+                              <option>30</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-1">HOURS</label>
+                            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                              <option>0</option>
+                              <option>1</option>
+                              <option>2</option>
+                              <option>6</option>
+                              <option>12</option>
+                              <option>24</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-1">MINUTES</label>
+                            <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                              <option>0</option>
+                              <option>15</option>
+                              <option>30</option>
+                              <option>45</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">USER EXPIRY</h4>
+                        <div className="flex items-center mb-4">
+                          <input type="checkbox" id="userExpiry" className="mr-2" />
+                          <label htmlFor="userExpiry" className="text-sm">Enabled</label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">A specified amount of time after each signup, the account will be disabled.</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">LABEL</h4>
+                        <input type="text" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Label for this invite (optional)" />
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">USER LABEL</h4>
+                        <p className="text-xs text-muted-foreground mb-2">Label to apply to users created with this invite.</p>
+                        <input type="text" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="User label (optional)" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">NUMBER OF USES</h4>
+                        <div className="flex items-center space-x-2">
+                          <input type="number" min="1" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="1" />
+                          <button className="rounded-md border border-input bg-background p-2">
+                            <span className="text-xl">∞</span>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">PROFILE</h4>
+                        <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                          <option>Basic Profile</option>
+                          <option>Advanced Profile</option>
+                          <option>Family Profile</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex justify-end mt-8">
+                        <Button className="bg-primary text-white w-full mt-8">
+                          CREATE
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Server Status Card */}
           <Card>

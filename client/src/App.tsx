@@ -11,6 +11,7 @@ import UsersPage from "@/pages/users";
 import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeProvider } from "@/hooks/use-theme";
 
 // Helper function to check if the user is connected to Jellyfin
 const checkConnectionStatus = async () => {
@@ -128,10 +129,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider defaultTheme="system">
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
