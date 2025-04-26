@@ -14,7 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LogOut, User, UserCheck, Settings, CheckCircle, Users, Film, Infinity } from "lucide-react";
+import { LogOut, User, UserCheck, Settings, CheckCircle, Users, Film, Infinity, Copy } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { AppHeader } from "@/components/app-header";
 import { Switch } from "@/components/ui/switch";
@@ -304,23 +304,55 @@ export default function Dashboard() {
                     {invitesQuery.data.map(invite => (
                       <div key={invite.id} className="flex justify-between items-center p-3 border rounded-md bg-card">
                         <div>
-                          <p className="font-medium">{invite.label || `Invite #${invite.id}`}</p>
+                          <p className="font-medium">{invite.label || `Invite ${invite.code.slice(0, 4)}`}</p>
                           <div className="text-xs text-muted-foreground mt-1">
-                            <p>Code: {invite.code}</p>
-                            <p>Uses: {invite.maxUses === null ? 'Unlimited' : `${invite.usesRemaining} remaining`}</p>
-                            <p>Expires in: {formatExpiryTime(invite.userExpiryMonths || 0, invite.userExpiryDays || 0, invite.userExpiryHours || 0)}</p>
+                            <p className="flex items-center">
+                              Code: {invite.code}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 w-6 p-0 ml-1" 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(invite.code);
+                                  toast({
+                                    title: "Copied",
+                                    description: "Invite code copied to clipboard",
+                                  });
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </p>
+                            <p>Uses: {invite.maxUses === null ? 'Unlimited' : (invite.usedCount !== undefined ? `${invite.maxUses - (invite.usedCount || 0)} remaining` : 'Unlimited')}</p>
+                            <p>Expires in: {formatExpiryTime(0, 0, invite.userExpiryHours || 0)}</p>
                           </div>
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => deleteInviteMutation.mutate(invite.id)}
-                          disabled={deleteInviteMutation.isPending && deleteInviteId === invite.id}
-                        >
-                          {deleteInviteMutation.isPending && deleteInviteId === invite.id 
-                            ? "Deleting..." 
-                            : "Delete"}
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invite.code);
+                              toast({
+                                title: "Copied",
+                                description: "Invite code copied to clipboard",
+                              });
+                            }}
+                            className="px-2 py-1 h-8"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => deleteInviteMutation.mutate(invite.id)}
+                            disabled={deleteInviteMutation.isPending && deleteInviteId === invite.id}
+                          >
+                            {deleteInviteMutation.isPending && deleteInviteId === invite.id 
+                              ? "Deleting..." 
+                              : "Delete"}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -333,68 +365,59 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-sm font-medium mb-2">INVITE DURATION</h4>
-                      <p className="text-xs text-muted-foreground mb-2">A specified amount of time after creation, the invite will expire.</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">MONTHS</label>
-                          <select 
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            value={inviteMonths}
-                            onChange={(e) => setInviteMonths(parseInt(e.target.value))}
-                          >
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="3">3</option>
-                            <option value="6">6</option>
-                            <option value="12">12</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">DAYS</label>
-                          <select 
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            value={inviteDays}
-                            onChange={(e) => setInviteDays(parseInt(e.target.value))}
-                          >
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="7">7</option>
-                            <option value="14">14</option>
-                            <option value="30">30</option>
-                          </select>
-                        </div>
+                      <h4 className="text-sm font-medium mb-2">INVITE EXPIRATION</h4>
+                      <p className="text-xs text-muted-foreground mb-2">Control when this invite will expire.</p>
+                      
+                      <div className="flex border rounded-md mb-3">
+                        <button 
+                          className={`py-2 px-4 text-xs font-medium ${neverExpires ? 'bg-primary text-white' : 'text-muted-foreground'}`}
+                          onClick={() => setNeverExpires(true)}
+                        >
+                          Never Expires
+                        </button>
+                        <button 
+                          className={`py-2 px-4 text-xs font-medium ${!neverExpires ? 'bg-primary text-white' : 'text-muted-foreground'}`}
+                          onClick={() => setNeverExpires(false)}
+                        >
+                          Set Expiry Time
+                        </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">HOURS</label>
-                          <select 
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            value={inviteHours}
-                            onChange={(e) => setInviteHours(parseInt(e.target.value))}
-                          >
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="6">6</option>
-                            <option value="12">12</option>
-                            <option value="24">24</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">MINUTES</label>
-                          <select 
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            value={inviteMinutes}
-                            onChange={(e) => setInviteMinutes(parseInt(e.target.value))}
-                          >
-                            <option value="0">0</option>
-                            <option value="15">15</option>
-                            <option value="30">30</option>
-                            <option value="45">45</option>
-                          </select>
-                        </div>
-                      </div>
+                      
+                      {!neverExpires && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs text-muted-foreground block mb-1">DAYS</label>
+                              <select 
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={inviteDays}
+                                onChange={(e) => setInviteDays(parseInt(e.target.value))}
+                              >
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="7">7</option>
+                                <option value="14">14</option>
+                                <option value="30">30</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground block mb-1">HOURS</label>
+                              <select 
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={inviteHours}
+                                onChange={(e) => setInviteHours(parseInt(e.target.value))}
+                              >
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="6">6</option>
+                                <option value="12">12</option>
+                                <option value="24">24</option>
+                              </select>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                     
                     <div>
