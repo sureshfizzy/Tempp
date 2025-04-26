@@ -222,3 +222,29 @@ export type User = z.infer<typeof userSchema>;
 export type NewUser = z.infer<typeof newUserSchema>;
 export type UserActivity = z.infer<typeof userActivitySchema>;
 export type Login = z.infer<typeof loginSchema>;
+
+// User Profiles schema
+export const userProfiles = pgTable("user_profiles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  sourceUserId: text("source_user_id").notNull(), // Jellyfin User ID that this profile is based on
+  sourceName: text("source_name").notNull(), // Jellyfin User Name for display
+  isDefault: boolean("is_default").default(false),
+  libraryAccess: text("library_access").default("[]"), // JSON string of library IDs
+  homeLayout: text("home_layout").default("[]"), // JSON string of home layout config
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserProfileSchema = createInsertSchema(userProfiles).pick({
+  name: true,
+  sourceUserId: true,
+  sourceName: true,
+  isDefault: true,
+  libraryAccess: true,
+  homeLayout: true,
+});
+
+// User profile related types
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;

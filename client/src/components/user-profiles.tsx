@@ -98,7 +98,11 @@ export function UserProfiles() {
   // Create profile mutation
   const createProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      return await apiRequest("/api/user-profiles", data, "POST");
+      return await apiRequest<any>("/api/user-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-profiles"] });
@@ -121,7 +125,9 @@ export function UserProfiles() {
   // Delete profile mutation
   const deleteProfileMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/user-profiles/${id}`, {}, "DELETE");
+      return await apiRequest<any>(`/api/user-profiles/${id}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-profiles"] });
