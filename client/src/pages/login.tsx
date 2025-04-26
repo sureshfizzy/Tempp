@@ -141,6 +141,12 @@ export default function LoginPage() {
                       Your Jellyfin server is configured but you are not connected.
                       Please log in with your credentials.
                     </p>
+                    {loginError && (
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{loginError}</AlertDescription>
+                      </Alert>
+                    )}
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <FormField
@@ -206,6 +212,12 @@ export default function LoginPage() {
               </div>
             ) : (
               <>
+                {loginError && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{loginError}</AlertDescription>
+                  </Alert>
+                )}
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField

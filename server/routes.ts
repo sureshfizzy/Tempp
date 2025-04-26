@@ -389,7 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Found user:", user ? JSON.stringify({ id: user.id, username: user.username, isAdmin: user.isAdmin }) : "null");
       
       if (!user) {
-        // Let's try to see if user exists in Jellyfin but not in our db
+        // For security reasons, let's add a more informative message but still return 401
+        // Now let's try to see if user exists in Jellyfin but not in our db
         try {
           const credentials = await storage.getJellyfinCredentials();
           if (credentials) {
@@ -488,7 +489,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Password valid:", isPasswordValid);
       
       if (!isPasswordValid) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        // For security reasons, we don't want to distinguish between nonexistent users and bad passwords
+        return res.status(401).json({ 
+          message: "Invalid username or password",
+          details: "The credentials you provided are incorrect. Note that usernames and passwords are case-sensitive."
+        });
       }
       
       // Setup session
@@ -509,10 +514,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+        console.error("Login validation error:", error.errors);
+        return res.status(400).json({ 
+          message: "Invalid input data", 
+          errors: error.errors.map(err => `${err.path}: ${err.message}`).join(', ')
+        });
       }
       console.error("Login error:", error);
-      return res.status(500).json({ message: "Failed to login" });
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to login due to server error" 
+      });
     }
   });
   
