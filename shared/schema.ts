@@ -283,5 +283,20 @@ export const insertInviteSchema = createInsertSchema(invites)
     maxUses: z.number().nullable(), // Allow null for unlimited uses
   });
 
-export type Invite = typeof invites.$inferSelect;
+// Custom Invite type to match our explicit selection
+export type Invite = {
+  id: number;
+  code: string;
+  label: string | null;
+  userLabel: string | null;
+  profileId: number | null;
+  maxUses: number | null;
+  expiresAt: Date | null;
+  userExpiryEnabled: boolean;
+  userExpiryMonths: number;
+  userExpiryDays: number;
+  userExpiryHours: number;
+  createdAt: Date;
+  createdBy: number | null;
+};
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
