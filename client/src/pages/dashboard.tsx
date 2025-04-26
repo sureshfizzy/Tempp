@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [numberOfUses, setNumberOfUses] = useState<number | null>(1);
   const [isInfiniteUses, setIsInfiniteUses] = useState<boolean>(false);
   const [userExpiryEnabled, setUserExpiryEnabled] = useState<boolean>(false);
+  const [neverExpires, setNeverExpires] = useState<boolean>(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [deleteInviteId, setDeleteInviteId] = useState<number | null>(null);
 
@@ -84,6 +85,7 @@ export default function Dashboard() {
       setNumberOfUses(1);
       setIsInfiniteUses(false);
       setUserExpiryEnabled(false);
+      setNeverExpires(false);
       setSelectedProfileId(null);
       
       // Refresh invites list
@@ -183,10 +185,9 @@ export default function Dashboard() {
       label: inviteLabel || null,
       userLabel: userLabel || null,
       userExpiryEnabled,
-      userExpiryMonths: inviteMonths,
-      userExpiryDays: inviteDays,
-      userExpiryHours: inviteHours,
-      profileId: selectedProfileId
+      // We only need to send userExpiryHours now that we've removed the other fields
+      userExpiryHours: neverExpires ? 0 : inviteHours,
+      profileId: selectedProfileId ? String(selectedProfileId) : null
     };
     
     createInviteMutation.mutate(inviteData);
