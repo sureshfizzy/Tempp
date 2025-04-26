@@ -1,39 +1,58 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { z } from "zod";
+import { 
+  getConnectionStatus,
+  Login
+} from "@/lib/jellyfin";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  Card, 
+  CardContent 
+} from "@/components/ui/card";
+import { 
+  Alert, 
+  AlertDescription 
+} from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { getConnectionStatus } from "@/lib/jellyfin";
 import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowRight, CheckCircle, Settings, Film, ClapperboardIcon } from "lucide-react";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { 
+  AlertCircle, 
+  ArrowRight, 
+  CheckCircle, 
+  Film, 
+  Settings,
+  ClapperboardIcon
+} from "lucide-react";
 import { MovieBackground } from "@/components/movie-background";
 import { CinemaDecoration } from "@/components/cinema-decoration";
 
-// Login form schema
+// Form schema for the login form
 const loginFormSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string()
+    .min(1, "Username is required"),
+  password: z.string()
+    .min(1, "Password is required")
 });
 
+// Infer the type from the schema
 type LoginFormData = z.infer<typeof loginFormSchema>;
 
-// Login response type
+// API Response type
 interface LoginResponse {
   message: string;
   user: {
@@ -44,22 +63,29 @@ interface LoginResponse {
 }
 
 export default function LoginPage() {
-  const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Get connection status to check if we have a server URL configured
-  // Disable auto-refresh completely with staleTime: Infinity
-  const connectionQuery = useQuery({
-    queryKey: ["/api/connection-status"],
-    queryFn: getConnectionStatus,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false
-  });
+  // Disable auto-refresh completely with fetched data
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  
+  // One-time fetch on component mount only, no refetching or polling
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      try {
+        const data = await getConnectionStatus();
+        setConnectionStatus(data);
+      } catch (error) {
+        console.error("Failed to fetch connection status:", error);
+      }
+    };
+    
+    fetchConnectionStatus();
+  }, []);
 
   // Login mutation
   const loginMutation = useMutation<LoginResponse, Error, LoginFormData>({
@@ -165,9 +191,9 @@ export default function LoginPage() {
           
           <Card className="cinema-card border-primary/20">
             <CardContent className="pt-6">
-              {!connectionQuery.data?.connected ? (
+              {!connectionStatus?.connected ? (
                 <div className="text-center py-4">
-                  {connectionQuery.data?.configured ? (
+                  {connectionStatus?.configured ? (
                     <>
                       <p className="mb-4 text-gray-300">
                         Your Jellyfin server is configured but you are not connected.
@@ -193,7 +219,7 @@ export default function LoginPage() {
                 <div>
                   <div className="flex items-center text-teal-400 mb-4 text-sm">
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Connected to {connectionQuery.data.serverUrl}</span>
+                    <span>Connected to {connectionStatus.serverUrl}</span>
                   </div>
                   <LoginForm />
                 </div>
@@ -254,9 +280,9 @@ export default function LoginPage() {
         >
           <Card className="cinema-card">
             <CardContent className="pt-6">
-              {!connectionQuery.data?.connected ? (
+              {!connectionStatus?.connected ? (
                 <div className="text-center py-4">
-                  {connectionQuery.data?.configured ? (
+                  {connectionStatus?.configured ? (
                     <>
                       <p className="mb-4 text-gray-300">
                         Your Jellyfin server is configured but you are not connected.
@@ -374,5 +400,6 @@ export default function LoginPage() {
     </>
   );
 
+  // Render based on screen size
   return isMobile ? <MobileLogin /> : <DesktopLogin />;
 }

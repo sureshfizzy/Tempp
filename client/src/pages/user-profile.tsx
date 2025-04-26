@@ -230,13 +230,36 @@ export default function UserProfilePage() {
                     <div className="space-y-4">
                       {watchHistoryQuery.data.Items.map((activity, idx) => (
                         <div key={idx} className="flex items-start border-b border-gray-800 pb-4 last:border-0 last:pb-0">
-                          <div className="h-10 w-10 rounded-md bg-blue-500/10 flex items-center justify-center mr-4">
-                            <Film className="h-5 w-5 text-blue-400" />
-                          </div>
+                          {activity.ImageTag ? (
+                            <div className="h-16 w-12 rounded-md overflow-hidden mr-4 flex-shrink-0">
+                              <img 
+                                src={`/api/users/${userQuery.data?.jellyfinUserId}/item-image/${activity.Id}?tag=${activity.ImageTag}`} 
+                                alt={activity.Name} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback if image fails to load
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div className="h-full w-full rounded-md bg-blue-500/10 hidden items-center justify-center">
+                                <Film className="h-5 w-5 text-blue-400" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-16 w-12 rounded-md bg-blue-500/10 flex items-center justify-center mr-4 flex-shrink-0">
+                              <Film className="h-5 w-5 text-blue-400" />
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-white">{activity.Name}</p>
+                            {activity.SeriesName && (
+                              <p className="text-sm text-blue-400">{activity.SeriesName} {activity.SeasonName ? `• ${activity.SeasonName}` : ''}</p>
+                            )}
                             <p className="text-sm text-gray-400">
                               Watched {activity.Type === "Movie" ? "movie" : "episode"} • {formatDate(activity.Date)}
+                              {activity.ProductionYear && ` • ${activity.ProductionYear}`}
                             </p>
                           </div>
                         </div>
