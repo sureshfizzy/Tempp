@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/onboarding";
 import Dashboard from "@/pages/dashboard";
-import UsersPage from "@/pages/users";
+// Import the new users page instead of the old one
+import UsersPage from "@/pages/users-new";
 import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
