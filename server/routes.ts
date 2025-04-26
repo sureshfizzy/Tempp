@@ -2017,11 +2017,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const code = req.params.code;
       const invite = await storage.getInviteByCode(code);
       if (invite) {
-        // Don't return all details, just confirmation it exists and any public info
+        // Return more details for the invite signup page
         res.status(200).json({
           valid: true,
           label: invite.label,
-          profileId: invite.profileId
+          userLabel: invite.userLabel,
+          profileId: invite.profileId,
+          expiresAt: invite.expiresAt,
+          userExpiryEnabled: invite.userExpiryEnabled,
+          userExpiryHours: invite.userExpiryHours
         });
       } else {
         res.status(404).json({ error: "Invite not found or expired" });

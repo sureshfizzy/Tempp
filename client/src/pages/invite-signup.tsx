@@ -60,12 +60,11 @@ export default function InviteSignupPage() {
   // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/register", data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to register");
+      try {
+        return await apiRequest("/api/register", data);
+      } catch (error) {
+        throw error;
       }
-      return response.json();
     },
     onSuccess: (data) => {
       setSuccess("Your account has been created successfully! You will be redirected to the dashboard shortly.");
