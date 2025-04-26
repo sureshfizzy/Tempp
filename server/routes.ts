@@ -1292,6 +1292,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ---- Activity Logging Endpoints ----
   
+  // Get user watch time
+  app.get("/api/users/:id/watch-time", async (req: Request, res: Response) => {
+    try {
+      // Check if connected to Jellyfin
+      if (!req.session.connected) {
+        return res.status(401).json({ message: "Not connected to Jellyfin" });
+      }
+
+      const { id } = req.params;
+      console.log(`Watch time: Calculating for user ${id}`);
+      
+      // Get credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials || !credentials.accessToken) {
+        return res.status(401).json({ message: "No Jellyfin credentials available" });
+      }
+      
+      // Prepare API URL
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
+      
+      // First get all played items to calculate total watch time
+      // Using higher limit to get a more accurate calculation
+      const playedItemsUrl = `${apiUrl}/Users/${id}/Items?IncludeItemTypes=Movie,Episode&Recursive=true&Filters=IsPlayed&fields=MediaSources,RunTimeTicks&limit=50`;
+      
+      const response = await fetch(playedItemsUrl, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken,
+        },
+      });
+      
+      if (!response.ok) {
+        console.error("Watch time: Jellyfin API returned an error:", response.status, response.statusText);
+        return res.status(response.status).json({ message: "Failed to fetch watch time from Jellyfin" });
+      }
+      
+      const data = await response.json();
+      
+      // Calculate total minutes from RunTimeTicks of all items
+      let totalMinutes = 0;
+      
+      if (data.Items && Array.isArray(data.Items)) {
+        data.Items.forEach((item: any) => {
+          if (item.RunTimeTicks) {
+            // RunTimeTicks is in 100-nanosecond intervals, convert to minutes
+            // 1 minute = 60 seconds = 60 * 10^7 ticks
+            const minutes = item.RunTimeTicks / (600000000);
+            totalMinutes += minutes;
+          }
+        });
+      }
+      
+      console.log(`Watch time: Calculated ${Math.round(totalMinutes)} minutes for user ${id}`);
+      
+      return res.status(200).json({
+        totalMinutes: Math.round(totalMinutes),
+        itemCount: data.Items?.length || 0
+      });
+    } catch (error) {
+      console.error("Error calculating watch time:", error);
+      return res.status(500).json({ message: "Failed to calculate watch time", totalMinutes: 0 });
+    }
+  });
+  
   // Get activity logs
   app.get("/api/activity", async (req: Request, res: Response) => {
     try {
