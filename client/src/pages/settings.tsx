@@ -18,8 +18,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Server, Brush, Globe, Users, AlertTriangle } from "lucide-react";
+import { Upload, Server, Brush, Globe, Users, AlertTriangle, UserCog } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
+import { UserProfiles } from "@/components/user-profiles";
 
 // Define a form schema for server settings
 const serverSettingsSchema = z.object({
@@ -278,6 +279,10 @@ export default function SettingsPage() {
                 <Users className="mr-2 h-4 w-4" />
                 Invites
               </TabsTrigger>
+              <TabsTrigger value="profiles" className="flex-1 md:flex-initial">
+                <UserCog className="mr-2 h-4 w-4" />
+                User Profiles
+              </TabsTrigger>
             </TabsList>
 
             <Form {...form}>
@@ -520,6 +525,10 @@ export default function SettingsPage() {
                       </Button>
                     </CardFooter>
                   </Card>
+                </TabsContent>
+
+                <TabsContent value="profiles" className="space-y-4">
+                  <UserProfiles />
                 </TabsContent>
                 
 
