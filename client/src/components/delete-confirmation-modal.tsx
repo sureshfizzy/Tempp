@@ -1,7 +1,17 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import { User } from "@shared/schema";
-import { AlertTriangle, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -19,56 +29,50 @@ export default function DeleteConfirmationModal({
   onCancel 
 }: DeleteConfirmationModalProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-medium">Confirm Delete</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4"
-            onClick={onCancel}
-            disabled={isDeleting}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogHeader>
-
-        <div className="p-1">
-          <div className="flex items-center text-destructive mb-4">
-            <AlertTriangle className="text-3xl mr-3 h-8 w-8" />
-            <div className="text-neutral-800 font-medium">Delete User Account?</div>
-          </div>
+    <AlertDialog open={isOpen} onOpenChange={onCancel}>
+      <AlertDialogContent>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <AlertDialogHeader className="flex flex-col items-center">
+            <div className="bg-red-100 p-3 rounded-full mb-4">
+              <AlertTriangle className="h-10 w-10 text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-xl">Delete User Account</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Are you sure you want to delete <span className="font-semibold">{user.Name}</span>?<br />
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           
-          <p className="text-neutral-700 mb-6">
-            Are you sure you want to delete the user "<span className="font-medium">{user.Name}</span>"? This action cannot be undone and will permanently remove the user from your Jellyfin server.
-          </p>
-        </div>
-
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={onCancel}
-            disabled={isDeleting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent border-current"></div>
-                Deleting...
-              </>
-            ) : (
-              "Delete User"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <AlertDialogFooter className="flex justify-center space-x-2 mt-6">
+            <AlertDialogCancel asChild>
+              <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button 
+                variant="destructive" 
+                onClick={onConfirm}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete User"
+                )}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </motion.div>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
