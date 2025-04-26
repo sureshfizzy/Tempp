@@ -378,17 +378,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User login
   app.post("/api/login", async (req: Request, res: Response) => {
     try {
+      console.log("Login attempt with body:", JSON.stringify(req.body));
+      
       // Validate login data
       const loginData = loginSchema.parse(req.body);
+      console.log("Parsed login data:", JSON.stringify(loginData));
       
       // Verify user exists
       const user = await storage.getUserByUsername(loginData.username);
+      console.log("Found user:", user ? JSON.stringify({ id: user.id, username: user.username, isAdmin: user.isAdmin }) : "null");
+      
       if (!user) {
+        // Let's try to see if user exists in Jellyfin but not in our db
+        try {
+          const credentials = await storage.getJellyfinCredentials();
+          if (credentials) {
+            const apiUrl = credentials.url.endsWith('/') 
+              ? credentials.url.slice(0, -1) 
+              : credentials.url;
+            
+            // Try to get all users from Jellyfin
+            const response = await fetch(`${apiUrl}/Users`, {
+              headers: {
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+            });
+            
+            if (response.ok) {
+              const jellyfinUsers = await response.json();
+              console.log("Jellyfin user count:", jellyfinUsers.length);
+              
+              // See if a user with this username exists in Jellyfin
+              const jellyfinUser = jellyfinUsers.find((u: any) => u.Name.toLowerCase() === loginData.username.toLowerCase());
+              console.log("Found Jellyfin user:", jellyfinUser ? "yes" : "no");
+              
+              if (jellyfinUser) {
+                console.log("User exists in Jellyfin but not in local DB, creating local user");
+                // This user exists in Jellyfin but not in our local DB
+                // Create a local user for them with the provided password
+                try {
+                  const newLocalUser = await storage.createUser({
+                    username: jellyfinUser.Name,
+                    password: loginData.password,
+                    email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+                    isAdmin: Boolean(jellyfinUser.Policy?.IsAdministrator),
+                    jellyfinUserId: jellyfinUser.Id
+                  });
+                  
+                  console.log("Created local user with ID:", newLocalUser.id);
+                  
+                  // Continue with the created user
+                  if (req.session) {
+                    req.session.connected = true;
+                    req.session.userId = newLocalUser.id;
+                    req.session.isAdmin = newLocalUser.isAdmin;
+                    req.session.jellyfinUserId = newLocalUser.jellyfinUserId;
+                  }
+                  
+                  return res.status(200).json({
+                    message: "Login successful",
+                    user: {
+                      id: newLocalUser.id,
+                      username: newLocalUser.username,
+                      isAdmin: newLocalUser.isAdmin
+                    }
+                  });
+                } catch (err) {
+                  console.error("Error creating local user during login:", err);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error checking Jellyfin users during login:", err);
+        }
+        
         return res.status(401).json({ message: "Invalid username or password" });
       }
       
       // Verify password
       const isPasswordValid = await storage.validatePassword(user, loginData.password);
+      console.log("Password valid:", isPasswordValid);
+      
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
