@@ -29,6 +29,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Validate Jellyfin server URL
+  app.post("/api/validate-url", async (req: Request, res: Response) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ message: "URL is required" });
+      }
+      
+      // Format API URL
+      const apiUrl = url.endsWith('/') 
+        ? url.slice(0, -1) 
+        : url;
+      
+      // Try to hit the Jellyfin info endpoint to validate URL
+      const response = await fetch(`${apiUrl}/System/Info/Public`, {
+        headers: {
+          "Accept": "application/json",
+        }
+      });
+      
+      if (!response.ok) {
+        return res.status(400).json({ 
+          message: `Could not connect to Jellyfin server: ${response.statusText}` 
+        });
+      }
+      
+      // Successfully validated
+      const serverInfo = await response.json();
+      return res.status(200).json({ 
+        message: "Jellyfin server validated successfully",
+        serverName: serverInfo.ServerName,
+        version: serverInfo.Version
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ 
+          message: `Failed to validate Jellyfin server URL: ${error.message}` 
+        });
+      }
+      return res.status(500).json({ 
+        message: "Failed to validate Jellyfin server URL" 
+      });
+    }
+  });
+
   // Connect to Jellyfin API - save credentials and test connection
   app.post("/api/connect", async (req: Request, res: Response) => {
     try {

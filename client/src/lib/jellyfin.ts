@@ -1,5 +1,28 @@
 import { User, NewUser, UserActivity } from "@shared/schema";
 
+// Validate Jellyfin server URL is reachable
+export async function validateJellyfinUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch("/api/validate-url", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to validate Jellyfin server URL");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error validating Jellyfin URL:", error);
+    throw error;
+  }
+}
+
 // Connect to Jellyfin API using username/password
 export async function connectToJellyfin(url: string, username: string, password: string): Promise<boolean> {
   try {
