@@ -423,6 +423,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // This user exists in Jellyfin but not in our local DB
                 // Create a local user for them with the provided password
                 try {
+                  // Try to login to Jellyfin with this username/password to verify credentials
+                  const jellyfinLoginResponse = await fetch(`${apiUrl}/Users/AuthenticateByName`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "X-Emby-Authorization": `MediaBrowser Client="Jellyfin Web", Device="Browser", DeviceId="TempDevice", Version="10.8.0"`
+                    },
+                    body: JSON.stringify({
+                      Username: loginData.username,
+                      Pw: loginData.password
+                    })
+                  });
+                  
+                  if (!jellyfinLoginResponse.ok) {
+                    console.log("Jellyfin login failed for new user");
+                    return res.status(401).json({ message: "Invalid username or password" });
+                  }
+                  
+                  const jellyfinLoginData = await jellyfinLoginResponse.json();
+                  console.log("Jellyfin login successful for new user");
+                  
                   const newLocalUser = await storage.createUser({
                     username: jellyfinUser.Name,
                     password: loginData.password,
@@ -563,13 +584,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Make an educated guess about admin status
             const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
             
+            const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
             await storage.createUser({
               username: jellyfinUser.Name,
-              password: "changeme", // Default password
+              password: tempPassword, // Random password for security
               email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
               isAdmin: isAdmin,
               jellyfinUserId: jellyfinUser.Id
             });
+            console.log(`Created local user for ${jellyfinUser.Name} with temporary password`);
           }
         }
       } catch (err) {
@@ -750,10 +773,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also create the user in our local database for authentication
       try {
         const isAdmin = newUser.Role === "Administrator";
+        // When creating a new user, leave the password as is since it will be hashed by storage.createUser
         await storage.createUser({
           username: newUser.Name,
-          password: newUser.Password || "changeme", // Default password if none provided
-          email: newUser.Email || `${newUser.Name}@jellyfin.local`, // Placeholder email if none provided
+          password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
+          email: newUser.Email || `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
           isAdmin: isAdmin,
           jellyfinUserId: userId
         });
