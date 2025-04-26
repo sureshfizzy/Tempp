@@ -468,6 +468,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the response with zod
       const parsedUsers = z.array(userSchema).parse(users);
       
+      // Synchronize Jellyfin users with local database
+      try {
+        // Get existing app users
+        const appUsers = await storage.getAllUsers();
+        const appUsersByJellyfinId = new Map(
+          appUsers
+            .filter(user => user.jellyfinUserId)
+            .map(user => [user.jellyfinUserId, user])
+        );
+        
+        // For each Jellyfin user, create an app user if one doesn't exist
+        for (const jellyfinUser of parsedUsers) {
+          if (!appUsersByJellyfinId.has(jellyfinUser.Id)) {
+            console.log(`Syncing user: Creating local user for ${jellyfinUser.Name} with Jellyfin ID ${jellyfinUser.Id}`);
+            
+            // Make an educated guess about admin status
+            const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
+            
+            await storage.createUser({
+              username: jellyfinUser.Name,
+              password: "changeme", // Default password
+              email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+              isAdmin: isAdmin,
+              jellyfinUserId: jellyfinUser.Id
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing users to local database:", err);
+        // Continue even if sync fails - we'll still return the Jellyfin users
+      }
+      
       // If admin, return all users
       // If regular user, only return own info
       if (req.session?.isAdmin) {
