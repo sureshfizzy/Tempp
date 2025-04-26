@@ -106,7 +106,7 @@ export default function LoginPage() {
               {connectionQuery.data?.connected ? (
                 <div className="flex items-center text-green-600">
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Connected to {connectionQuery.data.url}</span>
+                  <span>Connected to {connectionQuery.data.serverUrl}</span>
                 </div>
               ) : (
                 <div className="text-orange-500">

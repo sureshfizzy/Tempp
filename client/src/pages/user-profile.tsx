@@ -97,7 +97,7 @@ export default function UserProfilePage() {
               <CheckCircle className="text-green-300 mr-1 h-4 w-4" />
               <span className="hidden md:inline">Connected to:</span>
               <span className="font-medium ml-1 max-w-xs truncate">
-                {connectionQuery.data?.url || "Jellyfin Server"}
+                {connectionQuery.data?.serverUrl || "Jellyfin Server"}
               </span>
             </div>
             <Button 
