@@ -94,6 +94,7 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/login" component={LoginPage} />
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/invite/:code" component={LoginPage} />
       
       {/* Protected routes - only when connected */}
       {connectionStatus.connected && (

@@ -314,10 +314,11 @@ export default function Dashboard() {
                                 size="sm" 
                                 className="h-6 w-6 p-0 ml-1" 
                                 onClick={() => {
-                                  navigator.clipboard.writeText(invite.code);
+                                  const inviteUrl = `${window.location.origin}/invite/${invite.code}`;
+                                  navigator.clipboard.writeText(inviteUrl);
                                   toast({
                                     title: "Copied",
-                                    description: "Invite code copied to clipboard",
+                                    description: "Invite URL copied to clipboard",
                                   });
                                 }}
                               >
@@ -333,10 +334,11 @@ export default function Dashboard() {
                             variant="outline" 
                             size="sm"
                             onClick={() => {
-                              navigator.clipboard.writeText(invite.code);
+                              const inviteUrl = `${window.location.origin}/invite/${invite.code}`;
+                              navigator.clipboard.writeText(inviteUrl);
                               toast({
                                 title: "Copied",
-                                description: "Invite code copied to clipboard",
+                                description: "Invite URL copied to clipboard",
                               });
                             }}
                             className="px-2 py-1 h-8"
