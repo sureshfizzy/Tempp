@@ -1750,6 +1750,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invite Routes
+  app.get("/api/invites", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const invites = await storage.getAllInvites();
+      res.status(200).json(invites);
+    } catch (error) {
+      console.error("Error fetching invites:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/invites/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const invite = await storage.getInviteById(id);
+      if (invite) {
+        res.status(200).json(invite);
+      } else {
+        res.status(404).json({ error: "Invite not found" });
+      }
+    } catch (error) {
+      console.error("Error fetching invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/invites", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Make sure user is authenticated and we have their ID
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const inviteData = req.body;
+      const invite = await storage.createInvite(inviteData, req.session.userId);
+      res.status(201).json(invite);
+    } catch (error) {
+      console.error("Error creating invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/invites/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const inviteData = req.body;
+      const invite = await storage.updateInvite(id, inviteData);
+      if (invite) {
+        res.status(200).json(invite);
+      } else {
+        res.status(404).json({ error: "Invite not found" });
+      }
+    } catch (error) {
+      console.error("Error updating invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/invites/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const result = await storage.deleteInvite(id);
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(404).json({ error: "Invite not found or could not be deleted" });
+      }
+    } catch (error) {
+      console.error("Error deleting invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Public API for using invites (doesn't require authentication)
+  app.get("/api/invites/by-code/:code", async (req: Request, res: Response) => {
+    try {
+      const code = req.params.code;
+      const invite = await storage.getInviteByCode(code);
+      if (invite) {
+        // Don't return all details, just confirmation it exists and any public info
+        res.status(200).json({
+          valid: true,
+          label: invite.label,
+          profileId: invite.profileId
+        });
+      } else {
+        res.status(404).json({ error: "Invite not found or expired" });
+      }
+    } catch (error) {
+      console.error("Error fetching invite by code:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/invites/use/:code", async (req: Request, res: Response) => {
+    try {
+      const code = req.params.code;
+      const result = await storage.useInvite(code);
+      if (result) {
+        res.status(200).json({ success: true });
+      } else {
+        res.status(404).json({ error: "Invite not found, expired, or no uses remaining" });
+      }
+    } catch (error) {
+      console.error("Error using invite:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
