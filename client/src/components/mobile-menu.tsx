@@ -8,7 +8,8 @@ import {
   LogOut, 
   Film,
   UserCircle2,
-  History
+  History,
+  Ticket
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,16 @@ export function MobileMenu({ onClose, onDisconnect, isDisconnecting, isAdmin = f
         >
           <Settings className="h-5 w-5 mr-3" />
           <span>Settings</span>
+        </Link>
+
+        <Link 
+          href="/invites" 
+          onClick={onClose}
+          className={`flex items-center rounded-md p-3 ${isActive("/invites") ? "bg-primary/10 text-primary" : isAdmin ? "hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"}`}
+          aria-disabled={!isAdmin}
+        >
+          <Ticket className="h-5 w-5 mr-3" />
+          <span>Invites</span>
         </Link>
         
         <Link 
