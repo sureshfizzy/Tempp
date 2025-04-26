@@ -8,6 +8,7 @@ import {
   getUserProfiles,
   createInvite,
   getInvites,
+  deleteInvite,
   formatExpiryTime 
 } from "@/lib/jellyfin";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [isInfiniteUses, setIsInfiniteUses] = useState<boolean>(false);
   const [userExpiryEnabled, setUserExpiryEnabled] = useState<boolean>(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [deleteInviteId, setDeleteInviteId] = useState<number | null>(null);
 
   // Get Jellyfin connection status
   const connectionStatusQuery = useQuery({
@@ -93,6 +95,36 @@ export default function Dashboard() {
         description: error instanceof Error ? error.message : "Failed to create invite",
         variant: "destructive",
       });
+    }
+  });
+  
+  // Delete invite mutation
+  const deleteInviteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setDeleteInviteId(id);
+      return await deleteInvite(id); // This function is imported from @/lib/jellyfin
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invite Deleted",
+        description: "Invite has been deleted successfully",
+      });
+      
+      // Reset state
+      setDeleteInviteId(null);
+      
+      // Refresh invites list
+      queryClient.invalidateQueries({ queryKey: ["/api/invites"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete invite",
+        variant: "destructive",
+      });
+      
+      // Reset state even on error
+      setDeleteInviteId(null);
     }
   });
 
@@ -275,18 +307,19 @@ export default function Dashboard() {
                           <p className="font-medium">{invite.label || `Invite #${invite.id}`}</p>
                           <div className="text-xs text-muted-foreground mt-1">
                             <p>Code: {invite.code}</p>
-                            <p>Uses: {invite.remainingUses === null ? 'Unlimited' : `${invite.remainingUses} remaining`}</p>
-                            <p>Expires in: {formatExpiryTime(invite.expiresInMonths || 0, invite.expiresInDays || 0, invite.expiresInHours || 0)}</p>
+                            <p>Uses: {invite.maxUses === null ? 'Unlimited' : `${invite.usesRemaining} remaining`}</p>
+                            <p>Expires in: {formatExpiryTime(invite.userExpiryMonths || 0, invite.userExpiryDays || 0, invite.userExpiryHours || 0)}</p>
                           </div>
                         </div>
                         <Button 
                           variant="destructive" 
                           size="sm"
-                          onClick={() => {
-                            // Implement delete function
-                          }}
+                          onClick={() => deleteInviteMutation.mutate(invite.id)}
+                          disabled={deleteInviteMutation.isPending && deleteInviteId === invite.id}
                         >
-                          Delete
+                          {deleteInviteMutation.isPending && deleteInviteId === invite.id 
+                            ? "Deleting..." 
+                            : "Delete"}
                         </Button>
                       </div>
                     ))}
