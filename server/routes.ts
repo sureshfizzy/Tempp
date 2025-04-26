@@ -7,6 +7,13 @@ import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
 
+// Extend the session type to include our custom properties
+declare module 'express-session' {
+  interface SessionData {
+    connected?: boolean;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware
   const MemoryStoreSession = MemoryStore(session);
@@ -60,7 +67,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const authData = await authResponse.json();
+      const authData = await authResponse.json() as {
+        AccessToken: string;
+        User: {
+          Id: string;
+          Name: string;
+          Policy?: {
+            IsAdministrator?: boolean;
+          }
+        }
+      };
+      
       const accessToken = authData.AccessToken;
       const userId = authData.User.Id;
 
@@ -151,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetch(`${apiUrl}/Users`, {
         headers: {
-          "X-Emby-Token": credentials.accessToken || "",
+          "X-Emby-Token": credentials.accessToken || "" || "",
         },
       });
 
@@ -188,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const response = await fetch(`${apiUrl}/Users/${id}`, {
         headers: {
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -228,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
         },
         body: JSON.stringify({
           Name: newUser.Name,
@@ -243,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const createdUser = await response.json();
+      const createdUser = await response.json() as { Id: string };
       const userId = createdUser.Id;
 
       // Set password
@@ -252,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
           body: JSON.stringify({
             Id: userId,
@@ -271,12 +288,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // First get the current policy
         const policyResponse = await fetch(`${apiUrl}/Users/${userId}/Policy`, {
           headers: {
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
         });
 
         if (policyResponse.ok) {
-          const currentPolicy = await policyResponse.json();
+          const currentPolicy = await policyResponse.json() as { 
+            IsAdministrator: boolean;
+            IsDisabled: boolean;
+          };
           
           // Update policy based on role and disabled status
           if (newUser.Role === "Administrator") {
@@ -294,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Emby-Token": credentials.accessToken,
+              "X-Emby-Token": credentials.accessToken || "",
             },
             body: JSON.stringify(currentPolicy),
           });
@@ -308,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the updated user details
       const updatedUserResponse = await fetch(`${apiUrl}/Users/${userId}`, {
         headers: {
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -348,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
           body: JSON.stringify({
             Name: updateData.Name,
@@ -368,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
           body: JSON.stringify({
             Id: id,
@@ -388,12 +408,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // First get the current policy
         const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
           headers: {
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
         });
 
         if (policyResponse.ok) {
-          const currentPolicy = await policyResponse.json();
+          const currentPolicy = await policyResponse.json() as { 
+            IsAdministrator: boolean;
+            IsDisabled: boolean;
+          };
           
           // Update policy based on role and disabled status
           if (updateData.Role === "Administrator") {
@@ -411,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Emby-Token": credentials.accessToken,
+              "X-Emby-Token": credentials.accessToken || "",
             },
             body: JSON.stringify(currentPolicy),
           });
@@ -425,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the updated user details
       const updatedUserResponse = await fetch(`${apiUrl}/Users/${id}`, {
         headers: {
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -460,7 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await fetch(`${apiUrl}/Users/${id}`, {
         method: "DELETE",
         headers: {
-          "X-Emby-Token": credentials.accessToken,
+          "X-Emby-Token": credentials.accessToken || "",
         },
       });
 
@@ -498,7 +521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `${apiUrl}/System/ActivityLog/Entries?userId=${id}&limit=${limit}`, 
         {
           headers: {
-            "X-Emby-Token": credentials.accessToken,
+            "X-Emby-Token": credentials.accessToken || "",
           },
         }
       );
