@@ -1123,29 +1123,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if connected to Jellyfin
       if (!req.session.connected) {
+        console.log("Watch history: Not connected to Jellyfin");
         return res.status(401).json({ message: "Not connected to Jellyfin" });
       }
 
       const { id } = req.params;
       const limit = parseInt(req.query.limit as string) || 10;
+      console.log(`Watch history: Fetching for user ${id} with limit ${limit}`);
       
       // Get credentials
       const credentials = await storage.getJellyfinCredentials();
       if (!credentials || !credentials.accessToken) {
+        console.log("Watch history: No Jellyfin credentials available");
         return res.status(401).json({ message: "No Jellyfin credentials available" });
       }
 
-      // Make request to Jellyfin API to get watch history
-      const serverConfig = await storage.getServerConfig();
-      if (!serverConfig) {
-        return res.status(500).json({ message: "Server configuration not found" });
-      }
+      // Use the credentials URL instead of the server config URL
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
       
-      const apiUrl = serverConfig.url.endsWith('/') 
-        ? serverConfig.url.slice(0, -1) 
-        : serverConfig.url;
-      
+      // The correct Jellyfin API endpoint for watch history (recently watched/in progress)
       const url = `${apiUrl}/Users/${id}/Items/Resume?Limit=${limit}&Fields=PrimaryImageAspectRatio,BasicSyncInfo&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb`;
+      console.log(`Watch history: Making request to ${url}`);
       
       const response = await fetch(url, {
         headers: {
@@ -1154,12 +1154,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (!response.ok) {
+        console.log(`Watch history: Failed with status ${response.status}: ${response.statusText}`);
         return res.status(response.status).json({ 
           message: `Failed to fetch watch history from Jellyfin: ${response.statusText}` 
         });
       }
       
-      const watchHistory = await response.json();
+      // Process the response to a consistent format for the client
+      const rawData = await response.json();
+      
+      // Transform into the expected format
+      const watchHistory = {
+        Items: (rawData.Items || []).map((item: any) => ({
+          Name: item.Name,
+          Id: item.Id,
+          Type: item.Type,
+          Date: item.UserData?.LastPlayedDate || new Date().toISOString(),
+          ImageTag: item.ImageTags?.Primary,
+          SeriesName: item.SeriesName,
+          SeasonName: item.SeasonName,
+          ProductionYear: item.ProductionYear
+        })),
+        TotalRecordCount: rawData.TotalRecordCount || 0
+      };
+      
+      console.log(`Watch history: Successfully fetched ${watchHistory.Items.length} items`);
       return res.status(200).json(watchHistory);
     } catch (error) {
       console.error("Watch history error:", error);
