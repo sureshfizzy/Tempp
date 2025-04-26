@@ -7,20 +7,44 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
+export async function apiRequest<T = any>(
+  urlOrOptions: string | RequestInit,
+  optionsOrData?: RequestInit | unknown,
+): Promise<T> {
+  let url: string;
+  let options: RequestInit = {};
+  
+  // Handle different parameter patterns
+  if (typeof urlOrOptions === 'string') {
+    url = urlOrOptions;
+    
+    if (optionsOrData && typeof optionsOrData === 'object' && !Array.isArray(optionsOrData)) {
+      if ('method' in optionsOrData || 'headers' in optionsOrData || 'body' in optionsOrData) {
+        // It's a RequestInit object
+        options = optionsOrData as RequestInit;
+      } else {
+        // It's data to be sent in the body with POST
+        options = {
+          method: 'POST',
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(optionsOrData),
+        };
+      }
+    }
+  } else {
+    throw new Error('First parameter must be a URL string');
+  }
+  
+  // Set default credentials
+  if (!options.credentials) {
+    options.credentials = 'include';
+  }
+  
+  const res = await fetch(url, options);
   await throwIfResNotOk(res);
-  return res;
+  
+  // Parse the response as JSON and return it as type T
+  return await res.json() as T;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

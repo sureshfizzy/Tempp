@@ -16,11 +16,8 @@ export default function UserProfilePage() {
   const { toast } = useToast();
 
   // Get current user's info
-  const userQuery = useQuery({
-    queryKey: ["/api/me"],
-    queryFn: async () => {
-      return await apiRequest("/api/me") as JellyfinUser;
-    },
+  const userQuery = useQuery<JellyfinUser>({
+    queryKey: ["/api/me"]
   });
 
   // Get connection status
