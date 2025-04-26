@@ -16,8 +16,16 @@ export default function UserProfilePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Get current user's info
-  const userQuery = useQuery<JellyfinUser>({
+  // Get current user's info - appUser is different from JellyfinUser
+  interface AppUser {
+    id: number;
+    username: string;
+    email: string;
+    isAdmin: boolean;
+    jellyfinUserId: string;
+  }
+  
+  const userQuery = useQuery<AppUser>({
     queryKey: ["/api/me"]
   });
 
@@ -29,19 +37,27 @@ export default function UserProfilePage() {
 
   // Fetch watch history
   const watchHistoryQuery = useQuery<{ Items: UserActivity[], TotalRecordCount: number }>({
-    queryKey: ["/api/users", userQuery.data?.Id, "watch-history"],
+    queryKey: ["/api/users", userQuery.data?.jellyfinUserId, "watch-history"],
     queryFn: async () => {
-      if (!userQuery.data?.Id) {
+      if (!userQuery.data?.jellyfinUserId) {
+        console.log("No jellyfin user ID available for fetching watch history");
         return { Items: [], TotalRecordCount: 0 };
       }
       
-      const response = await fetch(`/api/users/${userQuery.data.Id}/watch-history?limit=10`);
+      console.log(`Fetching watch history for Jellyfin user ID: ${userQuery.data.jellyfinUserId}`);
+      const response = await fetch(`/api/users/${userQuery.data.jellyfinUserId}/watch-history?limit=10`);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch watch history');
+        const errorText = await response.text();
+        console.error('Failed to fetch watch history:', errorText);
+        throw new Error(`Failed to fetch watch history: ${errorText}`);
       }
-      return response.json();
+      
+      const data = await response.json();
+      console.log("Fetched watch history:", data);
+      return data;
     },
-    enabled: !!userQuery.data?.Id,
+    enabled: !!userQuery.data?.jellyfinUserId,
     staleTime: 60000, // 1 minute
   });
 
@@ -148,14 +164,14 @@ export default function UserProfilePage() {
             <Card className="md:col-span-1 bg-gray-900 border-gray-800 text-white">
               <CardHeader className="pb-0 pt-6 px-6 flex flex-col items-center">
                 <Avatar className="h-24 w-24 mb-4 bg-gray-800">
-                  <AvatarImage src={userQuery.data?.PrimaryImageTag ? `/api/users/${userQuery.data.Id}/image` : undefined} />
+                  <AvatarImage src={userQuery.data ? `/api/users/${userQuery.data.jellyfinUserId}/image` : undefined} />
                   <AvatarFallback className="text-lg bg-gray-800 text-white">
-                    {getUserInitials(userQuery.data?.Name || "")}
+                    {getUserInitials(userQuery.data?.username || "")}
                   </AvatarFallback>
                 </Avatar>
-                <CardTitle className="text-xl text-center text-white">{userQuery.data?.Name}</CardTitle>
+                <CardTitle className="text-xl text-center text-white">{userQuery.data?.username}</CardTitle>
                 <CardDescription className="text-center text-gray-400">
-                  {userQuery.data?.Policy?.IsAdministrator ? "Administrator" : "Regular User"}
+                  {userQuery.data?.isAdmin ? "Administrator" : "Regular User"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
@@ -167,17 +183,15 @@ export default function UserProfilePage() {
                         <UserIcon className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                         <div>
                           <p className="font-medium text-white">Username</p>
-                          <p className="text-sm text-gray-400">{userQuery.data?.Name}</p>
+                          <p className="text-sm text-gray-400">{userQuery.data?.username}</p>
                         </div>
                       </div>
                       <div className="flex items-start">
                         <Clock className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                         <div>
-                          <p className="font-medium text-white">Last Active</p>
+                          <p className="font-medium text-white">Email</p>
                           <p className="text-sm text-gray-400">
-                            {userQuery.data?.LastActivityDate 
-                              ? formatDate(userQuery.data.LastActivityDate) 
-                              : "Never"}
+                            {userQuery.data?.email || "Not provided"}
                           </p>
                         </div>
                       </div>

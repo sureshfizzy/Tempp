@@ -1161,19 +1161,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process the response to a consistent format for the client
-      const rawData = await response.json();
+      const rawData = await response.json() as {
+        Items?: Array<{
+          Name?: string;
+          Id?: string;
+          Type?: string;
+          UserData?: { LastPlayedDate?: string };
+          ImageTags?: { Primary?: string };
+          SeriesName?: string;
+          SeasonName?: string;
+          ProductionYear?: number;
+        }>;
+        TotalRecordCount?: number;
+      };
       
       // Transform into the expected format
       const watchHistory = {
-        Items: (rawData.Items || []).map((item: any) => ({
-          Name: item.Name,
-          Id: item.Id,
-          Type: item.Type,
+        Items: (rawData.Items || []).map((item) => ({
+          Name: item.Name || 'Unknown Title',
+          Id: item.Id || '',
+          Type: item.Type || 'Episode',
           Date: item.UserData?.LastPlayedDate || new Date().toISOString(),
-          ImageTag: item.ImageTags?.Primary,
-          SeriesName: item.SeriesName,
-          SeasonName: item.SeasonName,
-          ProductionYear: item.ProductionYear
+          ImageTag: item.ImageTags?.Primary || '',
+          SeriesName: item.SeriesName || '',
+          SeasonName: item.SeasonName || '',
+          ProductionYear: item.ProductionYear || new Date().getFullYear()
         })),
         TotalRecordCount: rawData.TotalRecordCount || 0
       };
