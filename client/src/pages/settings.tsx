@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   // Form
   const form = useForm<ServerSettingsFormValues>({
-    resolver: zodParser,
+    resolver: zodResolver(serverSettingsSchema),
     defaultValues: {
       serverName: serverQuery.data?.serverName || "",
       serverUrl: serverQuery.data?.url || "",

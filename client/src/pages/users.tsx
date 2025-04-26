@@ -372,13 +372,23 @@ export default function UsersPage() {
                             <span className="font-medium">{user.Name}</span>
                             {getUserStatus(user)}
                           </div>
-                          <div className="md:hidden mt-1">
-                            <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
-                              {getUserRole(user)}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(user.LastActivityDate)}
-                            </span>
+                          <div className="md:hidden mt-1 space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
+                                {getUserRole(user)}
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                {formatDate(user.LastActivityDate)}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs text-gray-500 mt-1">
+                              <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                              {userWatchTimes[user.Id] !== undefined ? (
+                                <span>{formatWatchTime(userWatchTimes[user.Id])}</span>
+                              ) : (
+                                <div className="h-3 w-6 bg-gray-200 animate-pulse rounded"></div>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
