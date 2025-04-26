@@ -47,7 +47,7 @@ export async function connectToJellyfin(url: string, username: string, password:
 }
 
 // Disconnect from Jellyfin API
-export async function disconnectFromJellyfin(): Promise<boolean> {
+export async function disconnectFromJellyfin(): Promise<{ message: string; configured: boolean }> {
   try {
     const response = await fetch("/api/disconnect", {
       method: "POST",
@@ -57,7 +57,7 @@ export async function disconnectFromJellyfin(): Promise<boolean> {
       throw new Error("Failed to disconnect from Jellyfin server");
     }
 
-    return true;
+    return await response.json();
   } catch (error) {
     console.error("Error disconnecting from Jellyfin:", error);
     throw error;
@@ -65,7 +65,12 @@ export async function disconnectFromJellyfin(): Promise<boolean> {
 }
 
 // Get connection status
-export async function getConnectionStatus(): Promise<{ connected: boolean; url?: string }> {
+export async function getConnectionStatus(): Promise<{ 
+  connected: boolean; 
+  isAdmin: boolean;
+  configured: boolean;
+  serverUrl?: string 
+}> {
   try {
     const response = await fetch("/api/connection-status");
     

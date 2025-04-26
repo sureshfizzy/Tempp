@@ -29,12 +29,20 @@ export default function UserProfilePage() {
   // Disconnect mutation
   const disconnectMutation = useMutation({
     mutationFn: disconnectFromJellyfin,
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Disconnected",
         description: "You have been disconnected from the Jellyfin server",
       });
-      setLocation("/login");
+      
+      // Redirect based on whether we have stored configuration
+      if (data.configured) {
+        // If we have config, go to login page
+        setLocation("/login");
+      } else {
+        // If no config, go to onboarding page
+        setLocation("/onboarding");
+      }
     },
     onError: (error) => {
       toast({

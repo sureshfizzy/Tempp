@@ -323,17 +323,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Disconnect from Jellyfin - clear session
-  app.post("/api/disconnect", (req: Request, res: Response) => {
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          return res.status(500).json({ message: "Failed to disconnect" });
-        }
-        res.status(200).json({ message: "Disconnected successfully" });
-      });
-    } else {
-      res.status(200).json({ message: "Already disconnected" });
+  // Disconnect from Jellyfin - log out but keep server config
+  app.post("/api/disconnect", async (req: Request, res: Response) => {
+    try {
+      // Instead of destroying the session, we just clear the connected status
+      // This allows us to keep server connection info but require login again
+      if (req.session) {
+        req.session.connected = false;
+        req.session.userId = undefined;
+        req.session.isAdmin = undefined;
+        req.session.jellyfinUserId = undefined;
+        
+        // Check if we have server config preserved in database
+        const serverConfig = await storage.getServerConfig();
+        const jellyfinCreds = await storage.getJellyfinCredentials();
+        
+        // Report back status including if we have stored credentials
+        return res.status(200).json({
+          message: "Disconnected successfully",
+          configured: Boolean(serverConfig && jellyfinCreds)
+        });
+      } else {
+        return res.status(200).json({ 
+          message: "Already disconnected", 
+          configured: false 
+        });
+      }
+    } catch (error) {
+      console.error("Error during disconnect:", error);
+      return res.status(500).json({ message: "Failed to disconnect properly" });
     }
   });
 

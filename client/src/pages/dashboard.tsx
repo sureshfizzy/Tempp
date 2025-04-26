@@ -70,7 +70,7 @@ export default function Dashboard() {
               <CheckCircle className="text-green-300 mr-1 h-4 w-4" />
               <span className="hidden md:inline">Connected to:</span>
               <span className="font-medium ml-1 max-w-xs truncate">
-                {connectionStatusQuery.data?.url || "Jellyfin Server"}
+                {connectionStatusQuery.data?.serverUrl || "Jellyfin Server"}
               </span>
             </div>
             <Button 
@@ -181,7 +181,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col">
                     <span className="text-sm text-neutral-500">Server URL</span>
-                    <span className="font-medium">{connectionStatusQuery.data?.url || "Not available"}</span>
+                    <span className="font-medium">{connectionStatusQuery.data?.serverUrl || "Not available"}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm text-neutral-500">Connection Status</span>
