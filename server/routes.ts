@@ -24,6 +24,7 @@ declare module 'express-session' {
     userId?: number;
     isAdmin?: boolean;
     jellyfinUserId?: string;
+    username?: string;
   }
 }
 
@@ -295,6 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.session.userId = appUser.id;
           req.session.isAdmin = true;
           req.session.jellyfinUserId = userId;
+          req.session.username = appUser.username;
         }
       } else {
         // Set session with existing user
@@ -560,6 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     req.session.userId = newLocalUser.id;
                     req.session.isAdmin = newLocalUser.isAdmin;
                     req.session.jellyfinUserId = newLocalUser.jellyfinUserId;
+                    req.session.username = newLocalUser.username;
                   }
                   
                   return res.status(200).json({
@@ -655,6 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId = user.id;
         req.session.isAdmin = user.isAdmin;
         req.session.jellyfinUserId = user.jellyfinUserId;
+        req.session.username = user.username;
       }
       
       return res.status(200).json({
@@ -1503,7 +1507,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if invite is at max usage
-      if (invite.maxUses !== 0 && invite.usedCount >= invite.maxUses) {
+      const maxUses1 = invite.maxUses ?? 0;
+      const usedCount1 = invite.usedCount ?? 0;
+      if (maxUses1 !== 0 && usedCount1 >= maxUses1) {
         return res.status(410).json({ message: "Invite has reached maximum usage" });
       }
       
@@ -1541,7 +1547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newInvite = await storage.createInvite({
         label,
         userLabel,
-        createdBy: req.session.username || "Admin",
+        createdBy: (req.session as any).username || "Admin",
         expiresAt,
         maxUses: Number(maxUses),
         userExpiryEnabled,
@@ -1592,7 +1598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if invite is at max usage
-      if (invite.maxUses !== 0 && invite.usedCount >= invite.maxUses) {
+      const maxUses2 = invite.maxUses ?? 0;
+      const usedCount2 = invite.usedCount ?? 0;
+      if (maxUses2 !== 0 && usedCount2 >= maxUses2) {
         return res.status(410).json({ message: "Invite has reached maximum usage" });
       }
       
