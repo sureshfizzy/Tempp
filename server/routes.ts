@@ -358,6 +358,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register a new user
+  app.post("/api/register", async (req: Request, res: Response) => {
+    try {
+      // Define registration schema
+      const registerSchema = z.object({
+        username: z.string().min(3, "Username must be at least 3 characters"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        email: z.string().email("Please enter a valid email address"),
+        inviteCode: z.string().optional(),
+      });
+      
+      // Validate the request body
+      const registerData = registerSchema.parse(req.body);
+      
+      // Check if the user already exists
+      const existingUser = await storage.getUserByUsername(registerData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Check invite code if provided
+      if (registerData.inviteCode) {
+        const invite = await storage.getInviteByCode(registerData.inviteCode);
+        
+        if (!invite) {
+          return res.status(400).json({ message: "Invalid invite code" });
+        }
+        
+        // Check if the invite is expired
+        if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
+          return res.status(400).json({ message: "Invite code has expired" });
+        }
+        
+        // Check if the invite has reached its maximum uses
+        if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+          return res.status(400).json({ message: "Invite code has reached its maximum uses" });
+        }
+      }
+      
+      // Fetch Jellyfin credentials to create a user there too
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(400).json({ message: "Server is not configured. Please set up the server first." });
+      }
+      
+      const apiUrl = credentials.url.endsWith('/') 
+        ? credentials.url.slice(0, -1) 
+        : credentials.url;
+      
+      // Create user in Jellyfin
+      const response = await fetch(`${apiUrl}/Users/New`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Emby-Token": credentials.accessToken || "",
+        },
+        body: JSON.stringify({
+          Name: registerData.username,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ 
+          message: `Failed to create user: ${response.statusText}`,
+          details: errorText
+        });
+      }
+      
+      const createdUser = await response.json() as { Id: string };
+      const userId = createdUser.Id;
+      
+      // Set password for Jellyfin user
+      const pwResponse = await fetch(`${apiUrl}/Users/${userId}/Password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Emby-Token": credentials.accessToken || "",
+        },
+        body: JSON.stringify({
+          Id: userId,
+          CurrentPw: "",
+          NewPw: registerData.password,
+        }),
+      });
+      
+      if (!pwResponse.ok) {
+        console.error(`Failed to set password: ${pwResponse.statusText}`);
+      }
+      
+      // Create user in local database
+      const newUser = await storage.createUser({
+        username: registerData.username,
+        password: registerData.password,  // Will be hashed in createUser
+        email: registerData.email,
+        isAdmin: false,  // New users from registration are not admins by default
+        jellyfinUserId: userId
+      });
+      
+      // Use the invite if provided
+      if (registerData.inviteCode) {
+        try {
+          await storage.useInvite(registerData.inviteCode);
+        } catch (error) {
+          console.error("Error using invite:", error);
+          // Continue even if invite use fails
+        }
+      }
+      
+      // Set up session
+      if (req.session) {
+        req.session.connected = true;
+        req.session.userId = newUser.id;
+        req.session.isAdmin = newUser.isAdmin;
+        req.session.jellyfinUserId = newUser.jellyfinUserId;
+      }
+      
+      return res.status(201).json({
+        message: "User registered successfully",
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          isAdmin: newUser.isAdmin
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid input data", 
+          errors: error.errors.map(err => `${err.path}: ${err.message}`).join(', ')
+        });
+      }
+      console.error("Error registering user:", error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to register user" 
+      });
+    }
+  });
+
   // Check connection status
   app.get("/api/connection-status", async (req: Request, res: Response) => {
     try {
