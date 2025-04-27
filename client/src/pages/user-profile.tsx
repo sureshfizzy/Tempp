@@ -26,6 +26,8 @@ export default function UserProfilePage() {
   const { toast } = useToast();
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  
+  // Password change dialog state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -709,7 +711,7 @@ export default function UserProfilePage() {
                     <Button 
                       variant="default" 
                       className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white shadow-lg shadow-blue-700/30 transition-all duration-300 text-md py-6"
-                      onClick={redirectToJellyfin}
+                      onClick={openJellyfin}
                     >
                       <Play className="mr-2 h-5 w-5" />
                       Watch Now
