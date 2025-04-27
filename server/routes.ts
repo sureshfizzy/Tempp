@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import fetch from "node-fetch";
 import { 
   insertJellyfinCredentialsSchema, 
@@ -11,8 +12,10 @@ import {
   loginSchema,
   InsertAppUser,
   insertUserProfileSchema,
-  UserProfile
+  UserProfile,
+  invites
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -1841,11 +1844,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const code = req.params.code;
       const invite = await storage.getInviteByCode(code);
       if (invite) {
-        // Don't return all details, just confirmation it exists and any public info
+        // Return information needed for sign-up
         res.status(200).json({
-          valid: true,
+          code: invite.code,
           label: invite.label,
-          profileId: invite.profileId
+          userLabel: invite.userLabel,
+          profileId: invite.profileId,
+          maxUses: invite.maxUses,
+          usedCount: invite.usedCount,
+          expiresAt: invite.expiresAt,
+          userExpiryEnabled: invite.userExpiryEnabled,
+          userExpiryHours: invite.userExpiryHours
         });
       } else {
         res.status(404).json({ error: "Invite not found or expired" });
@@ -1859,11 +1868,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invites/use/:code", async (req: Request, res: Response) => {
     try {
       const code = req.params.code;
-      const result = await storage.useInvite(code);
-      if (result) {
-        res.status(200).json({ success: true });
-      } else {
-        res.status(404).json({ error: "Invite not found, expired, or no uses remaining" });
+      const { username, password, email } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      // First, check if the invite exists and is valid
+      const invite = await storage.getInviteByCode(code);
+      if (!invite) {
+        return res.status(404).json({ error: "Invite not found" });
+      }
+      
+      // Check if invite is expired
+      if (invite.expiresAt && new Date() > new Date(invite.expiresAt)) {
+        return res.status(400).json({ error: "Invite has expired" });
+      }
+      
+      // Check if max uses has been reached (if not unlimited)
+      if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+        return res.status(400).json({ error: "Invite has reached maximum number of uses" });
+      }
+      
+      // Calculate the expiry date for the user account if enabled
+      let expiresAt = null;
+      if (invite.userExpiryEnabled && invite.userExpiryHours) {
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + invite.userExpiryHours);
+        expiresAt = expiryDate;
+      }
+      
+      // Get Jellyfin credentials to create user on Jellyfin server
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(500).json({ error: "Server configuration not found" });
+      }
+      
+      // Create the user in Jellyfin
+      const apiUrl = credentials.url;
+      const apiKey = credentials.apiKey;
+      
+      const jellyfinUserData = {
+        Name: username,
+        Password: password
+      };
+      
+      try {
+        const jellyfinResponse = await fetch(`${apiUrl}/Users/New`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Emby-Token': credentials.accessToken || '',
+            'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
+          },
+          body: JSON.stringify(jellyfinUserData)
+        });
+        
+        if (!jellyfinResponse.ok) {
+          const errorText = await jellyfinResponse.text();
+          console.error("Jellyfin API error:", errorText);
+          return res.status(jellyfinResponse.status).json({ error: `Could not create Jellyfin user: ${errorText}` });
+        }
+        
+        const jellyfinUser = await jellyfinResponse.json();
+        
+        // Create local app user with expiry if needed
+        const appUser = await storage.createUser({
+          username,
+          password, // Will be hashed by storage implementation
+          email: email || '',
+          jellyfinUserId: jellyfinUser.Id,
+          expiresAt
+        });
+        
+        // Increment the invite used count
+        const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
+        await storage.updateInviteUsage(code, usedCount);
+        
+        // Return success
+        res.status(201).json({ 
+          success: true,
+          message: "Account created successfully"
+        });
+      } catch (error) {
+        console.error("Error creating Jellyfin user:", error);
+        res.status(500).json({ error: "Failed to create Jellyfin user account" });
       }
     } catch (error) {
       console.error("Error using invite:", error);
