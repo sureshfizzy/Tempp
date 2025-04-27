@@ -373,7 +373,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         connected: isAuthenticated,
         isAdmin,
         configured: Boolean(serverConfig && jellyfinCreds),
-        serverUrl: serverConfig?.url
+        serverUrl: serverConfig?.url,
+        serverName: serverConfig?.serverName || "Jellyfin Manager"
       });
     } catch (error) {
       return res.status(500).json({ message: "Failed to get connection status" });

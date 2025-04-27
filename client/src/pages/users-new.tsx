@@ -381,7 +381,7 @@ export default function UsersPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader 
-        title="Jellyfin User Management"
+        title={connectionQuery.data?.serverName || "Jellyfin User Management"}
         subtitle={connectionQuery.data?.serverUrl}
         user={userQuery.data}
         onDisconnect={handleDisconnect}
