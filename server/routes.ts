@@ -1220,6 +1220,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updates.isAdmin = updateData.Role === "Administrator";
           }
           
+          // Sync the disabled state between Jellyfin and local DB
+          if (updateData.IsDisabled !== undefined) {
+            updates.disabled = updateData.IsDisabled;
+            console.log(`Updating disabled state for local user ${localUser.username} to: ${updateData.IsDisabled}`);
+          }
+          
           if (Object.keys(updates).length > 0) {
             await storage.updateUser(localUser.id, updates);
             console.log(`Updated local user ${localUser.username} with Jellyfin ID ${id}`);
