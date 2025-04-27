@@ -370,9 +370,7 @@ export async function disableUser(userId: string, disable: boolean = true): Prom
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        Policy: {
-          IsDisabled: disable
-        }
+        IsDisabled: disable
       }),
     });
 
