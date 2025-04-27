@@ -65,7 +65,7 @@ export async function runCustomMigrations() {
     `);
     
     // Alter table to allow NULL values for max_uses and uses_remaining columns
-    // Also add user_expiry_minutes if it doesn't exist
+    // Also add user_expiry_minutes and role_id if they don't exist
     await db.execute(sql`
       DO $$
       BEGIN
@@ -84,6 +84,14 @@ export async function runCustomMigrations() {
         EXCEPTION
           WHEN duplicate_column THEN
             RAISE NOTICE 'user_expiry_minutes column already exists';
+        END;
+        
+        BEGIN
+          ALTER TABLE invites
+          ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES user_roles(id) ON DELETE SET NULL;
+        EXCEPTION
+          WHEN duplicate_column THEN
+            RAISE NOTICE 'role_id column already exists';
         END;
       END
       $$;
