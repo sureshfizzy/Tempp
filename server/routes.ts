@@ -1772,11 +1772,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add library count to each profile
       const profilesWithLibraryCounts = profiles.map(profile => {
         let libraryCount = 0;
-        try {
-          const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-        } catch (e) {
-          console.error("Error parsing library access:", e);
+        
+        // If this is an empty array, it means "all libraries"
+        if (profile.libraryAccess === "[]") {
+          // When libraryAccess is empty, it means it has access to all libraries
+          // For UI display purposes, we'll use a "all" indicator
+          libraryCount = "All" as any;
+        } else {
+          try {
+            // Otherwise we count the specific libraries
+            const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+            libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+          } catch (e) {
+            console.error("Error parsing library access:", e);
+          }
         }
         
         return {
@@ -1803,11 +1812,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse library access
       let libraryCount = 0;
-      try {
-        const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
-        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-      } catch (e) {
-        console.error("Error parsing library access:", e);
+      
+      // If this is an empty array, it means "all libraries"
+      if (defaultProfile.libraryAccess === "[]") {
+        // When libraryAccess is empty, it means it has access to all libraries
+        libraryCount = "All" as any;
+      } else {
+        try {
+          const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
+          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+        } catch (e) {
+          console.error("Error parsing library access:", e);
+        }
       }
       
       res.json({
@@ -1835,11 +1851,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse library access
       let libraryCount = 0;
-      try {
-        const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-        libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-      } catch (e) {
-        console.error("Error parsing library access:", e);
+      
+      // If this is an empty array, it means "all libraries"
+      if (profile.libraryAccess === "[]") {
+        // When libraryAccess is empty, it means it has access to all libraries
+        libraryCount = "All" as any;
+      } else {
+        try {
+          const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+        } catch (e) {
+          console.error("Error parsing library access:", e);
+        }
       }
       
       res.json({
