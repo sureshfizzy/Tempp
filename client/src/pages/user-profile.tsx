@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { getConnectionStatus, disconnectFromJellyfin, getUserWatchTime } from "@/lib/jellyfin";
+import { getConnectionStatus, disconnectFromJellyfin, getUserWatchTime, getUserFavorites } from "@/lib/jellyfin";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { User as JellyfinUser, UserActivity } from "@shared/schema";
@@ -11,7 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   LogOut, User as UserIcon, Clock, FileBarChart, Film, 
   Home, Mail, Play, AlarmClock, CalendarClock, Pencil, ExternalLink,
-  TimerReset, Sparkles, Settings, Calendar, ImageIcon, AlertTriangle
+  TimerReset, Sparkles, Settings, Calendar, ImageIcon, AlertTriangle,
+  Heart, Star, Tv2
 } from "lucide-react";
 import { formatDate } from "@/lib/jellyfin";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -20,6 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserExpiryBadge } from "@/components/user-expiry-badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function UserProfilePage() {
   const [, setLocation] = useLocation();
@@ -98,6 +100,20 @@ export default function UserProfilePage() {
       }
       
       return await response.json();
+    },
+    enabled: !!userQuery.data?.jellyfinUserId,
+    staleTime: 300000, // 5 minutes
+  });
+  
+  // Fetch user favorites
+  const favoritesQuery = useQuery<{ Items: any[], TotalRecordCount: number }>({
+    queryKey: ["/api/users", userQuery.data?.jellyfinUserId, "favorites"],
+    queryFn: async () => {
+      if (!userQuery.data?.jellyfinUserId) {
+        return { Items: [], TotalRecordCount: 0 };
+      }
+      
+      return getUserFavorites(userQuery.data.jellyfinUserId);
     },
     enabled: !!userQuery.data?.jellyfinUserId,
     staleTime: 300000, // 5 minutes
