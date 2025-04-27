@@ -279,6 +279,144 @@
   100% { transform: rotate(0deg); }
 }
 
+/* New Harry Potter Login animations */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.login-success-glow {
+  animation: successGlow 1.8s forwards;
+}
+
+@keyframes successGlow {
+  0% { transform: scale(0); opacity: 0.8; filter: blur(20px); }
+  50% { transform: scale(8); opacity: 0.6; filter: blur(30px); }
+  100% { transform: scale(15); opacity: 0; filter: blur(40px); }
+}
+
+.success-sparks {
+  position: relative;
+  width: 2px;
+  height: 2px;
+}
+
+.success-sparks::before {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  top: -150px;
+  left: -150px;
+  background-image: radial-gradient(circle, transparent 10%, transparent 15%), 
+                    repeating-radial-gradient(circle, transparent 0%, transparent 40%, #eeba30 50%, transparent 60%, transparent 100%);
+  background-size: 10px 10px, 50px 50px;
+  background-position: 0 0;
+  animation: sparkFly 1.5s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes sparkFly {
+  0% { transform: scale(0.1); opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.error-flash {
+  animation: errorFlash 0.8s ease-out forwards;
+}
+
+@keyframes errorFlash {
+  0% { opacity: 0; }
+  25% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+.error-smoke {
+  animation: errorSmoke 0.8s ease-out forwards;
+}
+
+@keyframes errorSmoke {
+  0% { transform: scale(0); opacity: 0; }
+  40% { opacity: 0.7; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* Harry Potter themed card styling */
+.hp-card {
+  background-color: rgba(35, 20, 15, 0.8);
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a17a35' fill-opacity='0.1'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23a17a35' fill-opacity='0.05'/%3E%3C/svg%3E");
+  border: 1px solid rgba(161, 122, 53, 0.3);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.4), 
+    0 0 10px rgba(161, 122, 53, 0.2),
+    inset 0 0 10px rgba(161, 122, 53, 0.1);
+  border-radius: 0.5rem;
+}
+
+.hp-input {
+  background-color: rgba(35, 25, 20, 0.3);
+  border: 1px solid rgba(161, 122, 53, 0.3);
+  color: #e6d2a8;
+  transition: all 0.2s ease;
+}
+
+.hp-input:focus {
+  border-color: rgba(161, 122, 53, 0.6);
+  box-shadow: 0 0 0 2px rgba(161, 122, 53, 0.3);
+  background-color: rgba(35, 25, 20, 0.5);
+}
+
+.hp-input::placeholder {
+  color: rgba(161, 122, 53, 0.5);
+}
+
+.hp-button {
+  background: linear-gradient(to bottom, #a17a35, #714d1e);
+  border: 1px solid #a17a35;
+  color: #f8f0e3;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.hp-button:hover {
+  background: linear-gradient(to bottom, #b88b3c, #8a5f25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.hp-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.hp-button-spell {
+  position: relative;
+}
+
+.hp-button-spell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.3), transparent);
+  transition: all 0.3s ease;
+}
+
+.hp-button-spell:hover::before {
+  animation: wandSpell 1s infinite;
+}
+
+@keyframes wandSpell {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
 .cinema-gradient {
   background: linear-gradient(135deg, hsl(var(--cinema-dark)), hsl(220, 70%, 15%));
 }

@@ -1,32 +1,43 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
+// Static stars for background - no random calculations on render
+const STARS = Array.from({ length: 50 }).map(() => ({
+  width: Math.random() * 2 + 1,
+  height: Math.random() * 2 + 1,
+  top: Math.random() * 100,
+  left: Math.random() * 100,
+  opacity: Math.random() * 0.7 + 0.3,
+  duration: Math.random() * 3 + 2,
+  delay: Math.random() * 2
+}));
+
 export const HogwartsBackground: React.FC = () => {
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-[#14151a]">
-      {/* Animated stars in the background */}
+    <div className="fixed inset-0 z-0 overflow-hidden bg-[#0a0c14]">
+      {/* Animated stars in the background - using pre-calculated positions */}
       <div className="absolute inset-0">
-        {Array.from({ length: 50 }).map((_, i) => (
+        {STARS.map((star, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-white"
             style={{
-              width: `${Math.random() * 2 + 1}px`,
-              height: `${Math.random() * 2 + 1}px`,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              opacity: Math.random() * 0.7 + 0.3,
-              animation: `twinkle ${Math.random() * 3 + 2}s linear infinite ${Math.random() * 2}s`,
+              width: `${star.width}px`,
+              height: `${star.height}px`,
+              top: `${star.top}%`,
+              left: `${star.left}%`,
+              opacity: star.opacity,
+              animation: `twinkle ${star.duration}s linear infinite ${star.delay}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Distant castle silhouette */}
+      {/* Hogwarts castle silhouette */}
       <div 
-        className="absolute bottom-0 left-0 right-0 h-[30vh] opacity-20"
+        className="absolute bottom-0 left-0 right-0 h-[25vh] opacity-20"
         style={{
-          background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDgwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMjAwSDgwMFYxNzBINzYwVjE1MEg3NDBWMTMwSDcyMFYxMTBINzAwVjkwSDY4MFYxMTBINjYwVjEzMEg2NDBWMTUwSDYyMFYxMzBINjAwVjE1MEg1ODBWMTM1SDU2MFYxMjBINTQwVjEwMEg1MjBWODBINTAwVjYwSDQ4MFY0MEg0NjBWMjBINDQwVjBINDIwVjIwSDQwMFY0MEgzODBWNjBIMzYwVjgwSDM0MFYxMDBIMzIwVjEyMEgzMDBWMTM1SDI4MFYxNTBIMjYwVjEzMEgyNDBWMTUwSDIyMFYxMzBIMjAwVjExMEgxODBWOTBIMTYwVjExMEgxNDBWMTMwSDEyMFYxNTBIMTAwVjE3MEg0MFYyMDBIMFoiIGZpbGw9IiNGRkZGRkYiLz48L3N2Zz4=')",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='800' height='200' viewBox='0 0 800 200' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 200H800V170H760V150H740V130H720V110H700V90H680V110H660V130H640V150H620V130H600V150H580V135H560V120H540V100H520V80H500V60H480V40H460V20H440V0H420V20H400V40H380V60H360V80H340V100H320V120H300V135H280V150H260V130H240V150H220V130H200V110H180V90H160V110H140V130H120V150H100V170H40V200H0Z' fill='%23A17A35'/%3E%3C/svg%3E")`,
           backgroundSize: "contain",
           backgroundPosition: "bottom center",
           backgroundRepeat: "no-repeat",
@@ -38,74 +49,31 @@ export const HogwartsBackground: React.FC = () => {
         className="absolute bottom-0 left-0 right-0 h-[20vh]"
         style={{
           background: "linear-gradient(to top, rgba(20, 21, 26, 0.3), transparent)",
-          backdropFilter: "blur(4px)",
-        }}
-      />
-
-      {/* Floating objects */}
-      <motion.div
-        className="absolute"
-        style={{
-          top: "20%",
-          left: "10%",
-          width: "50px",
-          height: "30px",
-          background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCA1MCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNSAxNUMxMCA1IDIwIDUgMjUgMTVDMzAgMjUgNDAgMjUgNDUgMTUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+')",
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.2,
-        }}
-        animate={{
-          y: [0, -20, 0],
-          rotate: [0, 5, 0, -5, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-
-      <motion.div
-        className="absolute"
-        style={{
-          top: "30%",
-          right: "15%",
-          width: "30px",
-          height: "30px",
-          background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAzMCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNSIgY3k9IjE1IiByPSIxMCIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNMTUgMFYzMCIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNMCAxNUgzMCIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=')",
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.15,
-        }}
-        animate={{
-          y: [0, 15, 0],
-          rotate: [0, 180],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: "easeInOut",
         }}
       />
     </div>
   );
 };
 
+// Pre-defined positions for floating elements to prevent re-renders
+const FEATHERS_POSITION = {
+  top: "40%",
+  right: "20%"
+};
+
 export const FloatingFeather: React.FC = () => {
   return (
     <motion.div
-      className="absolute z-10 w-10 h-10 opacity-70 pointer-events-none"
+      className="absolute z-10 w-10 h-10 opacity-60 pointer-events-none"
       style={{
-        top: "40%",
-        right: "20%",
-        background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMzUgNUMzMC41ODcgOS40MTMgMjYuMTczIDEzLjgyNyAyMCAxMEMxMy44MjcgNi4xNzMgMTAuNSAxMi41IDUgMTVDLTAuNSAxNy41IDEwIDI1IDE1IDMwQzIwIDM1IDMwIDQwIDMwIDMwQzMwIDIwIDQwIDE1IDM1IDVaIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')",
+        top: FEATHERS_POSITION.top,
+        right: FEATHERS_POSITION.right,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M35 5C30.587 9.413 26.173 13.827 20 10C13.827 6.173 10.5 12.5 5 15C-0.5 17.5 10 25 15 30C20 35 30 40 30 30C30 20 40 15 35 5Z' stroke='%23D6B65B' stroke-width='1'/%3E%3C/svg%3E")`,
         backgroundSize: "contain",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
+      initial={{ y: 0, x: 0, rotate: 0 }}
       animate={{
         y: [0, -20, 0],
         x: [0, 10, 0, -10, 0],
@@ -120,30 +88,31 @@ export const FloatingFeather: React.FC = () => {
   );
 };
 
+// Pre-calculated positions for magical particles
+const PARTICLES = Array.from({ length: 10 }).map(() => ({
+  size: Math.random() * 4 + 2,
+  blur: Math.random() + 0.5,
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  duration: Math.random() * 10 + 10,
+  delay: Math.random() * 5
+}));
+
 export const MagicalParticles: React.FC = () => {
   return (
     <div className="absolute inset-0 z-0 pointer-events-none">
-      {Array.from({ length: 20 }).map((_, i) => (
-        <motion.div
+      {PARTICLES.map((particle, i) => (
+        <div
           key={i}
           className="absolute rounded-full bg-yellow-300"
           style={{
-            width: `${Math.random() * 4 + 2}px`,
-            height: `${Math.random() * 4 + 2}px`,
-            opacity: Math.random() * 0.3 + 0.1,
-            filter: `blur(${Math.random() + 0.5}px)`,
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-          }}
-          animate={{
-            y: [null, Math.random() * -100 - 50],
-            opacity: [null, 0],
-          }}
-          transition={{
-            duration: Math.random() * 10 + 10,
-            repeat: Infinity,
-            ease: "linear",
-            delay: Math.random() * 10,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            opacity: 0.15,
+            filter: `blur(${particle.blur}px)`,
+            top: `${particle.y}%`,
+            left: `${particle.x}%`,
+            animation: `float ${particle.duration}s ease-in-out infinite ${particle.delay}s`
           }}
         />
       ))}
@@ -151,57 +120,34 @@ export const MagicalParticles: React.FC = () => {
   );
 };
 
+// Fixed positions for scrolls
+const SCROLL_POSITIONS = [
+  { top: "15%", left: "5%", rotate: 0, delay: 0 },
+  { top: "60%", right: "8%", rotate: 15, delay: 2 }
+];
+
 export const FloatingScrolls: React.FC = () => {
   return (
     <>
-      <motion.div
-        className="absolute opacity-20 pointer-events-none"
-        style={{
-          top: "15%",
-          left: "5%",
-          width: "40px",
-          height: "60px",
-          background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNSA1SDM1VjU1SDVWNVoiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTUgNUMyLjUgMi41IDEwIDAgMjAgMEMzMCAwIDM3LjUgMi41IDM1IDUiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTUgNTVDMi41IDU3LjUgMTAgNjAgMjAgNjBDMzAgNjAgMzcuNSA1Ny41IDM1IDU1IiBzdHJva2U9IiNENkI2NUIiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xMCAxNUgzMCIgc3Ryb2tlPSIjRDZCNjVCIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMTAgMjVIMzAiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTTEwIDM1SDMwIiBzdHJva2U9IiNENkI2NUIiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0xMCA0NUgzMCIgc3Ryb2tlPSIjRDZCNjVCIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')",
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-        animate={{
-          y: [0, -15, 0],
-          rotate: [0, 5, 0, -5, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: Math.random() * 2,
-        }}
-      />
-
-      <motion.div
-        className="absolute opacity-15 pointer-events-none"
-        style={{
-          top: "60%",
-          right: "8%",
-          width: "40px",
-          height: "60px",
-          background: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNSA1SDM1VjU1SDVWNVoiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTUgNUMyLjUgMi41IDEwIDAgMjAgMEMzMCAwIDM3LjUgMi41IDM1IDUiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTUgNTVDMi41IDU3LjUgMTAgNjAgMjAgNjBDMzAgNjAgMzcuNSA1Ny41IDM1IDU1IiBzdHJva2U9IiNENkI2NUIiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xMCAxNUgzMCIgc3Ryb2tlPSIjRDZCNjVCIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMTAgMjVIMzAiIHN0cm9rZT0iI0Q2QjY1QiIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTTEwIDM1SDMwIiBzdHJva2U9IiNENkI2NUIiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0xMCA0NUgyMCIgc3Ryb2tlPSIjRDZCNjVCIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')",
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          transform: "rotate(15deg)",
-        }}
-        animate={{
-          y: [0, -10, 0],
-          rotate: [15, 25, 15, 5, 15],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: Math.random() * 2,
-        }}
-      />
+      {SCROLL_POSITIONS.map((pos, index) => (
+        <div
+          key={index}
+          className="absolute opacity-20 pointer-events-none"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            right: pos.right,
+            width: "40px",
+            height: "60px",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='60' viewBox='0 0 40 60' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 5H35V55H5V5Z' stroke='%23D6B65B' stroke-width='2'/%3E%3Cpath d='M5 5C2.5 2.5 10 0 20 0C30 0 37.5 2.5 35 5' stroke='%23D6B65B' stroke-width='2'/%3E%3Cpath d='M5 55C2.5 57.5 10 60 20 60C30 60 37.5 57.5 35 55' stroke='%23D6B65B' stroke-width='2'/%3E%3Cpath d='M10 15H30' stroke='%23D6B65B' stroke-width='1'/%3E%3Cpath d='M10 25H30' stroke='%23D6B65B' stroke-width='1'/%3E%3Cpath d='M10 35H30' stroke='%23D6B65B' stroke-width='1'/%3E%3Cpath d='M10 45H20' stroke='%23D6B65B' stroke-width='1'/%3E%3C/svg%3E")`,
+            backgroundSize: "contain",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            transform: `rotate(${pos.rotate}deg)`,
+            animation: `floatSlow 8s ease-in-out infinite ${pos.delay}s`
+          }}
+        />
+      ))}
     </>
   );
 };
@@ -214,7 +160,7 @@ export const LoginSuccessEffect: React.FC<{ active: boolean }> = ({ active }) =>
       setShowEffect(true);
       const timer = setTimeout(() => {
         setShowEffect(false);
-      }, 2000);
+      }, 1800);
       return () => clearTimeout(timer);
     }
   }, [active]);
@@ -222,46 +168,17 @@ export const LoginSuccessEffect: React.FC<{ active: boolean }> = ({ active }) =>
   if (!showEffect) return null;
   
   return (
-    <motion.div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" />
       
       {/* Central glow */}
-      <motion.div
-        className="absolute w-20 h-20 bg-yellow-300 rounded-full"
-        style={{ filter: "blur(40px)" }}
-        initial={{ scale: 0 }}
-        animate={{ scale: [0, 15], opacity: [1, 0] }}
-        transition={{ duration: 1.5 }}
+      <div
+        className="absolute w-20 h-20 bg-amber-300 rounded-full login-success-glow"
       />
       
-      {/* Sparks */}
-      <div className="relative">
-        {Array.from({ length: 30 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-yellow-300"
-            style={{
-              width: `${Math.random() * 6 + 2}px`,
-              height: `${Math.random() * 6 + 2}px`,
-              top: 0,
-              left: 0,
-            }}
-            initial={{ x: 0, y: 0 }}
-            animate={{ 
-              x: (Math.random() - 0.5) * 600, 
-              y: (Math.random() - 0.5) * 600,
-              opacity: [1, 0],
-            }}
-            transition={{ duration: Math.random() * 1 + 1 }}
-          />
-        ))}
-      </div>
-    </motion.div>
+      {/* Golden sparks */}
+      <div className="success-sparks" />
+    </div>
   );
 };
 
@@ -273,7 +190,7 @@ export const LoginErrorEffect: React.FC<{ active: boolean }> = ({ active }) => {
       setShowEffect(true);
       const timer = setTimeout(() => {
         setShowEffect(false);
-      }, 1000);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [active]);
@@ -281,28 +198,18 @@ export const LoginErrorEffect: React.FC<{ active: boolean }> = ({ active }) => {
   if (!showEffect) return null;
   
   return (
-    <motion.div 
-      className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       {/* Red flash */}
-      <motion.div
-        className="absolute inset-0 bg-red-900/30"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.7, 0] }}
-        transition={{ duration: 0.5 }}
-      />
+      <div className="absolute inset-0 bg-red-900/30 error-flash" />
       
       {/* Smoke effect */}
-      <motion.div
-        className="absolute h-40 w-40 rounded-full"
+      <div 
+        className="absolute h-40 w-40 rounded-full error-smoke"
         style={{ 
           background: "radial-gradient(circle, rgba(155, 8, 10, 0.5) 0%, rgba(155, 8, 10, 0) 70%)",
           filter: "blur(10px)"
         }}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: [0, 3], opacity: [0, 0.7, 0] }}
-        transition={{ duration: 1 }}
       />
-    </motion.div>
+    </div>
   );
 };

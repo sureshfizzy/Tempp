@@ -228,40 +228,36 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Card className="parchment magic-border shadow-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-amber-50/5 to-amber-100/10 pointer-events-none"></div>
-              
-              <CardContent className="pt-6 relative">
-                {!connectionStatus?.connected ? (
-                  <div className="text-center py-4">
-                    {connectionStatus?.configured ? (
-                      <>
-                        <p className="mb-4 text-amber-900">
-                          Your magical portal is configured but not connected.
-                          Present your credentials to enter.
-                        </p>
-                        <LoginFormContent />
-                      </>
-                    ) : (
-                      <>
-                        <p className="mb-4 text-amber-900">
-                          You need to establish a connection with your magical realm first.
-                        </p>
-                        <Button 
-                          onClick={handleReconnect}
-                          className="bg-amber-800 hover:bg-amber-700 text-white"
-                        >
-                          <WandIcon className="mr-2 h-4 w-4" />
-                          Connect to Realm
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <LoginFormContent />
-                )}
-              </CardContent>
-            </Card>
+            <div className="hp-card overflow-hidden shadow-2xl p-6">
+              {!connectionStatus?.connected ? (
+                <div className="text-center py-4">
+                  {connectionStatus?.configured ? (
+                    <>
+                      <p className="mb-4 text-amber-200">
+                        Your magical portal is configured but not connected.
+                        Present your credentials to enter.
+                      </p>
+                      <LoginFormContent />
+                    </>
+                  ) : (
+                    <>
+                      <p className="mb-4 text-amber-200">
+                        You need to establish a connection with your magical realm first.
+                      </p>
+                      <Button 
+                        onClick={handleReconnect}
+                        className="hp-button"
+                      >
+                        <WandIcon className="mr-2 h-4 w-4" />
+                        Connect to Realm
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <LoginFormContent />
+              )}
+            </div>
           </motion.div>
         </div>
       </div>
@@ -288,7 +284,7 @@ export default function LoginPage() {
                     <div className="relative">
                       <Input 
                         placeholder="Wizard Name" 
-                        className="border-amber-300/30 bg-amber-50/20 text-amber-900 placeholder:text-amber-700/50 h-12 pl-4"
+                        className="hp-input h-12 pl-4"
                         {...field} 
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-700/50">
@@ -323,7 +319,7 @@ export default function LoginPage() {
                       <Input 
                         type="password" 
                         placeholder="Secret Spell" 
-                        className="border-amber-300/30 bg-amber-50/20 text-amber-900 placeholder:text-amber-700/50 h-12 pl-4"
+                        className="hp-input h-12 pl-4"
                         {...field} 
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-700/50">
@@ -351,9 +347,7 @@ export default function LoginPage() {
           >
             <Button 
               type="submit" 
-              className={`w-full relative overflow-hidden ${
-                castingSpell ? 'bg-amber-600 hover:bg-amber-600' : 'bg-amber-800 hover:bg-amber-700'
-              } text-white h-12 text-lg font-semibold transition-all duration-300 spell-cast`}
+              className="hp-button hp-button-spell w-full h-12 text-lg font-semibold"
               disabled={isLoading}
             >
               <motion.span 
@@ -383,7 +377,7 @@ export default function LoginPage() {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="text-center pt-4 border-t border-amber-700/20"
           >
-            <p className="text-sm text-amber-800/70 mb-3">
+            <p className="text-sm text-amber-200/90 mb-3">
               Need to connect to a different magical realm?
             </p>
             <Button 
@@ -391,7 +385,7 @@ export default function LoginPage() {
               variant="outline"
               size="sm"
               onClick={handleReconnect}
-              className="border-amber-700/30 text-amber-800 hover:bg-amber-100/20"
+              className="hp-button"
             >
               <WandIcon className="mr-2 h-4 w-4" />
               Change Realm
