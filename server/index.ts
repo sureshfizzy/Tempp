@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./db-init";
+import { initializeSqliteDatabase } from "./db-init-sqlite";
 import { startExpiryCheckJob } from "./user-expiry";
 
 const app = express();

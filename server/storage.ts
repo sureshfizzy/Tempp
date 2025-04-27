@@ -18,11 +18,11 @@ import {
   ActivityLog,
   InsertActivityLog
 } from "@shared/schema";
-import { db, pool } from "./db";
 import { eq, and, desc, ne } from "drizzle-orm";
 import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs, userRoles } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { SQLiteStorage } from "./sqlite-storage";
 
 // Interface for API storage operations
 export interface IStorage {
@@ -984,4 +984,8 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Choose storage implementation based on environment
+// If DATABASE_URL is set, use PostgreSQL, otherwise use SQLite
+export const storage: IStorage = process.env.DATABASE_URL 
+  ? new DatabaseStorage() 
+  : new SQLiteStorage();
