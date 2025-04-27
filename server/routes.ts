@@ -450,19 +450,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         features
       });
       
-      // If API key is changing, also update Jellyfin credentials
-      if (apiKey) {
-        const jellyfinCreds = await storage.getJellyfinCredentials();
-        if (jellyfinCreds) {
-          await storage.saveJellyfinCredentials({
-            apiKey,
-            url: serverUrl || jellyfinCreds.url,
-            adminUsername: jellyfinCreds.adminUsername,
-            adminPassword: jellyfinCreds.adminPassword,
-            accessToken: jellyfinCreds.accessToken || undefined,
-            userId: jellyfinCreds.userId || undefined
-          });
-        }
+      // Always update the Jellyfin credentials with the server name and url changes too
+      const jellyfinCreds = await storage.getJellyfinCredentials();
+      if (jellyfinCreds) {
+        await storage.saveJellyfinCredentials({
+          apiKey: apiKey || jellyfinCreds.apiKey,
+          url: serverUrl || jellyfinCreds.url,
+          adminUsername: jellyfinCreds.adminUsername,
+          adminPassword: jellyfinCreds.adminPassword,
+          accessToken: jellyfinCreds.accessToken || undefined,
+          userId: jellyfinCreds.userId || undefined,
+          serverName: serverName || jellyfinCreds.serverName || existingConfig.serverName
+        });
       }
       
       return res.status(200).json({

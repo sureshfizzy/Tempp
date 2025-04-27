@@ -81,7 +81,7 @@ export function AppHeader({
             <SheetContent side="left" className="w-[85%] sm:w-[350px] p-0">
               <SheetHeader className="p-6 border-b">
                 <div className="flex items-center gap-3">
-                  <Film className="h-6 w-6 text-primary" />
+                  <Film className="h-8 w-8 text-primary" />
                   <div>
                     <SheetTitle>{title}</SheetTitle>
                     {subtitle && <SheetDescription>{subtitle}</SheetDescription>}
@@ -100,9 +100,9 @@ export function AppHeader({
           </Sheet>
 
           <div className="flex items-center gap-2">
-            <Film className="h-5 w-5 text-primary" />
-            <span className="font-semibold hidden sm:inline-block">{title}</span>
-            <span className="font-semibold sm:hidden">{title.length > 12 ? title.substring(0, 12) + '...' : title}</span>
+            <Film className="h-7 w-7 text-primary" />
+            <span className="text-lg font-semibold hidden sm:inline-block">{title}</span>
+            <span className="text-lg font-semibold sm:hidden">{title.length > 12 ? title.substring(0, 12) + '...' : title}</span>
             {/* Removed server URL subtitle as requested */}
           </div>
           
@@ -148,7 +148,7 @@ export function AppHeader({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
                   <div className="flex items-center gap-2 cursor-pointer">
-                    <Avatar className="h-8 w-8 border border-primary/20">
+                    <Avatar className="h-10 w-10 border border-primary/20">
                       <AvatarImage src={user.jellyfinUserId ? `/api/users/${user.jellyfinUserId}/image` : undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary">
                         {user.username?.substring(0, 2).toUpperCase()}

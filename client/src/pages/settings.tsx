@@ -247,9 +247,11 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader 
-        title={form.getValues("serverName") || "Jellyfin User Management"}
-        subtitle={connectionQuery.data?.serverUrl}
-        user={userQuery.data}
+        title={connectionQuery.data?.serverName || form.getValues("serverName") || "Jellyfin User Management"}
+        user={{
+          username: userQuery.data?.username || "",
+          jellyfinUserId: userQuery.data?.jellyfinUserId
+        }}
         onDisconnect={handleDisconnect}
         isDisconnecting={disconnectMutation.isPending}
         isAdmin={userQuery.data?.isAdmin}
