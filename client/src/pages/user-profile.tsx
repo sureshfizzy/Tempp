@@ -26,6 +26,10 @@ export default function UserProfilePage() {
   const { toast } = useToast();
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Get current user's info - appUser is different from JellyfinUser
   interface AppUser {
@@ -151,12 +155,87 @@ export default function UserProfilePage() {
     }
   });
 
+  // Password change mutation
+  const updatePasswordMutation = useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) => {
+      if (!userQuery.data) {
+        throw new Error("User not found");
+      }
+      
+      const response = await apiRequest("POST", `/api/users/${userQuery.data.jellyfinUserId}/password`, {
+        currentPassword,
+        newPassword
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to update password");
+      }
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed successfully",
+      });
+      
+      // Reset form and close dialog
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setIsPasswordDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Password Change Failed",
+        description: error instanceof Error ? error.message : "Failed to update password",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Handle email update
   const handleUpdateEmail = (e: React.FormEvent) => {
     e.preventDefault();
     if (newEmail) {
       updateEmailMutation.mutate(newEmail);
     }
+  };
+  
+  // Handle password update
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate password fields
+    if (!currentPassword) {
+      toast({
+        title: "Current Password Required", 
+        description: "Please enter your current password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!newPassword) {
+      toast({
+        title: "New Password Required", 
+        description: "Please enter a new password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords Don't Match", 
+        description: "New password and confirmation must match",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    updatePasswordMutation.mutate({ currentPassword, newPassword });
   };
 
   // Disconnect mutation
@@ -191,8 +270,8 @@ export default function UserProfilePage() {
     disconnectMutation.mutate();
   };
 
-  // Redirect to Jellyfin
-  const redirectToJellyfin = () => {
+  // Function to open Jellyfin main page in a new tab
+  const openJellyfin = () => {
     if (connectionQuery.data?.serverUrl) {
       window.open(connectionQuery.data.serverUrl, '_blank');
     } else {
@@ -202,6 +281,18 @@ export default function UserProfilePage() {
         variant: "destructive",
       });
     }
+  };
+
+  // Get item link for Jellyfin items
+  const getItemLink = (itemId: string) => {
+    if (!connectionQuery.data?.serverUrl) {
+      return '#';
+    }
+    
+    // Create a deep link to the specific item in Jellyfin
+    // We're using /web/index.html instead of just the server URL
+    // to ensure it goes to the correct item
+    return `${connectionQuery.data.serverUrl}/web/index.html#!/details?id=${itemId}`;
   };
 
   // Redirect to login if not connected
@@ -640,37 +731,17 @@ export default function UserProfilePage() {
                 <div className="absolute top-10 right-0 w-32 h-32 bg-blue-700/10 blur-[70px] rounded-full"></div>
                 
                 <CardHeader className="relative z-10">
-                  <div className="flex items-center justify-between">
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <CardTitle className="flex items-center text-xl text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-white">
-                        <FileBarChart className="h-5 w-5 mr-2 text-blue-400" />
-                        Recent Activity
-                      </CardTitle>
-                      <CardDescription className="text-blue-300/70">Your recent Jellyfin activity</CardDescription>
-                    </motion.div>
-                    
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.2 }}
-                    >
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs border-blue-700/30 bg-blue-900/10 hover:bg-blue-800/20 text-blue-100 shadow-sm shadow-blue-700/20"
-                        onClick={redirectToJellyfin}
-                      >
-                        <ExternalLink className="mr-1 h-3 w-3" />
-                        Watch Now
-                      </Button>
-                    </motion.div>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <CardTitle className="flex items-center text-xl text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-white">
+                      <FileBarChart className="h-5 w-5 mr-2 text-blue-400" />
+                      Recent Activity
+                    </CardTitle>
+                    <CardDescription className="text-blue-300/70">Your recent Jellyfin activity</CardDescription>
+                  </motion.div>
                 </CardHeader>
                 
                 <CardContent className="relative z-10">
@@ -777,17 +848,25 @@ export default function UserProfilePage() {
                               )}
                             </motion.div>
                             
-                            {/* Movie/Episode Details */}
+                            {/* Movie/Episode Details with clickable link */}
                             <div className="flex-1">
-                              <motion.p 
-                                className="font-medium text-white text-base leading-tight"
-                                whileHover={{ 
-                                  color: "rgb(191, 219, 254)", 
-                                  transition: { duration: 0.2 } 
-                                }}
+                              <a 
+                                href={getItemLink(activity.Id)} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="block hover:no-underline"
                               >
-                                {activity.Name}
-                              </motion.p>
+                                <motion.p 
+                                  className="font-medium text-white text-base leading-tight flex items-center"
+                                  whileHover={{ 
+                                    color: "rgb(191, 219, 254)", 
+                                    transition: { duration: 0.2 } 
+                                  }}
+                                >
+                                  {activity.Name}
+                                  <ExternalLink className="h-3 w-3 ml-1.5 text-blue-400 opacity-70" />
+                                </motion.p>
+                              </a>
                               
                               {activity.SeriesName && (
                                 <p className="text-sm text-blue-300 mt-0.5">
@@ -840,7 +919,7 @@ export default function UserProfilePage() {
                             variant="outline" 
                             size="sm" 
                             className="mt-3 text-blue-300 border-blue-700/40 bg-blue-900/20 hover:bg-blue-800/30 shadow-lg shadow-blue-900/20"
-                            onClick={redirectToJellyfin}
+                            onClick={openJellyfin}
                           >
                             <Play className="mr-2 h-4 w-4" />
                             Start Watching
@@ -910,7 +989,35 @@ export default function UserProfilePage() {
                       <Button 
                         variant="outline" 
                         className="w-full justify-start border-blue-700/30 bg-blue-900/10 text-white hover:bg-blue-800/20 hover:border-blue-600/50 transition-all duration-300 py-6 group"
-                        onClick={redirectToJellyfin}
+                        onClick={() => {
+                          setCurrentPassword("");
+                          setNewPassword("");
+                          setConfirmPassword("");
+                          setIsPasswordDialogOpen(true);
+                        }}
+                      >
+                        <motion.div
+                          whileHover={{ rotate: 15 }}
+                          transition={{ type: "spring", stiffness: 500 }}
+                          className="mr-3 bg-blue-800/70 rounded-full p-2 group-hover:bg-blue-700/80 transition-colors duration-300"
+                        >
+                          <TimerReset className="h-4 w-4 text-blue-200" />
+                        </motion.div>
+                        <span className="font-medium">Change Password</span>
+                      </Button>
+                    </motion.div>
+                    
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start border-blue-700/30 bg-blue-900/10 text-white hover:bg-blue-800/20 hover:border-blue-600/50 transition-all duration-300 py-6 group"
+                        onClick={openJellyfin}
                       >
                         <motion.div
                           whileHover={{ scale: 1.2 }}
@@ -926,7 +1033,7 @@ export default function UserProfilePage() {
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.3 }}
+                      transition={{ duration: 0.3, delay: 0.4 }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -995,6 +1102,84 @@ export default function UserProfilePage() {
                     Updating...
                   </>
                 ) : "Update Email"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Password Change Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Change Password</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Enter your current password and a new password
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleUpdatePassword}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="current-password" className="text-sm font-medium text-gray-300">Current Password</label>
+                <Input 
+                  id="current-password"
+                  value={currentPassword} 
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  type="password"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="new-password" className="text-sm font-medium text-gray-300">New Password</label>
+                <Input 
+                  id="new-password"
+                  value={newPassword} 
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  type="password"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="confirm-password" className="text-sm font-medium text-gray-300">Confirm New Password</label>
+                <Input 
+                  id="confirm-password"
+                  value={confirmPassword} 
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  type="password"
+                  required
+                />
+                {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-sm text-red-500 mt-1">Passwords don't match</p>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsPasswordDialogOpen(false)}
+                className="border-gray-700 text-white hover:bg-gray-800"
+                type="button"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={updatePasswordMutation.isPending || (newPassword !== confirmPassword)}
+              >
+                {updatePasswordMutation.isPending ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                    Updating...
+                  </>
+                ) : "Change Password"}
               </Button>
             </DialogFooter>
           </form>
