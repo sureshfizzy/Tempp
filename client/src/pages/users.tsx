@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { UserExpiryBadge } from "@/components/user-expiry-badge";
 import { formatDate } from "@/lib/jellyfin";
 import { debounce } from "@/lib/utils";
 import { User } from "@shared/schema";
@@ -414,6 +415,12 @@ export default function UsersPage() {
                               <div className="h-4 w-8 bg-gray-200 animate-pulse rounded"></div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <UserExpiryBadge 
+                            expiresAt={user.expiresAt} 
+                            disabled={user.Policy?.IsDisabled}
+                          />
                         </TableCell>
                         <TableCell>
                           {isMobile ? (
