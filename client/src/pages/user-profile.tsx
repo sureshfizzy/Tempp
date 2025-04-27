@@ -812,10 +812,31 @@ export default function UserProfilePage() {
                       <CardDescription className="text-blue-300/70 mb-4">Your Jellyfin activity and favorites</CardDescription>
                       
                       {/* Display enabled folders stats with animation */}
-                      <EnabledFoldersDisplay 
-                        userId={userQuery.data?.jellyfinUserId || ""} 
-                        folderList={userPolicyQuery.data?.EnabledFolders || []}
-                      />
+                      {userPolicyQuery.data?.EnableAllFolders ? (
+                        <div className="mb-4">
+                          <motion.div 
+                            className="bg-gradient-to-r from-green-900/30 to-blue-900/30 p-3 rounded-lg border border-green-800/20 overflow-hidden"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-green-300 font-medium flex items-center">
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-400" />
+                                Full Library Access
+                              </span>
+                              <span className="text-xs bg-green-900/40 text-green-200 px-2 py-0.5 rounded-full border border-green-800/30">
+                                All Content
+                              </span>
+                            </div>
+                          </motion.div>
+                        </div>
+                      ) : (
+                        <EnabledFoldersDisplay 
+                          userId={userQuery.data?.jellyfinUserId || ""} 
+                          folderList={userPolicyQuery.data?.EnabledFolders || []}
+                        />
+                      )}
                       
                       <TabsList className="bg-black/30 border border-blue-900/30">
                         <TabsTrigger 

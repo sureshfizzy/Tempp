@@ -1,112 +1,86 @@
-import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Folder, Library, Film, Music, Camera, BookOpenText, Grid } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Database, Folder, FileVideo2, Music, BookOpen, Image, Film, Tv2 } from 'lucide-react';
 
 interface EnabledFoldersDisplayProps {
   userId: string;
   folderList: string[];
 }
 
-// Media type icons mapping
-const mediaTypeIcons: Record<string, JSX.Element> = {
-  Movies: <Film className="h-4 w-4 text-indigo-400" />,
-  Shows: <Camera className="h-4 w-4 text-purple-400" />,
-  Music: <Music className="h-4 w-4 text-green-400" />,
-  Books: <BookOpenText className="h-4 w-4 text-amber-400" />,
-  Photos: <Camera className="h-4 w-4 text-blue-400" />,
-  Collections: <Grid className="h-4 w-4 text-pink-400" />,
-  default: <Folder className="h-4 w-4 text-slate-400" />
+// Maps folder IDs to more user-friendly names and icons
+const getFolderIcon = (index: number) => {
+  const icons = [
+    <Film className="h-4 w-4 text-indigo-400" />,
+    <Tv2 className="h-4 w-4 text-blue-400" />,
+    <Music className="h-4 w-4 text-green-400" />,
+    <BookOpen className="h-4 w-4 text-yellow-400" />,
+    <Image className="h-4 w-4 text-purple-400" />,
+    <FileVideo2 className="h-4 w-4 text-pink-400" />,
+    <Folder className="h-4 w-4 text-orange-400" />,
+  ];
+  
+  return icons[index % icons.length];
 };
 
-export default function EnabledFoldersDisplay({ userId, folderList }: EnabledFoldersDisplayProps) {
-  const [groupedByType, setGroupedByType] = useState<Record<string, number>>({});
-  const [isLoaded, setIsLoaded] = useState(false);
-
+const EnabledFoldersDisplay: React.FC<EnabledFoldersDisplayProps> = ({ userId, folderList }) => {
+  const [folderCount, setFolderCount] = useState(0);
+  
   useEffect(() => {
-    // Group folders by type
-    const folderCounts: Record<string, number> = {
-      Movies: 0,
-      Shows: 0,
-      Music: 0,
-      Books: 0,
-      Photos: 0,
-      Collections: 0,
-      Other: 0
-    };
-
-    // We'll simulate categorizing based on the folder count
-    // In a real app, you'd query the actual folder names/types from the server
     if (folderList && folderList.length > 0) {
-      // Distribute folders among categories for visualization
-      const total = folderList.length;
-      
-      // Apply a distribution algorithm
-      folderCounts.Movies = Math.ceil(total * 0.35); // 35% are movies
-      folderCounts.Shows = Math.ceil(total * 0.25); // 25% are shows
-      folderCounts.Music = Math.ceil(total * 0.15); // 15% are music
-      folderCounts.Collections = Math.ceil(total * 0.1); // 10% are collections
-      folderCounts.Photos = Math.ceil(total * 0.05); // 5% are photos
-      folderCounts.Books = Math.ceil(total * 0.05); // 5% are books
-      folderCounts.Other = Math.max(0, total - Object.values(folderCounts).reduce((a, b) => a + b, 0));
-      
-      setGroupedByType(folderCounts);
-      
-      // Delay animation start for staggered effect
-      setTimeout(() => {
-        setIsLoaded(true);
-      }, 200);
+      setFolderCount(folderList.length);
     }
   }, [folderList]);
-
-  // Skip if no folders
+  
   if (!folderList || folderList.length === 0) {
     return null;
   }
-
+  
   return (
-    <div className="mb-5">
-      <h3 className="text-sm font-medium text-indigo-300/70 mb-3 flex items-center">
-        <Library className="h-4 w-4 mr-1.5 opacity-70" />
-        <span>Library Access</span>
-        <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-indigo-800/30 text-indigo-300/90">
-          {folderList.length} folders
-        </span>
-      </h3>
-
+    <div className="mb-4">
       <motion.div 
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 p-3 rounded-lg border border-blue-800/20 overflow-hidden"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <AnimatePresence>
-          {isLoaded && Object.entries(groupedByType)
-            .filter(([_, count]) => count > 0)
-            .map(([type, count], index) => (
-              <motion.div
-                key={type}
-                className="rounded-lg bg-gradient-to-br from-indigo-900/50 to-indigo-950/80 border border-indigo-800/20 px-3 py-2 flex items-center"
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ 
-                  duration: 0.4, 
-                  delay: index * 0.1,
-                  type: "spring",
-                  stiffness: 200
-                }}
-              >
-                <div className="flex-shrink-0 w-7 h-7 mr-2 rounded-full bg-indigo-800/20 flex items-center justify-center">
-                  {mediaTypeIcons[type] || mediaTypeIcons.default}
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-indigo-300">{type}</div>
-                  <div className="text-xs text-indigo-400/60">{count} {count === 1 ? 'folder' : 'folders'}</div>
-                </div>
-              </motion.div>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm text-blue-300 font-medium">
+            <Database className="h-3.5 w-3.5 inline-block mr-1.5 text-blue-400" />
+            Library Access
+          </span>
+          <span className="text-xs bg-blue-900/40 text-blue-200 px-2 py-0.5 rounded-full border border-blue-800/30">
+            {folderCount} {folderCount === 1 ? 'folder' : 'folders'}
+          </span>
+        </div>
+        
+        <div className="flex flex-wrap gap-1.5">
+          {folderList.map((folderId, index) => (
+            <motion.div
+              key={folderId}
+              className="px-2 py-1 rounded bg-blue-900/20 border border-blue-800/10 flex items-center"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ 
+                delay: index * 0.05,
+                type: "spring",
+                stiffness: 400,
+                damping: 15
+              }}
+              whileHover={{ 
+                scale: 1.05, 
+                backgroundColor: "rgba(30, 58, 138, 0.3)" 
+              }}
+            >
+              {getFolderIcon(index)}
+              <span className="text-xs text-blue-300 ml-1.5">
+                Library {index + 1}
+              </span>
+            </motion.div>
           ))}
-        </AnimatePresence>
+        </div>
       </motion.div>
     </div>
   );
-}
+};
+
+export default EnabledFoldersDisplay;
