@@ -66,11 +66,61 @@ EOF
     else
         echo "You'll need to set up the DATABASE_URL in .env file manually."
         cp .env.example .env
+        echo ""
+        echo "IMPORTANT: You must edit the .env file with your database credentials before running the application!"
+        echo ""
+        ${EDITOR:-vi} .env
     fi
 else
-    echo "Warning: PostgreSQL client not found."
-    echo "You'll need to set up the DATABASE_URL in .env file manually."
-    cp .env.example .env
+    # If PostgreSQL is not found, offer to run a PostgreSQL container
+    echo "PostgreSQL client not found."
+    
+    if command -v docker &> /dev/null; then
+        echo "Docker is installed. Would you like to run a PostgreSQL container? (y/n)"
+        read -r RUN_DOCKER_DB
+        
+        if [[ "$RUN_DOCKER_DB" =~ ^[Yy]$ ]]; then
+            echo "Enter a password for PostgreSQL (default: postgres):"
+            read -rs PG_PASS
+            PG_PASS=${PG_PASS:-postgres}
+            
+            echo "Starting PostgreSQL container..."
+            docker run -d \
+                --name jellyfin-manager-db \
+                -e POSTGRES_USER=postgres \
+                -e POSTGRES_PASSWORD=$PG_PASS \
+                -e POSTGRES_DB=jellyfin_manager \
+                -p 5432:5432 \
+                postgres:15-alpine
+            
+            # Wait for PostgreSQL to be ready
+            echo "Waiting for PostgreSQL to start..."
+            sleep 5
+            
+            # Create .env file with database connection
+            echo "Creating .env file..."
+            cat > .env << EOF
+DATABASE_URL=postgresql://postgres:$PG_PASS@localhost:5432/jellyfin_manager
+NODE_ENV=production
+PORT=5000
+EOF
+        else
+            echo "You'll need to set up the DATABASE_URL in .env file manually."
+            cp .env.example .env
+            echo ""
+            echo "IMPORTANT: You must edit the .env file with your database credentials before running the application!"
+            echo ""
+            ${EDITOR:-vi} .env
+        fi
+    else
+        echo "Warning: Neither PostgreSQL nor Docker were found."
+        echo "You'll need to install PostgreSQL and set up the DATABASE_URL in .env file manually."
+        cp .env.example .env
+        echo ""
+        echo "IMPORTANT: You must edit the .env file with your database credentials before running the application!"
+        echo ""
+        ${EDITOR:-vi} .env
+    fi
 fi
 
 # Install dependencies
@@ -91,8 +141,12 @@ echo "==================================================="
 echo "To start the application, run:"
 echo "  npm start"
 echo ""
+echo "Or in development mode:"
+echo "  npm run dev"
+echo ""
 echo "The application will be available at:"
 echo "  http://localhost:5000"
 echo ""
-echo "Make sure your PostgreSQL database is running!"
+echo "IMPORTANT: Make sure your PostgreSQL database is running and"
+echo "that DATABASE_URL in your .env file is correct!"
 echo "==================================================="

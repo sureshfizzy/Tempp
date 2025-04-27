@@ -7,6 +7,22 @@
 
 Jellyfin User Manager is a sophisticated web application that enhances Jellyfin's user management capabilities with features like invite systems, user account expiration, advanced role management, and activity tracking.
 
+## Quick Start
+
+Having trouble with database setup? Try our quickstart script:
+
+```bash
+# Clone the repository (if you haven't already)
+git clone https://github.com/yourusername/jellyfin-user-manager.git
+cd jellyfin-user-manager
+
+# Run the quickstart script
+chmod +x quickstart.sh
+./quickstart.sh
+```
+
+This will guide you through setting up the database and environment variables correctly.
+
 ## Features
 
 - 🔒 **Multi-step onboarding process**: Connect to your Jellyfin server with API key and admin credentials
@@ -83,22 +99,55 @@ If you prefer to build and run the application directly:
    cd jellyfin-user-manager
    ```
 
-2. Install dependencies:
+2. Set up a PostgreSQL database:
+   
+   Option A - Using Docker (easiest):
+   ```bash
+   docker run -d \
+     --name jellyfin-manager-db \
+     -e POSTGRES_USER=postgres \
+     -e POSTGRES_PASSWORD=postgres \
+     -e POSTGRES_DB=jellyfin_manager \
+     -p 5432:5432 \
+     postgres:15-alpine
+   ```
+
+   Option B - Using an existing PostgreSQL installation:
+   ```bash
+   # Create a database using psql
+   psql -U postgres -c "CREATE DATABASE jellyfin_manager;"
+   ```
+
+3. Create an `.env` file with your database connection:
+   ```bash
+   # Use this format
+   echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jellyfin_manager" > .env
+   echo "NODE_ENV=development" >> .env
+   echo "PORT=5000" >> .env
+   ```
+
+4. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Set up your PostgreSQL database and update the connection string in your environment variables.
-
-4. Build the application:
+5. Build the application:
    ```bash
    npm run build
    ```
 
-5. Start the application:
+6. Start the application:
    ```bash
+   # For production
    npm start
+   
+   # For development
+   npm run dev
    ```
+
+7. Access the application at `http://localhost:5000`
+
+> **IMPORTANT**: The most common error when running locally is the absence of a proper DATABASE_URL environment variable. Make sure your `.env` file exists and contains the correct PostgreSQL connection string.
 
 ## Environment Variables
 
