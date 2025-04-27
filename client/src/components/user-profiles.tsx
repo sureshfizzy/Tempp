@@ -48,7 +48,7 @@ interface UserProfile {
   sourceUserId: string;
   sourceName: string; // The name of the base user
   isDefault: boolean;
-  libraryCount: number;
+  libraryCount: number; // will be a number
   createdAt: string;
 }
 
@@ -214,7 +214,11 @@ export function UserProfiles() {
                     <TableRow key={profile.id}>
                       <TableCell className="font-medium">{profile.name}</TableCell>
                       <TableCell>{profile.sourceName}</TableCell>
-                      <TableCell>{profile.libraryCount === "All" ? "All Libraries" : profile.libraryCount}</TableCell>
+                      <TableCell>
+                        {typeof profile.libraryCount === "string" && profile.libraryCount === "All" 
+                          ? "All Libraries" 
+                          : `${profile.libraryCount} ${profile.libraryCount === 1 ? 'Library' : 'Libraries'}`}
+                      </TableCell>
                       <TableCell>
                         {profile.isDefault && (
                           <Badge variant="outline" className="bg-primary/10 text-primary">
