@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { ClapperboardIcon, Film, AlertCircle, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
+import { ClapperboardIcon, Film, AlertCircle, CheckCircle2, Loader2, ArrowRight, Users } from "lucide-react";
 import { 
   Form, 
   FormControl, 
@@ -218,9 +218,37 @@ export default function InviteSignupPage() {
                       <span>Valid invite</span>
                     </div>
                     {invite.label && (
-                      <p className="text-gray-300 text-sm">
+                      <p className="text-gray-300 text-sm mb-2">
                         {invite.label}
                       </p>
+                    )}
+                    
+                    {/* Show account expiration information if enabled */}
+                    {invite.userExpiryEnabled && (
+                      <div className="mt-2 text-xs text-amber-400 bg-amber-900/30 p-2 rounded-md flex items-start">
+                        <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-medium">Time-limited account</span>
+                          <p className="text-amber-300/80 mt-1">
+                            This account will expire after{' '}
+                            {invite.userExpiryMonths ? `${invite.userExpiryMonths} month${invite.userExpiryMonths !== 1 ? 's' : ''}` : ''}
+                            {invite.userExpiryMonths && invite.userExpiryDays ? ' and ' : ''}
+                            {invite.userExpiryDays ? `${invite.userExpiryDays} day${invite.userExpiryDays !== 1 ? 's' : ''}` : ''}
+                            {((invite.userExpiryMonths || invite.userExpiryDays) && invite.userExpiryHours) ? ' and ' : ''}
+                            {invite.userExpiryHours ? `${invite.userExpiryHours} hour${invite.userExpiryHours !== 1 ? 's' : ''}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show invite usage information if limited */}
+                    {invite.maxUses !== null && (
+                      <div className="mt-2 text-xs text-blue-400 bg-blue-900/30 p-2 rounded-md flex items-center">
+                        <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <span>
+                          This invite can be used {invite.usesRemaining} more time{invite.usesRemaining !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     )}
                   </div>
                 )}

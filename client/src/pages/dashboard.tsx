@@ -19,7 +19,8 @@ import {
   User, 
   UserCheck, 
   Settings, 
-  CheckCircle, 
+  CheckCircle,
+  AlertCircle, 
   Users, 
   Film, 
   Infinity, 
@@ -356,21 +357,44 @@ export default function Dashboard() {
                               </Button>
                             </div>
                           </div>
-                          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                            <div>
-                              <div className="flex items-center mb-1">
+                          <div className="mt-2 text-xs text-muted-foreground space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
                                 <Code className="h-3 w-3 mr-1" /> 
                                 <span className="font-mono">{invite.code}</span>
                               </div>
                               <div className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>Expires in {expiryText}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between">
+                              <div className="flex items-center">
                                 <Users className="h-3 w-3 mr-1" /> 
                                 <span>{invite.maxUses === null ? 'Unlimited uses' : `${invite.usesRemaining} of ${invite.maxUses} uses remaining`}</span>
                               </div>
+                              
+                              {invite.userExpiryEnabled && (
+                                <div className="flex items-center text-amber-500">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  <span>
+                                    Account expiry: {formatExpiryTime(
+                                      invite.userExpiryMonths || 0,
+                                      invite.userExpiryDays || 0,
+                                      invite.userExpiryHours || 0
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>Expires in {expiryText}</span>
-                            </div>
+                            
+                            {invite.userLabel && (
+                              <div className="flex items-center pt-1 border-t border-border/40">
+                                <User className="h-3 w-3 mr-1" />
+                                <span>User label: {invite.userLabel}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
