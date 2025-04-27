@@ -8,8 +8,11 @@ import {
   updateUser,
   disableUser,
   getUserRole, 
-  getConnectionStatus
+  getConnectionStatus,
+  getUserRoleById,
+  assignRoleToUser
 } from "@/lib/jellyfin";
+import { AssignRoleModal } from "@/components/assign-role-modal";
 import { UserExpiryBadge } from "@/components/user-expiry-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,6 +206,9 @@ export default function UsersPage() {
   
   // Expiry date state for the direct date picker
   const [expiryDate, setExpiryDate] = useState<string>("");
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [selectedAppUserId, setSelectedAppUserId] = useState<number | null>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   
   // Calculate expiry date based on selected months, days, hours, minutes
   const calculateExpiryDate = useCallback(() => {

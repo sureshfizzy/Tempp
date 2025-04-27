@@ -202,13 +202,75 @@ export async function getUserActivity(id: string, limit: number = 10): Promise<{
 }
 
 // Helper function to determine user role from policy
-export function getUserRole(user: User): "Administrator" | "User" | "ContentManager" {
+export function getUserRole(user: User): string {
   if (user.Policy?.IsAdministrator) {
     return "Administrator";
   } else if (user.Policy?.EnableMediaPlayback && user.Policy?.EnableContentDeletion) {
     return "ContentManager";
   } else {
-    return "User";
+    return user.roleName || "User";
+  }
+}
+
+// Get all user roles
+export async function getUserRoles(): Promise<any[]> {
+  try {
+    const response = await fetch('/api/user-roles', {
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch user roles:', response.statusText);
+      return [];
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user roles:', error);
+    return [];
+  }
+}
+
+// Get role for a specific user
+export async function getUserRoleById(userId: number): Promise<any> {
+  try {
+    const response = await fetch(`/api/users/${userId}/role`, {
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch role for user ${userId}:`, response.statusText);
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching role for user ${userId}:`, error);
+    return null;
+  }
+}
+
+// Assign role to user
+export async function assignRoleToUser(userId: number, roleId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/users/${userId}/role`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ roleId }),
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to assign role to user ${userId}:`, response.statusText);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error assigning role to user ${userId}:`, error);
+    return false;
   }
 }
 
