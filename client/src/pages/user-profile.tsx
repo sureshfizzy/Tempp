@@ -35,10 +35,13 @@ export default function UserProfilePage() {
     isAdmin: boolean;
     jellyfinUserId: string;
     expiresAt?: string | null;
+    disabled?: boolean;
   }
   
   const userQuery = useQuery<AppUser>({
-    queryKey: ["/api/me"]
+    queryKey: ["/api/me"],
+    staleTime: 0, // Always refetch to get the latest expiry information
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   // Get connection status
@@ -367,10 +370,18 @@ export default function UserProfilePage() {
                     {userQuery.data?.isAdmin ? "Administrator" : "Regular User"}
                   </CardDescription>
                   
-                  {/* Account Expiry Badge */}
+                  {/* Account Expiry Badge - Using both badge components for redundancy */}
                   <div className="mt-3">
-                    <UserExpiryBadge expiresAt={userQuery.data?.expiresAt} />
+                    <UserExpiryBadge expiresAt={userQuery.data?.expiresAt} disabled={userQuery.data?.disabled} />
                   </div>
+                  
+                  {/* Manual expiry display as backup */}
+                  {userQuery.data?.expiresAt && (
+                    <div className="mt-2 bg-amber-500/20 text-amber-300 border border-amber-600 px-3 py-1 rounded-full text-xs flex items-center">
+                      <CalendarClock className="w-3 h-3 mr-1" />
+                      Expires: {new Date(userQuery.data.expiresAt).toLocaleDateString()}
+                    </div>
+                  )}
                 </CardHeader>
                 
                 <CardContent className="p-6">

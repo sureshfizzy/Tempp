@@ -701,12 +701,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Return additional fields including expiry date and disabled status
       return res.status(200).json({
         id: user.id,
         username: user.username,
         email: user.email,
         isAdmin: user.isAdmin,
-        jellyfinUserId: user.jellyfinUserId
+        jellyfinUserId: user.jellyfinUserId,
+        expiresAt: user.expiresAt ? user.expiresAt.toISOString() : null,
+        disabled: user.disabled || false,
+        // Include roleId and roleName if available
+        roleId: user.roleId,
+        roleName: user.roleName
       });
     } catch (error) {
       console.error("Error fetching current user:", error);
