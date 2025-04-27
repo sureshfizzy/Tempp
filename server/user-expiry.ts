@@ -1,7 +1,6 @@
 import { db } from './db';
 import { appUsers, jellyfinCredentials } from '@shared/schema';
 import { eq, and, isNotNull, lt } from 'drizzle-orm';
-import * as https from 'https';
 
 /**
  * Background job to check for expired user accounts and disable them
@@ -45,22 +44,12 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
           
           try {
             if (user.jellyfinUserId && user.jellyfinUserId.length > 5) { // Validate the ID is a proper string, not a date
-              // Configure fetch options for self-signed certificates in development
-              const fetchOptions: RequestInit = {
+              // First get the current user policy
+              const userResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}`, {
                 headers: {
                   "X-Emby-Token": creds.accessToken || "",
                 },
-              };
-              
-              // Add agent for self-signed certificates in development
-              if (process.env.NODE_ENV !== 'production') {
-                fetchOptions.agent = new https.Agent({
-                  rejectUnauthorized: false
-                });
-              }
-              
-              // First get the current user policy
-              const userResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}`, fetchOptions);
+              });
               
               if (userResponse.ok) {
                 const userData = await userResponse.json();
@@ -69,25 +58,15 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
                   const currentPolicy = userData.Policy;
                   currentPolicy.IsDisabled = true;
                   
-                  // Setup fetch options with SSL handling
-                  const policyFetchOptions: RequestInit = {
+                  // Update the policy in Jellyfin
+                  const policyResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}/Policy`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
                       "X-Emby-Token": creds.accessToken || "",
                     },
                     body: JSON.stringify(currentPolicy),
-                  };
-                  
-                  // Add agent for self-signed certificates in development
-                  if (process.env.NODE_ENV !== 'production') {
-                    policyFetchOptions.agent = new https.Agent({
-                      rejectUnauthorized: false
-                    });
-                  }
-                  
-                  // Update the policy in Jellyfin
-                  const policyResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}/Policy`, policyFetchOptions);
+                  });
                   
                   if (policyResponse.ok) {
                     console.log(`Successfully disabled Jellyfin user ${userData.Name} (${user.jellyfinUserId}) due to expiry`);
