@@ -164,10 +164,10 @@ export default function LoginPage() {
       
       {/* Content Panel (Centered) */}
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center fade-in">
+        <div className="w-full max-w-md login-container">
+          <div className="mb-8 text-center">
             <div className="flex items-center justify-center mb-4">
-              <Film className="h-14 w-14 text-primary blue-glow" />
+              <Film className="h-14 w-14 text-primary blue-glow login-logo" />
             </div>
             <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow">
               Jellyfin Manager
@@ -177,7 +177,7 @@ export default function LoginPage() {
             </p>
           </div>
           
-          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
+          <div className="login-card">
             <Card className="bg-slate-900 border-primary/30 shadow-lg">
               <CardContent className="pt-6">
                 {!connectionStatus?.connected ? (
@@ -197,7 +197,7 @@ export default function LoginPage() {
                         </p>
                         <Button 
                           onClick={handleReconnect}
-                          className="bg-primary hover:bg-primary/90 text-white"
+                          className="bg-primary hover:bg-primary/90 text-white btn-animate"
                         >
                           Connect to Server
                         </Button>
