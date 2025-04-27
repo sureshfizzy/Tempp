@@ -129,9 +129,7 @@ export default function UserProfilePage() {
         throw new Error("User not found");
       }
       
-      const response = await apiRequest("PATCH", `/api/app-users/${userQuery.data.id}`, {
-        email
-      });
+      const response = await apiRequest("PATCH", `/api/app-users/${userQuery.data.id}`, { email });
       
       if (!response.ok) {
         throw new Error("Failed to update email");
@@ -164,10 +162,7 @@ export default function UserProfilePage() {
         throw new Error("User not found");
       }
       
-      const response = await apiRequest("POST", `/api/users/${userQuery.data.jellyfinUserId}/password`, {
-        currentPassword,
-        newPassword
-      });
+      const response = await apiRequest("POST", `/api/users/${userQuery.data.jellyfinUserId}/password`, { currentPassword, newPassword });
       
       if (!response.ok) {
         const errorText = await response.text();

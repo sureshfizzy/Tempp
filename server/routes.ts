@@ -3055,5 +3055,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Change password endpoint
+  app.post("/api/users/:id/password", async (req: Request, res: Response) => {
+    try {
+      const jellyfinUserId = req.params.id;
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).send("Current password and new password are required");
+      }
+      
+      if (!req.session.connected || !req.session.userId) {
+        return res.status(401).send("You must be logged in to change your password");
+      }
+      
+      // Only allow users to change their own password unless they're an admin
+      if (jellyfinUserId !== req.session.jellyfinUserId && !req.session.isAdmin) {
+        return res.status(403).send("You can only change your own password");
+      }
+      
+      // Get the credentials to authenticate to Jellyfin
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(500).send("Jellyfin server credentials not found");
+      }
+      
+      // Get app user by Jellyfin ID
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.jellyfinUserId === jellyfinUserId);
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      
+      // Verify the current password with Jellyfin server
+      const authResponse = await fetch(`${credentials.url}/Users/AuthenticateByName`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Emby-Authorization": `MediaBrowser Client="JellyfinUserManager", Device="Server", DeviceId="usermanager", Version="1.0.0"`
+        },
+        body: JSON.stringify({
+          Username: user.username,
+          Pw: currentPassword
+        })
+      });
+      
+      if (!authResponse.ok) {
+        return res.status(400).send("Current password is incorrect");
+      }
+      
+      // Change password in Jellyfin
+      const changePasswordResponse = await fetch(`${credentials.url}/Users/${jellyfinUserId}/Password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Emby-Token": credentials.accessToken || ""
+        },
+        body: JSON.stringify({
+          CurrentPw: currentPassword,
+          NewPw: newPassword
+        })
+      });
+      
+      if (!changePasswordResponse.ok) {
+        const errorText = await changePasswordResponse.text();
+        console.error("Password change failed:", errorText);
+        return res.status(500).send("Failed to change password in Jellyfin");
+      }
+      
+      // Log this activity
+      await storage.createActivityLog({
+        action: "PASSWORD_CHANGED",
+        userId: req.session.userId || 0,
+        targetUserId: user.id,
+        details: `Password changed for user ${user.username}`
+      });
+      
+      res.status(200).send({ success: true, message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).send("Error changing password");
+    }
+  });
+  
   return httpServer;
 }
