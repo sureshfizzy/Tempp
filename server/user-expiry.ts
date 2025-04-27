@@ -70,8 +70,66 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
                   
                   if (policyResponse.ok) {
                     console.log(`Successfully disabled Jellyfin user ${userData.Name} (${user.jellyfinUserId}) due to expiry`);
+
+                    // Verify the update was applied by fetching the user again
+                    const verifyResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}`, {
+                      headers: {
+                        "X-Emby-Token": creds.accessToken || "",
+                      },
+                    });
+                    
+                    if (verifyResponse.ok) {
+                      const verifyData = await verifyResponse.json();
+                      console.log(`Verified Jellyfin user ${verifyData.Name} disabled status: ${verifyData.Policy?.IsDisabled ? 'true' : 'false'}`);
+                      
+                      if (!verifyData.Policy?.IsDisabled) {
+                        // The disable update didn't take effect, try again with a different approach
+                        console.warn(`Jellyfin API didn't apply disable setting for ${userData.Name}, trying alternative method`);
+                        
+                        // Make a more specific request focused only on the IsDisabled property
+                        const retryResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}/Policy`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json", 
+                            "X-Emby-Token": creds.accessToken || "",
+                          },
+                          body: JSON.stringify({
+                            IsDisabled: true
+                          }),
+                        });
+                        
+                        if (retryResponse.ok) {
+                          console.log(`Successfully disabled Jellyfin user ${userData.Name} using simplified request`);
+                        } else {
+                          console.error(`Failed retry to disable Jellyfin user ${user.jellyfinUserId}: ${retryResponse.statusText}`);
+                        }
+                      }
+                    }
                   } else {
                     console.error(`Failed to disable Jellyfin user ${user.jellyfinUserId}: ${policyResponse.statusText}`);
+                    
+                    // Try alternative method with minimal payload
+                    console.warn(`Trying alternative method to disable user ${user.jellyfinUserId}`);
+                    try {
+                      const alternativeResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}/Policy`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "X-Emby-Token": creds.accessToken || "",
+                        },
+                        body: JSON.stringify({
+                          IsDisabled: true
+                        }),
+                      });
+                      
+                      if (alternativeResponse.ok) {
+                        console.log(`Successfully disabled Jellyfin user ${userData.Name} with alternative method`);
+                      } else {
+                        console.error(`Alternative method also failed: ${alternativeResponse.statusText}`);
+                      }
+                    } catch (altError) {
+                      console.error(`Error in alternative disable method:`, altError);
+                    }
                   }
                 } else {
                   console.error(`Unable to retrieve policy for Jellyfin user ${user.jellyfinUserId}`);
