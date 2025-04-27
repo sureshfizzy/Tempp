@@ -731,13 +731,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const users = await response.json() as any[];
+      // Define proper type for Jellyfin API response
+  interface JellyfinUser {
+    Id: string;
+    Name: string;
+    Policy?: {
+      IsAdministrator?: boolean;
+      IsDisabled?: boolean;
+      EnableAllFolders?: boolean;
+      EnabledFolders?: string[];
+      [key: string]: any; // For other policy properties
+    };
+    [key: string]: any; // For other user properties
+  }
+  
+  const users = await response.json() as JellyfinUser[];
       
-      // Log the first user's policy data for debugging
-      if (users && users.length > 0 && users[0]) {
-        const firstUser = users[0];
-        console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
-      }
+  // Log the first user's policy data for debugging
+  if (users && users.length > 0 && users[0]) {
+    const firstUser = users[0];
+    console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
+  }
       
       // Get individual user details which include the full policy
       // This is needed because the list API might not return complete policy data
@@ -2340,6 +2354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
+        console.log(`Creating new Jellyfin user: ${username} via invite code: ${code}`);
         const jellyfinResponse = await fetch(`${apiUrl}/Users/New`, {
           method: 'POST',
           headers: {
@@ -2357,6 +2372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
+        console.log(`Successfully created Jellyfin user with ID: ${jellyfinUser.Id}`);
         
         // Create local app user with expiry if needed
         const appUser = await storage.createUser({
@@ -2366,6 +2382,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
           jellyfinUserId: jellyfinUser.Id,
           expiresAt
         });
+        
+        // Step 1: First disable access to all libraries for the new user
+        // Get the current policy for the newly created user
+        console.log(`Getting current policy for new user: ${jellyfinUser.Id}`);
+        const userResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}`, {
+          headers: {
+            "X-Emby-Token": credentials.accessToken || "",
+          },
+        });
+        
+        if (userResponse.ok) {
+          // Define type for Jellyfin user response
+          interface JellyfinUserData {
+            Id: string;
+            Name: string;
+            Policy?: {
+              IsAdministrator?: boolean;
+              IsDisabled?: boolean;
+              EnableAllFolders?: boolean;
+              EnabledFolders?: string[];
+              [key: string]: any;
+            };
+            [key: string]: any;
+          }
+          
+          const userData = await userResponse.json() as JellyfinUserData;
+          
+          if (userData && userData.Policy) {
+            console.log(`Retrieved current policy for new user ${username}`);
+            const currentPolicy = userData.Policy;
+            
+            // Disable access to all libraries
+            currentPolicy.EnableAllFolders = false;
+            currentPolicy.EnabledFolders = []; // Empty array to disable all access
+            
+            console.log(`Updating policy for new user ${username} to disable all library access`);
+            const updatePolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+              body: JSON.stringify(currentPolicy),
+            });
+
+            if (!updatePolicyResponse.ok) {
+              console.error(`Failed to update library access policy: ${updatePolicyResponse.statusText}`);
+            } else {
+              console.log(`Successfully disabled all library access for new user ${username}`);
+              
+              // Step 2: Check if this invite has an associated profile to copy library access from
+              if (invite.profileId) {
+                console.log(`Invite has associated profile ID: ${invite.profileId}, applying library access settings`);
+                
+                try {
+                  // Get the user profile
+                  const profileId = parseInt(invite.profileId, 10);
+                  if (!isNaN(profileId)) {
+                    const profile = await storage.getUserProfileById(profileId);
+                    
+                    if (profile && profile.libraryAccess) {
+                      console.log(`Found profile ${profile.name} with library access settings`);
+                      
+                      // Parse the library access from the profile
+                      try {
+                        const libraryAccess = JSON.parse(profile.libraryAccess);
+                        
+                        if (Array.isArray(libraryAccess) && libraryAccess.length > 0) {
+                          console.log(`Setting library access for user ${username} based on profile ${profile.name}`);
+                          
+                          // Apply the library access to the user's policy
+                          currentPolicy.EnabledFolders = libraryAccess;
+                          
+                          const updateLibraryResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "X-Emby-Token": credentials.accessToken || "",
+                            },
+                            body: JSON.stringify(currentPolicy),
+                          });
+                          
+                          if (updateLibraryResponse.ok) {
+                            console.log(`Successfully applied library access settings from profile "${profile.name}" with ${libraryAccess.length} libraries`);
+                            
+                            // Log the library access change
+                            await storage.createActivityLog({
+                              type: 'library_access_updated',
+                              message: `Library access set for ${username} from profile "${profile.name}"`,
+                              username: username,
+                              userId: String(appUser.id),
+                              inviteCode: code,
+                              metadata: JSON.stringify({
+                                profileId: profile.id,
+                                profileName: profile.name,
+                                libraryCount: libraryAccess.length
+                              })
+                            });
+                          } else {
+                            console.error(`Failed to update library access: ${updateLibraryResponse.statusText}`);
+                          }
+                        } else {
+                          console.log(`Profile ${profile.name} has no library access defined or empty array`);
+                        }
+                      } catch (parseError) {
+                        console.error(`Error parsing library access JSON from profile: ${parseError}`);
+                      }
+                    } else {
+                      console.log(`Profile ID ${profileId} not found or has no library access settings`);
+                    }
+                  }
+                } catch (profileError) {
+                  console.error(`Error applying profile library access: ${profileError}`);
+                }
+              } else {
+                console.log(`No profile associated with invite code: ${code}, keeping all libraries disabled`);
+              }
+            }
+          }
+        }
         
         // Increment the invite used count
         const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
