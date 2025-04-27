@@ -24,7 +24,12 @@ A sophisticated Jellyfin user management web application that provides advanced 
 This application supports two database options:
 
 1. **Embedded SQLite** (Default): No configuration required, data is stored in a local SQLite file
+   - Pros: No external dependencies, simple setup, works out of the box
+   - Data stored in: `./data/jellyfin-manager.db` (configurable via DATA_DIR environment variable)
+   
 2. **External PostgreSQL**: Connect to an external PostgreSQL database (optional)
+   - Pros: Better performance for large installations, data can be backed up separately
+   - Configure via DATABASE_URL environment variable
 
 ## Quick Start
 

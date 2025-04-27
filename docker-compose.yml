@@ -17,11 +17,23 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=UTC
+      
+      # DATABASE CONFIGURATION OPTIONS:
+      
+      # Option 1 (Default): Use SQLite (embedded database)
+      # Set DATA_DIR to specify where SQLite database will be stored
       - DATA_DIR=/app/data
-      # Empty DATABASE_URL to force SQLite mode
+      # Empty DATABASE_URL explicitly forces SQLite mode
       - DATABASE_URL=
+      
+      # Option 2: Use PostgreSQL (uncomment and configure)
+      # - DATABASE_URL=postgresql://username:password@host:5432/database
+      # Note: When using PostgreSQL, comment out DATA_DIR if not needed
+      
     volumes:
+      # App configuration
       - ./config:/app/config
+      # Data storage (critical for SQLite database)
       - ./data:/app/data
     networks:
       - jellyfin-network
