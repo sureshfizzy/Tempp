@@ -346,7 +346,7 @@ export default function UsersPage() {
                 <TableBody>
                   {usersQuery.isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                           <span className="ml-2">Loading users...</span>
@@ -355,7 +355,7 @@ export default function UsersPage() {
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <Users className="h-10 w-10 text-gray-300" />
                           <span>No users found</span>
