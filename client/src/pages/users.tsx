@@ -329,7 +329,7 @@ export default function UsersPage() {
                       />
                     </TableHead>
                     <TableHead>Username</TableHead>
-                    <TableHead className="hidden md:table-cell">Role & Access</TableHead>
+                    <TableHead className="hidden md:table-cell">Access</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -375,18 +375,9 @@ export default function UsersPage() {
                               <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
                                 {getUserRole(user)}
                               </Badge>
-                              {user.roleId && (
-                                <span className="text-xs text-blue-600 font-medium">Custom</span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center text-xs text-gray-500 mt-1">
-                              <span className="mr-2">
-                                {user.Policy?.EnableAllFolders ? "All libraries" : 
-                                  user.Policy?.EnabledFolders?.length ? `${user.Policy.EnabledFolders.length} libraries` : 
-                                  "No access"}
+                              <span className="text-xs text-gray-500">
+                                {formatDate(user.LastActivityDate)}
                               </span>
-                              <span>•</span>
-                              <span className="mx-2">{formatDate(user.LastActivityDate)}</span>
                             </div>
                             <div className="flex items-center text-xs text-gray-500 mt-1">
                               <UserExpiryBadge 
@@ -398,30 +389,9 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex items-center">
-                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
-                                {getUserRole(user)}
-                              </Badge>
-                              {user.roleId && (
-                                <span className="text-xs text-blue-600 font-medium">
-                                  Custom role assigned
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {user.Policy?.EnableAllFolders ? (
-                                <span>All libraries</span>
-                              ) : user.Policy?.EnabledFolders?.length ? (
-                                <span>{user.Policy.EnabledFolders.length} libraries</span>
-                              ) : (
-                                <span className="text-red-500">No library access</span>
-                              )}
-                              {user.Policy?.EnableContentDeletion && (
-                                <span className="ml-2 text-amber-600">• Can delete content</span>
-                              )}
-                            </div>
-                          </div>
+                          <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                            {getUserRole(user)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className="text-gray-400">
