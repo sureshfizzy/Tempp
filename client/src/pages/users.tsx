@@ -78,6 +78,12 @@ export default function UsersPage() {
     queryFn: getUsers,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+  
+  // Get all roles for displaying role info
+  const rolesQuery = useQuery({
+    queryKey: ["/api/user-roles"],
+    queryFn: getUserRoles
+  });
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
@@ -396,9 +402,9 @@ export default function UsersPage() {
                             </Badge>
                             
                             {/* Display Role if available */}
-                            {user.roleId && (
+                            {user.roleId && rolesQuery.data && (
                               <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                                Role: {rolesQuery.data?.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                                {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
                               </Badge>
                             )}
                           </div>
@@ -623,9 +629,9 @@ function RolesTable({ users }: { users: User[] }) {
                       </Badge>
                       
                       {/* Display assigned role if available */}
-                      {user.roleId && (
+                      {user.roleId && rolesQuery.data && (
                         <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                          {rolesQuery.data?.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                          {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
                         </Badge>
                       )}
                       
