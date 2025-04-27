@@ -19,12 +19,14 @@ import { Input } from "@/components/ui/input";
 // Activity data structure
 interface ActivityItem {
   id: string;
-  type: "account_created" | "invite_expired" | "invite_created";
+  type: string;
   message: string;
   timestamp: string;
   inviteCode?: string;
   username?: string;
+  userId?: number;
   createdBy?: string;
+  metadata?: Record<string, any>;
 }
 
 // Function to fetch activities from API
@@ -40,6 +42,7 @@ function ActivityPage() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [activityFilter, setActivityFilter] = useState("all");
   
   // Get Jellyfin connection status
   const connectionStatusQuery = useQuery({
@@ -70,17 +73,33 @@ function ActivityPage() {
   // Process activities data
   const activities = activityQuery.data || [];
   
-  // Filter activities based on search query
+  // Filter activities based on search query and activity type
   const filteredActivities = activities.filter((activity: ActivityItem) => {
-    if (!searchQuery) return true;
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (
+        activity.message.toLowerCase().includes(query) ||
+        activity.inviteCode?.toLowerCase().includes(query) ||
+        activity.username?.toLowerCase().includes(query) ||
+        activity.createdBy?.toLowerCase().includes(query)
+      );
+      
+      if (!matchesSearch) return false;
+    }
     
-    const query = searchQuery.toLowerCase();
-    return (
-      activity.message.toLowerCase().includes(query) ||
-      activity.inviteCode?.toLowerCase().includes(query) ||
-      activity.username?.toLowerCase().includes(query) ||
-      activity.createdBy?.toLowerCase().includes(query)
-    );
+    // Apply activity type filter
+    if (activityFilter === 'all') return true;
+    if (activityFilter === 'accounts' && (
+      activity.type === 'account_created' || 
+      activity.type === 'user_updated' || 
+      activity.type === 'user_deleted' ||
+      activity.type === 'user_disabled'
+    )) return true;
+    if (activityFilter === 'invites' && activity.type.includes('invite_')) return true;
+    if (activityFilter === 'system' && activity.type === 'system') return true;
+    
+    return false;
   });
 
   // Sort activities based on timestamp
@@ -175,7 +194,10 @@ function ActivityPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground whitespace-nowrap">Filters</span>
-                    <Select defaultValue="all">
+                    <Select 
+                      value={activityFilter}
+                      onValueChange={(value) => setActivityFilter(value)}
+                    >
                       <SelectTrigger className="w-[120px]">
                         <SelectValue placeholder="All" />
                       </SelectTrigger>
@@ -183,6 +205,7 @@ function ActivityPage() {
                         <SelectItem value="all">All</SelectItem>
                         <SelectItem value="accounts">Accounts</SelectItem>
                         <SelectItem value="invites">Invites</SelectItem>
+                        <SelectItem value="system">System</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -236,12 +259,20 @@ function ActivityPage() {
                   let textColorClass = 'text-white';
                   
                   // Set appropriate colors based on activity type
-                  if (activity.type === 'invite_expired') {
+                  if (activity.type.includes('expired')) {
                     bgColorClass = 'bg-amber-500';
                   } else if (activity.type === 'account_created') {
                     bgColorClass = 'bg-blue-500';
-                  } else if (activity.type === 'invite_created') {
+                  } else if (activity.type.includes('invite_')) {
                     bgColorClass = 'bg-green-500';
+                  } else if (activity.type === 'user_updated') {
+                    bgColorClass = 'bg-purple-500';
+                  } else if (activity.type === 'user_deleted') {
+                    bgColorClass = 'bg-red-500';
+                  } else if (activity.type === 'user_disabled') {
+                    bgColorClass = 'bg-orange-500';
+                  } else if (activity.type === 'system') {
+                    bgColorClass = 'bg-gray-500';
                   }
                   
                   return (
@@ -252,11 +283,20 @@ function ActivityPage() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium">{activity.message}</h3>
-                          {activity.type === "account_created" && (
+                          {activity.type === "account_created" && activity.inviteCode && (
                             <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
                           )}
-                          {(activity.type === "invite_expired" || activity.type === "invite_created") && activity.createdBy && (
+                          {activity.createdBy && (
                             <p className="text-sm opacity-90">BY {activity.createdBy}</p>
+                          )}
+                          {activity.type === "user_disabled" && activity.metadata?.reason && (
+                            <p className="text-sm opacity-90">REASON: {activity.metadata.reason}</p>
+                          )}
+                          {activity.type === "user_updated" && activity.metadata?.updates && Array.isArray(activity.metadata.updates) && (
+                            <p className="text-sm opacity-90">UPDATES: {activity.metadata.updates.join(', ')}</p>
+                          )}
+                          {activity.type === "invite_used" && activity.metadata?.usesLeft !== undefined && (
+                            <p className="text-sm opacity-90">USES LEFT: {activity.metadata.usesLeft}</p>
                           )}
                         </div>
                         <div className="text-sm opacity-80">{activity.timestamp}</div>
