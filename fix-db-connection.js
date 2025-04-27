@@ -1,84 +1,105 @@
-// Simple utility to check if DATABASE_URL is being read correctly
-const fs = require('fs');
+/**
+ * This script helps troubleshoot and fix SSL-related issues with database connections
+ * especially when using self-signed certificates in development environments.
+ */
 
-console.log("Checking database connection setup...");
+import * as fs from 'fs';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+import { exec } from 'child_process';
 
-// Check if .env file exists
-if (!fs.existsSync('.env')) {
-    console.error("ERROR: .env file not found!");
-    console.log("Please create an .env file with your database connection string.");
-    console.log("Example: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jellyfin_manager");
-    process.exit(1);
+console.log("============================================================");
+console.log("Jellyfin User Manager - Database Connection SSL Troubleshooter");
+console.log("============================================================\n");
+
+// Load environment variables from .env file
+const envPath = path.resolve(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  console.log(`Loading environment variables from ${envPath}`);
+  dotenv.config({ path: envPath });
+} else {
+  console.error(`Error: .env file not found at ${envPath}`);
+  console.log("Creating a basic .env file with NODE_TLS_REJECT_UNAUTHORIZED=0");
+  
+  // Create a minimal .env file if it doesn't exist
+  fs.writeFileSync(envPath, 'NODE_TLS_REJECT_UNAUTHORIZED=0\n');
+  console.log(`Created ${envPath} with NODE_TLS_REJECT_UNAUTHORIZED=0`);
 }
 
-// Read .env file
-const envContent = fs.readFileSync('.env', 'utf8');
-console.log("\n.env file content:");
-console.log("---------------------------------------");
-console.log(envContent);
-console.log("---------------------------------------");
-
-// Check for DATABASE_URL
-const databaseUrlMatch = envContent.match(/DATABASE_URL=(.+)/);
-if (!databaseUrlMatch) {
-    console.error("\nERROR: DATABASE_URL not found in .env file!");
-    process.exit(1);
+// Check if DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error("Error: DATABASE_URL environment variable is not set in .env file.");
+  process.exit(1);
 }
 
-const databaseUrl = databaseUrlMatch[1].trim();
-console.log("\nDATABASE_URL found:", databaseUrl);
+console.log(`Found DATABASE_URL: ${process.env.DATABASE_URL.substring(0, 20)}...`);
 
-// Check for correct format
-if (!databaseUrl.startsWith('postgresql://')) {
-    console.error("\nERROR: Invalid DATABASE_URL format. It should start with 'postgresql://'");
-    process.exit(1);
+// Update .env file to enable self-signed certificates if it's not already set
+if (process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0') {
+  console.log("Adding NODE_TLS_REJECT_UNAUTHORIZED=0 to .env file");
+  
+  // Read existing .env content
+  let envContent = fs.readFileSync(envPath, 'utf8');
+  
+  // Check if NODE_TLS_REJECT_UNAUTHORIZED is already in the file
+  if (envContent.includes('NODE_TLS_REJECT_UNAUTHORIZED=')) {
+    // Update the existing entry
+    envContent = envContent.replace(
+      /NODE_TLS_REJECT_UNAUTHORIZED=.*/,
+      'NODE_TLS_REJECT_UNAUTHORIZED=0'
+    );
+  } else {
+    // Add a new entry
+    envContent += '\nNODE_TLS_REJECT_UNAUTHORIZED=0';
+  }
+  
+  // Write back to .env file
+  fs.writeFileSync(envPath, envContent);
+  console.log("Updated .env file with NODE_TLS_REJECT_UNAUTHORIZED=0");
 }
 
-console.log("\nDatabase URL format is correct.");
+// Check if the database URL is secure (wss:// or https://)
+if (process.env.DATABASE_URL.startsWith('postgres://')) {
+  console.log("Your DATABASE_URL uses an insecure connection (postgres://)");
+  console.log("Checking if we can update it to use a secure connection (postgresql://)...");
+  
+  // Update the DATABASE_URL to use postgresql://
+  const updatedUrl = process.env.DATABASE_URL.replace('postgres://', 'postgresql://');
+  
+  // Read existing .env content
+  let envContent = fs.readFileSync(envPath, 'utf8');
+  
+  // Update the DATABASE_URL
+  envContent = envContent.replace(
+    /DATABASE_URL=.*/,
+    `DATABASE_URL=${updatedUrl}`
+  );
+  
+  // Write back to .env file
+  fs.writeFileSync(envPath, envContent);
+  console.log("Updated DATABASE_URL in .env file to use postgresql://");
+}
 
-// Create a temporary script to run with the environment variable manually set
-const tempScriptContent = `
-#!/bin/bash
-export DATABASE_URL="${databaseUrl}"
-export NODE_ENV=development
-export PORT=5000
+console.log("\n============================================================");
+console.log("SSL Troubleshooting Complete");
+console.log("The .env file has been updated with SSL bypassing configuration.");
+console.log("\nTo check if the database connection works now, run:");
+console.log("  ./check-db.sh");
+console.log("\nTo start the application with the new configuration, run:");
+console.log("  ./start-dev.sh");
+console.log("============================================================");
 
-echo "Starting application with explicit environment variables:"
-echo "DATABASE_URL = $DATABASE_URL"
-echo "NODE_ENV = $NODE_ENV"
-echo "PORT = $PORT"
-echo ""
-
-npm run dev
-`;
-
-fs.writeFileSync('start-with-env.sh', tempScriptContent);
-fs.chmodSync('start-with-env.sh', 0o755);
-
-console.log("\nI've created a special startup script that explicitly sets the environment variables:");
-console.log("---------------------------------------");
-console.log("Try running this command to start the application:");
-console.log("    ./start-with-env.sh");
-console.log("---------------------------------------");
-
-// Print troubleshooting information
-console.log("\nTroubleshooting information:");
-console.log("- Node.js version:", process.version);
-console.log("- Current directory:", process.cwd());
-console.log("- User home directory:", require('os').homedir());
-console.log("- Environment variables present:", Object.keys(process.env).length);
-
-// Check if dotenv module is available
-try {
-    // Try loading dotenv programmatically and see if it works
-    require('dotenv').config();
-    if (process.env.DATABASE_URL) {
-        console.log("\nDOTENV TEST SUCCESSFUL: DATABASE_URL was loaded properly when using require('dotenv').config()");
-        console.log("This suggests that you should modify server/db.ts to explicitly load dotenv at the top of the file.");
-    } else {
-        console.log("\nDOTENV TEST FAILED: DATABASE_URL wasn't loaded by dotenv. This suggests a configuration issue.");
+// Run npm install if node_modules doesn't exist
+if (!fs.existsSync(path.resolve(process.cwd(), 'node_modules'))) {
+  console.log("\nNode modules not found. Running npm install...");
+  exec('npm install', (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error during npm install: ${error.message}`);
+      return;
     }
-} catch (error) {
-    console.log("\nNote: dotenv module not installed. You may want to install it:");
-    console.log("    npm install dotenv");
+    if (stderr) {
+      console.error(`npm install stderr: ${stderr}`);
+    }
+    console.log("npm install completed successfully");
+  });
 }

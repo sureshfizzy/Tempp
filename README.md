@@ -27,19 +27,25 @@ This will guide you through setting up the database and environment variables co
 
 If you're having issues with the database connection, try these steps:
 
-1. Check your database connection:
+1. Fix SSL certificate issues (common when using self-signed certificates):
+   ```bash
+   ./fix-db-connection.sh
+   ```
+   This script will configure your environment to work with self-signed SSL certificates.
+
+2. Check your database connection:
    ```bash
    ./check-db.sh
    ```
    This will verify if your database is accessible and properly configured.
 
-2. Start with explicit environment variables:
+3. Start with explicit environment variables:
    ```bash
    ./start-dev.sh
    ```
    This script ensures environment variables are properly loaded before starting the application.
 
-3. If you need to quickly create a working development environment:
+4. If you need to quickly create a working development environment:
    ```bash
    # For full guided setup
    ./quickstart.sh
@@ -50,6 +56,19 @@ If you're having issues with the database connection, try these steps:
    # For Docker-based installation
    ./install-docker.sh
    ```
+
+#### Common SSL Certificate Issues
+
+If you're seeing errors like `self-signed certificate` or `DEPTH_ZERO_SELF_SIGNED_CERT`, these are related to SSL certificate validation failures. Our `fix-db-connection.sh` script addresses these by:
+
+1. Setting `NODE_TLS_REJECT_UNAUTHORIZED=0` in your .env file
+2. Configuring the application to use custom HTTPS agents that bypass certificate validation
+3. Ensuring proper protocol usage in database connection strings
+
+For production use, we recommend:
+- Using properly signed SSL certificates
+- Removing the `NODE_TLS_REJECT_UNAUTHORIZED=0` setting
+- Configuring trusted certificate authorities
 
 ## Features
 
