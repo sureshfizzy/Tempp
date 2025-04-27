@@ -842,9 +842,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .catch(err => console.error(`Failed to update disabled state for ${user.Name}:`, err));
           }
           
+          // Include role information if available
           return {
             ...user,
-            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
+            // Add local database fields for UI display
+            appUserId: appUser.id,
+            roleId: appUser.roleId || null,
             // Don't use appUser.disabled, use Jellyfin's Policy.IsDisabled flag
           };
         }
@@ -930,7 +934,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return res.status(200).json({
             ...parsedUser,
-            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
+            // Add local database fields for UI display
+            appUserId: appUser.id,
+            roleId: appUser.roleId || null
             // Don't add our DB disabled state, rely on Policy.IsDisabled
           });
         }
