@@ -112,16 +112,19 @@ function ActivityPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header/Nav */}
-      <header className="bg-primary text-white shadow-md">
+      <header className="border-b border-border/40 bg-background">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Settings className="h-6 w-6" />
-            <h1 className="text-xl font-semibold">Jellyfin User Management</h1>
+            <Link to="/dashboard" className="hover:opacity-80">
+              <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+                Jellyfin User Management
+              </h1>
+            </Link>
           </div>
           
           <div className="flex items-center space-x-4">
             <div className="text-sm flex items-center">
-              <CheckCircle className="text-green-300 mr-1 h-4 w-4" />
+              <CheckCircle className="text-green-500 mr-1 h-4 w-4" />
               <span className="hidden md:inline">Connected to:</span>
               <span className="font-medium ml-1 max-w-xs truncate">
                 {connectionStatusQuery.data?.serverUrl || "Jellyfin Server"}
@@ -129,9 +132,8 @@ function ActivityPage() {
             </div>
             <ThemeToggle />
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white"
               onClick={handleDisconnect}
             >
               <LogOut className="h-4 w-4 mr-1" />

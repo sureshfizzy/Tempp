@@ -1256,24 +1256,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (updateData.IsDisabled !== undefined) {
             updates.disabled = updateData.IsDisabled;
             console.log(`Updating disabled state for local user ${localUser.username} to: ${updateData.IsDisabled}`);
+            
+            // If the user is being enabled, reset their expiry date to null (permanent)
+            if (updateData.IsDisabled === false) {
+              updates.expiresAt = null;
+              console.log(`User ${localUser.username} enabled, resetting expiry to permanent`);
+            }
           }
           
           if (Object.keys(updates).length > 0) {
             await storage.updateUser(localUser.id, updates);
             
             // Log the user update in activity logs
+            // Use specific activity type for disabling/enabling users
+            const activityType = updateData.IsDisabled === true 
+              ? 'user_disabled' 
+              : updateData.IsDisabled === false 
+                ? 'user_enabled' 
+                : 'user_updated';
+
+            const activityMessage = updateData.IsDisabled === true 
+              ? `User disabled: ${localUser.username}` 
+              : updateData.IsDisabled === false 
+                ? `User enabled: ${localUser.username}` 
+                : `User updated: ${localUser.username}`;
+
             await storage.createActivityLog({
-              type: 'user_updated',
-              message: `User updated: ${localUser.username}`,
+              type: activityType,
+              message: activityMessage,
               username: localUser.username,
               userId: localUser.id,
               createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
               metadata: JSON.stringify({
                 updates: Object.keys(updates),
-                adminDisabled: updateData.IsDisabled === true ? true : undefined,
-                adminEnabled: updateData.IsDisabled === false ? true : undefined,
-                roleChanged: updateData.Role ? true : undefined,
-                jellyfinUserId: id
+                jellyfinUserId: id,
+                expiryReset: updateData.IsDisabled === false ? true : undefined,
+                roleChanged: updateData.Role ? true : undefined
               })
             });
             
