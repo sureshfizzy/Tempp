@@ -110,9 +110,12 @@ export default function InviteSignupPage() {
       toast({
         title: "Account created successfully",
         description: "Your account has been created. You can now sign in.",
+        duration: 5000, // Show toast a bit longer
       });
-      // Redirect to login page
-      setLocation("/login");
+      // Redirect to login page with slight delay so user sees success message
+      setTimeout(() => {
+        setLocation("/login");
+      }, 1500);
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : "Failed to create account";

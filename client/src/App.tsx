@@ -56,7 +56,12 @@ function Router() {
         setLocation('/login');
       }
       // If not connected and on a protected page, redirect to login
-      else if (!status.connected && path !== '/' && path !== '/login' && path !== '/onboarding') {
+      // BUT don't redirect if they're on the invite signup page
+      else if (!status.connected && 
+               path !== '/' && 
+               path !== '/login' && 
+               path !== '/onboarding' && 
+               !path.startsWith('/invite/')) {
         setLocation('/login');
       } 
       // If connected and on root, redirect to appropriate dashboard
