@@ -199,15 +199,66 @@ export default function UsersPage() {
     },
   });
   
+  // Expiry date state for the direct date picker
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  
+  // Calculate expiry date based on selected months, days, hours, minutes
+  const calculateExpiryDate = useCallback(() => {
+    const months = parseInt(expiryMonths || "0", 10);
+    const days = parseInt(expiryDays || "0", 10);
+    const hours = parseInt(expiryHours || "0", 10);
+    const minutes = parseInt(expiryMinutes || "0", 10);
+    
+    if (months === 0 && days === 0 && hours === 0 && minutes === 0) {
+      return null; // No expiry
+    }
+    
+    const now = new Date();
+    
+    // Add the specified time
+    now.setMonth(now.getMonth() + months);
+    now.setDate(now.getDate() + days);
+    now.setHours(now.getHours() + hours);
+    now.setMinutes(now.getMinutes() + minutes);
+    
+    return now.toISOString();
+  }, [expiryMonths, expiryDays, expiryHours, expiryMinutes]);
+
   // Set expiry mutation
   const setExpiryMutation = useMutation({
-    mutationFn: ({ userId, expiryDate }: { userId: string; expiryDate: string }) => 
-      updateUser(userId, { 
-        // Use a custom field in the API for expiry date
-        Policy: {
+    mutationFn: async ({ userId, expiryDate }: { userId: string; expiryDate: string | null }) => {
+      // First get the app user ID by Jellyfin user ID
+      const appUserResponse = await fetch(`/api/app-users/by-jellyfin-id/${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!appUserResponse.ok) {
+        throw new Error("Failed to find app user");
+      }
+      
+      const appUser = await appUserResponse.json();
+      
+      // Then update the app user's expiry date
+      const updateResponse = await fetch(`/api/app-users/${appUser.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           expiresAt: expiryDate
-        }
-      }),
+        }),
+      });
+      
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update expiry date");
+      }
+      
+      // Return the updated user
+      return await updateResponse.json();
+    },
     onSuccess: () => {
       toast({
         title: "Expiry updated",
@@ -659,6 +710,8 @@ export default function UsersPage() {
                   placeholder="Enter an expiry"
                   type="datetime-local"
                   min={new Date().toISOString().slice(0, 16)}
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
                 />
               </div>
               <div>
@@ -725,8 +778,21 @@ export default function UsersPage() {
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="button" variant="default">
-                Submit
+              <Button 
+                type="button" 
+                variant="default"
+                onClick={() => {
+                  if (currentUser) {
+                    const calculatedDate = expiryDate || calculateExpiryDate();
+                    setExpiryMutation.mutate({
+                      userId: currentUser.Id,
+                      expiryDate: calculatedDate
+                    });
+                  }
+                }}
+                disabled={setExpiryMutation.isPending}
+              >
+                {setExpiryMutation.isPending ? "Submitting..." : "Submit"}
               </Button>
             </DialogFooter>
           </DialogContent>
