@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import MediaTabsCard from "@/components/media-tabs-card";
 import FavoritesTab from "@/components/favorites-tab";
+import EnabledFoldersDisplay from "@/components/enabled-folders-display";
 import { formatDate } from "@/lib/jellyfin";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
