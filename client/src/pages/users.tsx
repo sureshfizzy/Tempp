@@ -78,6 +78,12 @@ export default function UsersPage() {
     queryFn: getUsers,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+  
+  // Get all roles
+  const rolesQuery = useQuery({
+    queryKey: ["/api/user-roles"],
+    queryFn: getUserRoles
+  });
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
@@ -330,6 +336,7 @@ export default function UsersPage() {
                     </TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead className="hidden md:table-cell">Access</TableHead>
+                    <TableHead className="hidden md:table-cell">Custom Role</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -379,6 +386,13 @@ export default function UsersPage() {
                                 {formatDate(user.LastActivityDate)}
                               </span>
                             </div>
+                            {user.roleId && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 mr-2">
+                                  {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
+                                </Badge>
+                              </div>
+                            )}
                             <div className="flex items-center text-xs text-gray-500 mt-1">
                               <UserExpiryBadge 
                                 expiresAt={user.expiresAt} 
@@ -392,6 +406,15 @@ export default function UsersPage() {
                           <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
                             {getUserRole(user)}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {user.roleId ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400">None</span>
+                          )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className="text-gray-400">
@@ -606,10 +629,16 @@ function RolesTable({ users }: { users: User[] }) {
               users.map((user) => (
                 <TableRow key={user.Id}>
                   <TableCell className="font-medium">{user.Name}</TableCell>
-                  <TableCell>
+                  <TableCell className="space-x-2">
                     <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
                       {getUserRole(user)}
                     </Badge>
+                    
+                    {user.roleId && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {user.Policy?.IsDisabled ? (
