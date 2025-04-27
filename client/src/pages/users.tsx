@@ -4,9 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   getUsers, 
   deleteUser, 
-  getUserRole, 
-  getUserWatchTime,
-  formatWatchTime
+  getUserRole
 } from "@/lib/jellyfin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,31 +113,11 @@ export default function UsersPage() {
     }
   }, [searchQuery, usersQuery.data]);
   
-  // Fetch watch time data for users
+  // No longer fetching watch time for users in the users table
   useEffect(() => {
-    async function fetchWatchTimes() {
-      if (!filteredUsers.length) return;
-      
-      const watchTimes: Record<string, number> = {};
-      
-      // Only fetch for a reasonable number of users to avoid too many requests
-      const usersToFetch = filteredUsers.slice(0, 10);
-      
-      for (const user of usersToFetch) {
-        try {
-          const watchTime = await getUserWatchTime(user.Id);
-          watchTimes[user.Id] = watchTime;
-        } catch (error) {
-          console.error(`Error fetching watch time for user ${user.Name}:`, error);
-          watchTimes[user.Id] = 0;
-        }
-      }
-      
-      setUserWatchTimes(watchTimes);
-    }
-    
-    fetchWatchTimes();
-  }, [filteredUsers]);
+    // Reset the user watch times state since we're not using it anymore
+    setUserWatchTimes({});
+  }, []);
 
   // Handle select all users
   const handleSelectAll = () => {

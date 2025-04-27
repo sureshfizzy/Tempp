@@ -5,17 +5,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface UserExpiryBadgeProps {
   expiresAt?: string | null;
   disabled?: boolean;
+  small?: boolean;
 }
 
-export function UserExpiryBadge({ expiresAt, disabled }: UserExpiryBadgeProps) {
+export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpiryBadgeProps) {
   if (!expiresAt && !disabled) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className="text-green-500 border-green-500 bg-green-500/10">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Permanent
+              <CheckCircle className={`${small ? 'h-2 w-2' : 'h-3 w-3'} mr-1`} />
+              {small ? "Perm" : "Permanent"}
             </Badge>
           </TooltipTrigger>
           <TooltipContent side="top">
@@ -32,7 +33,7 @@ export function UserExpiryBadge({ expiresAt, disabled }: UserExpiryBadgeProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="destructive" className="text-red-500 border-red-500 bg-red-500/10">
-              <Ban className="h-3 w-3 mr-1" />
+              <Ban className={`${small ? 'h-2 w-2' : 'h-3 w-3'} mr-1`} />
               Disabled
             </Badge>
           </TooltipTrigger>
@@ -58,7 +59,7 @@ export function UserExpiryBadge({ expiresAt, disabled }: UserExpiryBadgeProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="destructive" className="text-red-500 border-red-500 bg-red-500/10">
-              <AlertTriangle className="h-3 w-3 mr-1" />
+              <AlertTriangle className={`${small ? 'h-2 w-2' : 'h-3 w-3'} mr-1`} />
               Expired
             </Badge>
           </TooltipTrigger>
@@ -82,8 +83,8 @@ export function UserExpiryBadge({ expiresAt, disabled }: UserExpiryBadgeProps) {
             variant={isExpiringSoon ? "outline" : "secondary"} 
             className={isExpiringSoon ? "text-amber-500 border-amber-500 bg-amber-500/10" : ""}
           >
-            <Clock className="h-3 w-3 mr-1" />
-            {daysRemaining} days
+            <Clock className={`${small ? 'h-2 w-2' : 'h-3 w-3'} mr-1`} />
+            {daysRemaining} {small ? 'd' : 'days'}
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="top">
