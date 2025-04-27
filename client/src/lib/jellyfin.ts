@@ -360,3 +360,30 @@ export function formatExpiryTime(months: number | null = 0, days: number | null 
   
   return parts.join(', ') || "Custom expiry";
 }
+
+// Disable user (sets IsDisabled property in user policy)
+export async function disableUser(userId: string, disable: boolean = true): Promise<User> {
+  try {
+    const response = await fetch(`/api/users/${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        Policy: {
+          IsDisabled: disable
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to ${disable ? 'disable' : 'enable'} user`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error ${disable ? 'disabling' : 'enabling'} user:`, error);
+    throw error;
+  }
+}

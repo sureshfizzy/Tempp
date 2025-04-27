@@ -177,6 +177,53 @@ export default function UsersPage() {
       });
     },
   });
+  
+  // Disable user mutation
+  const disableUserMutation = useMutation({
+    mutationFn: ({ userId, disabled }: { userId: string; disabled: boolean }) => 
+      disableUser(userId, disabled),
+    onSuccess: () => {
+      toast({
+        title: "User status updated",
+        description: "The user has been updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsDisableModalOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user status",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Set expiry mutation
+  const setExpiryMutation = useMutation({
+    mutationFn: ({ userId, expiryDate }: { userId: string; expiryDate: string }) => 
+      updateUser(userId, { 
+        // Use a custom field in the API for expiry date
+        Policy: {
+          expiresAt: expiryDate
+        }
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Expiry updated",
+        description: "User expiry has been set successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsExpiryModalOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to set expiry",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Handle disconnect
   const handleDisconnect = () => {
@@ -397,24 +444,64 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end md:justify-start items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleEditUser(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => handleDeleteUser(user)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sr-only">Actions</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[180px]">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setCurrentUser(user);
+                                    setIsModifySettingsModalOpen(true);
+                                  }}
+                                >
+                                  <Settings className="h-4 w-4 mr-2" />
+                                  Modify Settings
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setCurrentUser(user);
+                                    setIsExpiryModalOpen(true);
+                                    setExpiryMonths("0");
+                                    setExpiryDays("0");
+                                    setExpiryHours("0");
+                                    setExpiryMinutes("0");
+                                  }}
+                                >
+                                  <CalendarClock className="h-4 w-4 mr-2" />
+                                  Set Expiry
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setCurrentUser(user);
+                                    setIsDisableModalOpen(true);
+                                    setSendNotification(false);
+                                  }}
+                                  className="text-amber-600"
+                                >
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Disable
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setCurrentUser(user);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -451,6 +538,199 @@ export default function UsersPage() {
           onConfirm={confirmDeleteUser}
           onCancel={() => setIsDeleteModalOpen(false)}
         />
+      )}
+
+      {/* Disable User Modal */}
+      {currentUser && (
+        <Dialog open={isDisableModalOpen} onOpenChange={setIsDisableModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Disable {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox
+                id="send-notification"
+                checked={sendNotification}
+                onCheckedChange={(checked) => setSendNotification(!!checked)}
+              />
+              <label htmlFor="send-notification" className="text-sm font-medium cursor-pointer">Send notification message</label>
+            </div>
+            <DialogFooter className="sm:justify-between">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  if (currentUser) {
+                    disableUserMutation.mutate({ 
+                      userId: currentUser.Id, 
+                      disabled: true 
+                    });
+                  }
+                }}
+                disabled={disableUserMutation.isPending}
+              >
+                {disableUserMutation.isPending ? "Disabling..." : "Disable"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modify Settings Modal */}
+      {currentUser && (
+        <Dialog open={isModifySettingsModalOpen} onOpenChange={setIsModifySettingsModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Modify Settings for {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}</DialogTitle>
+              <DialogDescription>
+                Apply settings from an existing profile, or source them directly from a user.
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="user">User</TabsTrigger>
+              </TabsList>
+              <TabsContent value="profile" className="py-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a profile" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic-profile">Basic Profile</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="apply-homescreen"
+                      checked={applyHomescreenLayout}
+                      onCheckedChange={(checked) => setApplyHomescreenLayout(!!checked)}
+                    />
+                    <label htmlFor="apply-homescreen" className="text-sm font-medium cursor-pointer">Apply homescreen layout</label>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="user" className="py-4">
+                <div className="space-y-4">
+                  <Select defaultValue={currentUser.Name}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={currentUser.Name}>{currentUser.Name}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+            </Tabs>
+            <DialogFooter className="sm:justify-between">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="button">
+                Apply
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Set Expiry Modal */}
+      {currentUser && (
+        <Dialog open={isExpiryModalOpen} onOpenChange={setIsExpiryModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Set expiry for {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Set Expiry</h3>
+                <Input 
+                  placeholder="Enter an expiry"
+                  type="datetime-local"
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium mb-2">Extend Expiry</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs">Months</label>
+                    <Select value={expiryMonths} onValueChange={setExpiryMonths}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="0" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <SelectItem key={`month-${i}`} value={i.toString()}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs">Days</label>
+                    <Select value={expiryDays} onValueChange={setExpiryDays}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="0" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <SelectItem key={`day-${i}`} value={i.toString()}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs">Hours</label>
+                    <Select value={expiryHours} onValueChange={setExpiryHours}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="0" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={`hour-${i}`} value={i.toString()}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs">Minutes</label>
+                    <Select value={expiryMinutes} onValueChange={setExpiryMinutes}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="0" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 60 }, (_, i) => (
+                          <SelectItem key={`minute-${i}`} value={i.toString()}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="sm:justify-between">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="button" variant="default">
+                Submit
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
