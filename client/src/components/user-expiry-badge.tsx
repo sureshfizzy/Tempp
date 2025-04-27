@@ -95,10 +95,21 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
       // Only attempt to disable once when component mounts and is expired
       const disableExpiredUser = async () => {
         try {
-          // Get the Jellyfin user ID from the expiry date string
-          const jellyfinUserId = expiresAt.split('_')[0]; // Get the ID if it's part of the string
+          // Get the Jellyfin user ID from the user data fetched from the server
+          // We need a separate API call to get the user information since we don't have it here
+          // First, get the current URL to extract the user table row data ID (not the Jellyfin ID)
+          const url = window.location.href;
+          const urlParts = url.split('/');
+          // Try to find a data-jellyfin-id attribute on a parent element
+          const userElement = document.querySelector('[data-jellyfin-id]');
+          const jellyfinUserId = userElement?.getAttribute('data-jellyfin-id');
           
-          if (!jellyfinUserId) return;
+          if (!jellyfinUserId) {
+            console.log('Could not find Jellyfin user ID from DOM, skipping auto-disable');
+            return;
+          }
+          
+          console.log(`Found Jellyfin user ID: ${jellyfinUserId}`);
           
           // Call our simplified disable endpoint that handles everything in one request
           const response = await fetch(`/api/users/${jellyfinUserId}/disable`, {
@@ -119,14 +130,17 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
             // Refresh users data to show updated status
             window.location.reload();
           } else {
-            console.error(`Failed to disable user: ${await response.text()}`);
+            const errorText = await response.text();
+            console.error(`Failed to disable user: ${errorText}`);
           }
         } catch (error) {
           console.error("Failed to auto-disable expired user:", error);
         }
       };
       
-      disableExpiredUser();
+      // Disable the automatic disable process for now until we can properly get the Jellyfin ID
+      // This will be handled by the scheduled server-side job instead
+      // disableExpiredUser();
     }
   }, [isExpired, expiryDate, expiresAt, disabled]);
   
