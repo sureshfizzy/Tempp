@@ -235,7 +235,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader 
-        title="Jellyfin Manager"
+        title={connectionStatusQuery.data?.serverName || "Jellyfin Manager"}
         subtitle={connectionStatusQuery.data?.serverUrl}
         user={{
           username: "Admin", // Default name since connectionStatus doesn't include username
