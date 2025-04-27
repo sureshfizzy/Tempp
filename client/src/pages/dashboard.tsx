@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { 
@@ -216,6 +216,18 @@ export default function Dashboard() {
     createInviteMutation.mutate(inviteData);
   };
 
+  // Filter out invites that are deleted (client-side filtering) for better UI animation
+  const filteredInvites = useMemo(() => {
+    if (!invitesQuery.data) return [];
+    
+    // If we're currently deleting an invite, filter it out immediately for smooth animation
+    if (deleteInviteId) {
+      return invitesQuery.data.filter(invite => invite.id !== deleteInviteId);
+    }
+    
+    return invitesQuery.data;
+  }, [invitesQuery.data, deleteInviteId]);
+  
   // Count user types
   const adminCount = usersQuery.data?.filter(user => user.Policy?.IsAdministrator).length || 0;
   const regularUserCount = usersQuery.data?.length ? usersQuery.data.length - adminCount : 0;
@@ -323,9 +335,9 @@ export default function Dashboard() {
                   <p className="text-muted-foreground text-sm">Loading invites...</p>
                 ) : invitesQuery.error ? (
                   <p className="text-muted-foreground text-sm">Error loading invites</p>
-                ) : invitesQuery.data && invitesQuery.data.length > 0 ? (
+                ) : filteredInvites.length > 0 ? (
                   <div className="space-y-3">
-                    {invitesQuery.data.map(invite => {
+                    {filteredInvites.map(invite => {
                       const inviteUrl = `${window.location.origin}/invite/${invite.code}`;
                       const expiryText = invite.expiresAt 
                         ? formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: false }) 
