@@ -336,7 +336,7 @@ export default function UsersPage() {
                     </TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead className="hidden md:table-cell">Access</TableHead>
-                    <TableHead className="hidden md:table-cell">Role</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -405,7 +405,7 @@ export default function UsersPage() {
                             {getUserRole(user)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell>
                           {user.roleName ? (
                             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
                               {user.roleName}
