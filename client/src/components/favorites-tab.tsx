@@ -19,7 +19,10 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
         return { Items: [], TotalRecordCount: 0 };
       }
       
-      return getUserFavorites(jellyfinUserId);
+      const result = await getUserFavorites(jellyfinUserId);
+      // Log favorites data for debugging
+      console.log("Favorites data:", result);
+      return result;
     },
     enabled: !!jellyfinUserId,
     staleTime: 300000, // 5 minutes
@@ -64,7 +67,7 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                     <a href={getItemLink(item.Id)} target="_blank" rel="noopener noreferrer" className="block">
                       <div className="h-16 w-28 rounded bg-blue-900/30 overflow-hidden relative">
                         <img 
-                          src={`/api/users/${jellyfinUserId}/item-image/${item.Id}`} 
+                          src={`/api/users/${jellyfinUserId}/item-image/${item.Id}${item.ImageTags?.Primary ? `?tag=${item.ImageTags.Primary}` : ''}`} 
                           alt={item.Name} 
                           className="h-full w-full object-cover transition-opacity duration-500 opacity-100"
                           onError={(e) => {
