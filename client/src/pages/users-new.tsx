@@ -323,6 +323,11 @@ export default function UsersPage() {
       setSelectedUsers([...selectedUsers, id]);
     }
   };
+  
+  // Get selected users objects
+  const getSelectedUsersObjects = useCallback(() => {
+    return filteredUsers.filter(user => selectedUsers.includes(user.Id));
+  }, [filteredUsers, selectedUsers]);
 
   // Handle edit user
   const handleEditUser = (user: User) => {
@@ -347,7 +352,7 @@ export default function UsersPage() {
   // Get status badge for users
   const getUserStatus = (user: User) => {
     if (user.Policy?.IsDisabled) {
-      return <Badge variant="destructive">Disabled</Badge>;
+      return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Disabled</Badge>;
     }
     
     // For tickets or invites - can be customized further
@@ -406,6 +411,78 @@ export default function UsersPage() {
               </Button>
             </div>
           </div>
+          
+          {/* Selected Users Actions */}
+          {selectedUsers.length > 0 && (
+            <div className="flex flex-wrap gap-2 bg-muted p-3 rounded-md">
+              <div className="mr-2 flex items-center">
+                <span className="font-medium">{selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected:</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => {
+                  const selectedUsersObjects = getSelectedUsersObjects();
+                  if (selectedUsersObjects.length > 0) {
+                    setCurrentUser(selectedUsersObjects[0]);
+                    setIsModifySettingsModalOpen(true);
+                  }
+                }}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Modify Settings
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => {
+                  const selectedUsersObjects = getSelectedUsersObjects();
+                  if (selectedUsersObjects.length > 0) {
+                    setCurrentUser(selectedUsersObjects[0]);
+                    setIsExpiryModalOpen(true);
+                    setExpiryMonths("0");
+                    setExpiryDays("0");
+                    setExpiryHours("0");
+                    setExpiryMinutes("0");
+                  }
+                }}
+              >
+                <CalendarClock className="h-4 w-4 mr-2" />
+                Set Expiry
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                onClick={() => {
+                  const selectedUsersObjects = getSelectedUsersObjects();
+                  if (selectedUsersObjects.length > 0) {
+                    setCurrentUser(selectedUsersObjects[0]);
+                    setIsDisableModalOpen(true);
+                    setSendNotification(false);
+                  }
+                }}
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Disable
+              </Button>
+              <Button 
+                variant="secondary"
+                size="sm" 
+                className="text-destructive border-red-200 hover:bg-red-50"
+                onClick={() => {
+                  const selectedUsersObjects = getSelectedUsersObjects();
+                  if (selectedUsersObjects.length > 0) {
+                    setCurrentUser(selectedUsersObjects[0]);
+                    setIsDeleteModalOpen(true);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          )}
 
           {/* Users Table */}
           <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
