@@ -23,6 +23,34 @@ chmod +x quickstart.sh
 
 This will guide you through setting up the database and environment variables correctly.
 
+### Troubleshooting Database Connection Issues
+
+If you're having issues with the database connection, try these steps:
+
+1. Check your database connection:
+   ```bash
+   ./check-db.sh
+   ```
+   This will verify if your database is accessible and properly configured.
+
+2. Start with explicit environment variables:
+   ```bash
+   ./start-dev.sh
+   ```
+   This script ensures environment variables are properly loaded before starting the application.
+
+3. If you need to quickly create a working development environment:
+   ```bash
+   # For full guided setup
+   ./quickstart.sh
+   
+   # For local installation with PostgreSQL setup
+   ./install-local.sh
+   
+   # For Docker-based installation
+   ./install-docker.sh
+   ```
+
 ## Features
 
 - 🔒 **Multi-step onboarding process**: Connect to your Jellyfin server with API key and admin credentials
@@ -138,11 +166,14 @@ If you prefer to build and run the application directly:
 
 6. Start the application:
    ```bash
-   # For production
-   npm start
+   # Using our helper script (recommended - ensures environment variables are loaded)
+   ./start-dev.sh
    
-   # For development
+   # Alternative method 1 (for development)
    npm run dev
+   
+   # Alternative method 2 (for production)
+   npm start
    ```
 
 7. Access the application at `http://localhost:5000`
