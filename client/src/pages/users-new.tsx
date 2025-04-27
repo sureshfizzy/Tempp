@@ -645,6 +645,51 @@ export default function UsersPage() {
                                   <CalendarClock className="h-4 w-4 mr-2" />
                                   Set Expiry
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      // First get the app user ID by Jellyfin user ID
+                                      const appUserResponse = await fetch(`/api/app-users/by-jellyfin-id/${user.Id}`, {
+                                        method: "GET",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                      });
+                                      
+                                      if (!appUserResponse.ok) {
+                                        throw new Error("Failed to find app user");
+                                      }
+                                      
+                                      const appUser = await appUserResponse.json();
+                                      setSelectedAppUserId(appUser.id);
+                                      
+                                      // Get current role if exists
+                                      const roleResponse = await fetch(`/api/users/${appUser.id}/role`, {
+                                        credentials: 'include',
+                                      });
+                                      
+                                      if (roleResponse.ok) {
+                                        const roleData = await roleResponse.json();
+                                        if (roleData && roleData.id) {
+                                          setSelectedRoleId(roleData.id);
+                                        }
+                                      }
+                                      
+                                      setCurrentUser(user);
+                                      setIsRoleModalOpen(true);
+                                    } catch (error) {
+                                      console.error("Error preparing role assignment:", error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to prepare role assignment. Please try again.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Users className="h-4 w-4 mr-2" />
+                                  Assign Role
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -836,6 +881,17 @@ export default function UsersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+      
+      {/* Assign Role Modal */}
+      {currentUser && selectedAppUserId !== null && (
+        <AssignRoleModal
+          isOpen={isRoleModalOpen}
+          onClose={() => setIsRoleModalOpen(false)}
+          userId={selectedAppUserId}
+          userName={currentUser.Name}
+          currentRoleId={selectedRoleId || undefined}
+        />
       )}
       
       {/* Set Expiry Modal */}

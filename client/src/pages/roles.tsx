@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "../components/page-header";
 import UserRolesList from "@/components/user-roles";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
