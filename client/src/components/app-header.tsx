@@ -89,7 +89,7 @@ export function AppHeader({
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Film className="h-5 w-5 text-primary" />
             <span className="font-semibold hidden sm:inline-block">{title}</span>
             <span className="font-semibold sm:hidden">JellyManager</span>
@@ -98,7 +98,7 @@ export function AppHeader({
                 {subtitle}
               </span>
             )}
-          </Link>
+          </div>
           
           {/* Desktop navigation - tabs style */}
           <nav className="hidden md:flex items-center gap-1 text-sm">
