@@ -249,7 +249,7 @@ export default function Dashboard() {
 
   // Count users by their roles
   const roleCounts = useMemo(() => {
-    if (!usersQuery.data) return { Administrator: 0, User: 0 };
+    if (!usersQuery.data) return { Administrator: 0 };
 
     // Create a map with all roles initialized to 0
     const counts: Record<string, number> = {};
@@ -261,13 +261,13 @@ export default function Dashboard() {
       });
     }
     
-    // Initialize default system roles
+    // Initialize Administrator role count
     counts["Administrator"] = 0;
-    counts["User"] = 0;
     
     // Count users by role
     usersQuery.data.forEach(user => {
       if (user.Policy?.IsAdministrator) {
+        // Always count administrators separately
         counts["Administrator"] = (counts["Administrator"] || 0) + 1;
       } else if (user.roleId && Array.isArray(userRolesQuery.data)) {
         // Find role name from role ID
@@ -275,12 +275,22 @@ export default function Dashboard() {
         if (role) {
           counts[role.name] = (counts[role.name] || 0) + 1;
         } else {
-          // Default to "User" if role not found
-          counts["User"] = (counts["User"] || 0) + 1;
+          // Check if there's a default role, otherwise use "User"
+          const defaultRole = userRolesQuery.data.find((r: { isDefault: boolean }) => r.isDefault);
+          if (defaultRole) {
+            counts[defaultRole.name] = (counts[defaultRole.name] || 0) + 1;
+          } else if (counts["User"] !== undefined) {
+            counts["User"] = (counts["User"] || 0) + 1;
+          }
         }
       } else {
-        // Default to "User" if no role ID
-        counts["User"] = (counts["User"] || 0) + 1;
+        // Check if there's a default role, otherwise use "User"
+        const defaultRole = userRolesQuery.data?.find((r: { isDefault: boolean }) => r.isDefault);
+        if (defaultRole) {
+          counts[defaultRole.name] = (counts[defaultRole.name] || 0) + 1;
+        } else if (counts["User"] !== undefined) {
+          counts["User"] = (counts["User"] || 0) + 1;
+        }
       }
     });
     
@@ -361,7 +371,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
                 <User className="h-5 w-5 mr-2 text-blue-500" />
-                Regular Users
+                {userRolesQuery.data?.find((r: { isDefault: boolean }) => r.isDefault)?.name || "Regular Users"}
               </CardTitle>
               <CardDescription>Users with standard access</CardDescription>
             </CardHeader>
@@ -370,7 +380,8 @@ export default function Dashboard() {
                 {usersQuery.isLoading ? (
                   <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
                 ) : (
-                  roleCounts["User"] || 0
+                  userRolesQuery.data && 
+                  roleCounts[userRolesQuery.data?.find((r: { isDefault: boolean }) => r.isDefault)?.name || "User"] || 0
                 )}
               </div>
             </CardContent>
@@ -378,12 +389,23 @@ export default function Dashboard() {
         </div>
         
         {/* Custom Roles Cards */}
-        {userRolesQuery.data && userRolesQuery.data.length > 0 && (
+        {userRolesQuery.data && userRolesQuery.data.filter(role => 
+          role.name !== "User" && 
+          role.name !== "Administrator" && 
+          !role.isDefault
+        ).length > 0 && (
           <>
-            <h2 className="text-xl font-semibold mb-4">User Roles</h2>
+            <h2 className="text-xl font-semibold mb-4">Custom User Roles</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
               {userRolesQuery.data
-                .filter(role => role.name !== "User" && role.name !== "Administrator")
+                .filter(role => {
+                  // Filter out Administrator role (already shown in top cards)
+                  // Filter out the default role (already shown in top cards)
+                  // Filter out "User" role if it exists
+                  return role.name !== "User" && 
+                         role.name !== "Administrator" && 
+                         !role.isDefault;
+                })
                 .map(role => (
                   <Card key={role.id}>
                     <CardHeader className="pb-2">
