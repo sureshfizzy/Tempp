@@ -404,6 +404,10 @@ export default function UsersPage() {
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAssignRole(user)}>
+                                  <Users className="mr-2 h-4 w-4" />
+                                  Assign Role
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleDeleteUser(user)}
@@ -421,14 +425,25 @@ export default function UsersPage() {
                                 size="icon" 
                                 className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
                                 onClick={() => handleEditUser(user)}
+                                title="Edit User"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
+                                className="h-8 w-8 hover:bg-primary-50 hover:text-primary-600"
+                                onClick={() => handleAssignRole(user)}
+                                title="Assign Role"
+                              >
+                                <Users className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
                                 className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
                                 onClick={() => handleDeleteUser(user)}
+                                title="Delete User"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -468,6 +483,17 @@ export default function UsersPage() {
           isDeleting={deleteUserMutation.isPending}
           onConfirm={confirmDeleteUser}
           onCancel={() => setIsDeleteModalOpen(false)} 
+        />
+      )}
+
+      {/* Assign Role Modal */}
+      {currentUser && (
+        <AssignRoleModal 
+          isOpen={isAssignRoleModalOpen}
+          userId={currentUser.appUserId || 0}
+          userName={currentUser.Name || ""}
+          currentRoleId={currentUser.roleId}
+          onClose={() => setIsAssignRoleModalOpen(false)}
         />
       )}
     </div>
