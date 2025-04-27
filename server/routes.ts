@@ -1787,6 +1787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
+      console.log("Profiles with library counts:", JSON.stringify(profilesWithLibraryCounts));
       res.json(profilesWithLibraryCounts);
     } catch (error) {
       console.error("Error fetching user profiles:", error);
@@ -1866,7 +1867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Not connected to Jellyfin" });
       }
       
-      // Get the source user from Jellyfin to verify it exists and get their name
+      // Get the source user from Jellyfin to verify it exists and get their name and permissions
       const sourceUserId = validatedData.sourceUserId;
       const apiUrl = credentials.url;
       
@@ -1890,15 +1891,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
+      console.log(`Creating profile based on source user: ${sourceUser.Name} (${sourceUserId})`);
+      console.log(`Source user policy:`, sourceUser.Policy);
+      
       // Fetch the user's display preferences which contains the home layout
       const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {
-        headers: {
-          "X-Emby-Token": credentials.accessToken
-        }
-      });
-      
-      // Get the user's policy which includes library access permissions
-      const policyResponse = await fetch(`${apiUrl}/Users/${sourceUserId}/Policy`, {
         headers: {
           "X-Emby-Token": credentials.accessToken
         }
@@ -1908,17 +1905,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let libraryAccess = "[]";
       let homeLayout = "[]";
       
-      if (policyResponse.ok) {
-        const policy = await policyResponse.json() as {
-          EnableAllFolders?: boolean;
-          EnabledFolders?: string[];
-        };
-        
+      // Check if we already have the policy in the user object, otherwise fetch it
+      if (sourceUser.Policy) {
+        console.log("Using policy from source user object");
         // Handle library access based on policy
-        if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+        if (sourceUser.Policy.EnableAllFolders === false && Array.isArray(sourceUser.Policy.EnabledFolders)) {
           // User has restricted access - use the explicitly enabled folders
-          libraryAccess = JSON.stringify(policy.EnabledFolders);
-        } else if (policy.EnableAllFolders === true) {
+          libraryAccess = JSON.stringify(sourceUser.Policy.EnabledFolders);
+          console.log(`User has specific folder permissions: ${libraryAccess}`);
+        } else if (sourceUser.Policy.EnableAllFolders === true) {
           // User has access to all libraries - fetch the list of all library IDs
           try {
             console.log("Fetching all media folders for user with EnableAllFolders=true");
@@ -2036,6 +2031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Update the name in the validated data
         validatedData.sourceName = sourceUser.Name;
+        console.log(`Updating profile based on source user: ${sourceUser.Name} (${sourceUserId})`);
+        console.log(`Source user policy:`, sourceUser.Policy);
         
         // Fetch the user's display preferences which contains the home layout
         const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {
@@ -2044,25 +2041,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        // Get the user's policy which includes library access permissions
-        const policyResponse = await fetch(`${apiUrl}/Users/${sourceUserId}/Policy`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken
-          }
-        });
-        
-        // Extract library access and home layout from API responses
-        if (policyResponse.ok) {
-          const policy = await policyResponse.json() as {
-            EnableAllFolders?: boolean;
-            EnabledFolders?: string[];
-          };
-          
+        // Check if we already have the policy in the user object, otherwise fetch it
+        if (sourceUser.Policy) {
+          console.log("Using policy from source user object for update");
           // Handle library access based on policy
-          if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+          if (sourceUser.Policy.EnableAllFolders === false && Array.isArray(sourceUser.Policy.EnabledFolders)) {
             // User has restricted access - use the explicitly enabled folders
-            validatedData.libraryAccess = JSON.stringify(policy.EnabledFolders);
-          } else if (policy.EnableAllFolders === true) {
+            validatedData.libraryAccess = JSON.stringify(sourceUser.Policy.EnabledFolders);
+            console.log(`User has specific folder permissions: ${validatedData.libraryAccess}`);
+          } else if (sourceUser.Policy.EnableAllFolders === true) {
             // User has access to all libraries - fetch the list of all library IDs
             try {
               console.log("Fetching all media folders for user with EnableAllFolders=true");
