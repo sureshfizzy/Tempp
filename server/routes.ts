@@ -747,7 +747,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // According to the Jellyfin API documentation, we should fetch the complete user
           // which includes their policy, as there's no GET method for policy directly
-          console.log(`Fetching complete user data for ${user.Name} (${user.Id})`);
           const userResponse = await fetch(`${apiUrl}/Users/${user.Id}`, {
             headers: {
               "X-Emby-Token": credentials.accessToken || "",
@@ -757,10 +756,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (userResponse.ok) {
             const userData = await userResponse.json();
             
-            // Check for disabled state and log
-            if (userData?.Policy?.IsDisabled) {
-              console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
-            }
+            // Check for disabled state (no logging needed)
+            // if (userData?.Policy?.IsDisabled) {
+            //   console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
+            // }
             
             // Return the complete user data
             return userData;
@@ -899,14 +898,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // The user data retrieved from /Users/{userId} already includes complete policy data
       // We don't need to fetch the policy separately
-      try {
-        // Check for disabled state and log
-        if (user?.Policy?.IsDisabled) {
-          console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
-        }
-      } catch (error) {
-        console.error(`Error checking disabled status for user ${user.Name}:`, error);
-      }
+      // try {
+      //   // Check for disabled state and log
+      //   if (user?.Policy?.IsDisabled) {
+      //     console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
+      //   }
+      // } catch (error) {
+      //   console.error(`Error checking disabled status for user ${user.Name}:`, error);
+      // }
       
       // Validate the response with zod
       const parsedUser = userSchema.parse(user);
@@ -1444,18 +1443,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if connected to Jellyfin
       if (!req.session.connected) {
-        console.log("Watch history: Not connected to Jellyfin");
         return res.status(401).json({ message: "Not connected to Jellyfin" });
       }
 
       const { id } = req.params;
       const limit = parseInt(req.query.limit as string) || 10;
-      console.log(`Watch history: Fetching for user ${id} with limit ${limit}`);
       
       // Get credentials
       const credentials = await storage.getJellyfinCredentials();
       if (!credentials || !credentials.accessToken) {
-        console.log("Watch history: No Jellyfin credentials available");
         return res.status(401).json({ message: "No Jellyfin credentials available" });
       }
 
@@ -1466,7 +1462,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // The correct Jellyfin API endpoint for watch history (recently watched/in progress)
       const url = `${apiUrl}/Users/${id}/Items/Resume?Limit=${limit}&Fields=PrimaryImageAspectRatio,BasicSyncInfo&ImageTypeLimit=1&EnableImageTypes=Primary,Backdrop,Thumb`;
-      console.log(`Watch history: Making request to ${url}`);
       
       const response = await fetch(url, {
         headers: {
@@ -1475,7 +1470,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (!response.ok) {
-        console.log(`Watch history: Failed with status ${response.status}: ${response.statusText}`);
         return res.status(response.status).json({ 
           message: `Failed to fetch watch history from Jellyfin: ${response.statusText}` 
         });
@@ -1511,7 +1505,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         TotalRecordCount: rawData.TotalRecordCount || 0
       };
       
-      console.log(`Watch history: Successfully fetched ${watchHistory.Items.length} items`);
       return res.status(200).json(watchHistory);
     } catch (error) {
       console.error("Watch history error:", error);
@@ -1530,7 +1523,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      console.log(`Watch time: Calculating for user ${id}`);
       
       // Get credentials
       const credentials = await storage.getJellyfinCredentials();
@@ -1582,7 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log(`Watch time: Calculated ${Math.round(totalMinutes)} minutes for user ${id}`);
+      // Calculate completed, return result
       
       return res.status(200).json({
         totalMinutes: Math.round(totalMinutes),
