@@ -2358,124 +2358,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
         
-        // After creating the user, immediately disable all folder access
-        console.log(`Disabling all folder access for new user ${username} (${jellyfinUser.Id})`);
-        
-        // 1. Get the user's current policy
-        const getUserPolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-          headers: {
-            'X-Emby-Token': credentials.accessToken || '',
-            'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
-          }
-        });
-        
-        if (!getUserPolicyResponse.ok) {
-          console.error(`Failed to get policy for user ${jellyfinUser.Id}:`, await getUserPolicyResponse.text());
-        } else {
-          const userPolicy = await getUserPolicyResponse.json() as any;
-          
-          // 2. Update the policy to disable all folder access
-          userPolicy.EnableAllFolders = false;
-          userPolicy.EnabledFolders = []; // Empty array means no access to any folders
-          
-          console.log(`Updating policy for user ${jellyfinUser.Id} to disable all folder access`);
-          const updatePolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Emby-Token': credentials.accessToken || '',
-              'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
-            },
-            body: JSON.stringify(userPolicy)
-          });
-          
-          if (!updatePolicyResponse.ok) {
-            console.error(`Failed to update policy for user ${jellyfinUser.Id}:`, await updatePolicyResponse.text());
-          } else {
-            console.log(`Successfully disabled all folder access for user ${username} (${jellyfinUser.Id})`);
-          }
-        }
-        
-        // Check if there's a profile associated with this invite
-        let userProfileInfo = null;
-        if (invite.profileId) {
-          try {
-            const profileId = parseInt(invite.profileId);
-            if (!isNaN(profileId)) {
-              const userProfile = await storage.getUserProfileById(profileId);
-              if (userProfile) {
-                userProfileInfo = userProfile;
-                console.log(`Applying user profile "${userProfile.name}" to new user ${username}`);
-                
-                // If we have a profile, apply the library access settings from it
-                const libraryAccess = JSON.parse(userProfile.libraryAccess || '[]');
-                
-                // Get the user policy again to update with profile settings
-                const getUserPolicyAgain = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-                  headers: {
-                    'X-Emby-Token': credentials.accessToken || '',
-                    'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
-                  }
-                });
-                
-                if (getUserPolicyAgain.ok) {
-                  const userPolicy = await getUserPolicyAgain.json() as any;
-                  
-                  // Keep all folders disabled, but set the enabled folders from the profile
-                  userPolicy.EnableAllFolders = false;
-                  userPolicy.EnabledFolders = libraryAccess;
-                  
-                  const updateWithProfileResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'X-Emby-Token': credentials.accessToken || '',
-                      'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
-                    },
-                    body: JSON.stringify(userPolicy)
-                  });
-                  
-                  if (!updateWithProfileResponse.ok) {
-                    console.error(`Failed to apply profile library access for user ${jellyfinUser.Id}:`, await updateWithProfileResponse.text());
-                  } else {
-                    console.log(`Applied library access from profile to user ${username}`);
-                  }
-                  
-                  // Now also apply the home layout settings if available
-                  if (userProfile.homeLayout && userProfile.homeLayout !== '[]') {
-                    try {
-                      const homeLayout = JSON.parse(userProfile.homeLayout);
-                      
-                      // Get display preferences to update the layout
-                      console.log(`Applying home layout settings from profile to user ${username}`);
-                      
-                      const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'X-Emby-Token': credentials.accessToken || '',
-                          'X-Emby-Authorization': `MediaBrowser Client="UserManager", Device="Server", DeviceId="Server", Version="1.0.0", Token="${apiKey}"`
-                        },
-                        body: JSON.stringify(homeLayout)
-                      });
-                      
-                      if (!displayPrefsResponse.ok) {
-                        console.error(`Failed to apply home layout settings for user ${jellyfinUser.Id}:`, await displayPrefsResponse.text());
-                      } else {
-                        console.log(`Successfully applied home layout settings from profile to user ${username}`);
-                      }
-                    } catch (layoutError) {
-                      console.error(`Error parsing or applying home layout from profile:`, layoutError);
-                    }
-                  }
-                }
-              }
-            }
-          } catch (profileError) {
-            console.error(`Error applying user profile:`, profileError);
-          }
-        }
-        
         // Create local app user with expiry if needed
         const appUser = await storage.createUser({
           username,
@@ -2489,12 +2371,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
         await storage.updateInviteUsage(code, usedCount);
         
-        // Log account creation via invite with profile information if available
+        // Log account creation via invite
         await storage.createActivityLog({
           type: 'account_created',
-          message: userProfileInfo 
-            ? `Account created: ${username} (via invite with profile "${userProfileInfo.name}")` 
-            : `Account created: ${username} (via invite)`,
+          message: `Account created: ${username} (via invite)`,
           username: username,
           userId: String(appUser.id), // Convert number to string for userId
           inviteCode: code,
@@ -2502,13 +2382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             expiresAt: expiresAt,
             email: email || null,
             jellyfinUserId: jellyfinUser.Id,
-            createdVia: 'invite',
-            profileApplied: userProfileInfo ? {
-              id: userProfileInfo.id,
-              name: userProfileInfo.name,
-              sourceName: userProfileInfo.sourceName
-            } : null,
-            libraryAccessDisabled: true
+            createdVia: 'invite'
           })
         });
         
