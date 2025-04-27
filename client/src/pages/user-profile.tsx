@@ -16,6 +16,7 @@ import {
   Heart, Star, Tv2
 } from "lucide-react";
 import MediaTabsCard from "@/components/media-tabs-card";
+import FavoritesTab from "@/components/favorites-tab";
 import { formatDate } from "@/lib/jellyfin";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
@@ -976,6 +977,17 @@ export default function UserProfilePage() {
                     </motion.div>
                   )}
                 </CardContent>
+                  </TabsContent>
+                  
+                  {/* Favorites Tab */}
+                  <TabsContent value="favorites">
+                    <CardContent>
+                      <FavoritesTab
+                        jellyfinUserId={userQuery.data?.jellyfinUserId || ""}
+                        getItemLink={getItemLink}
+                        openJellyfin={openJellyfin}
+                      />
+                    </CardContent>
                   </TabsContent>
                 </Tabs>
               </Card>

@@ -16,16 +16,33 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
     queryKey: ["/api/users", jellyfinUserId, "favorites"],
     queryFn: async () => {
       if (!jellyfinUserId) {
+        console.log("No Jellyfin user ID provided");
         return { Items: [], TotalRecordCount: 0 };
       }
       
-      const result = await getUserFavorites(jellyfinUserId);
-      // Log favorites data for debugging
-      console.log("Favorites data:", result);
-      return result;
+      try {
+        console.log(`Fetching favorites for user: ${jellyfinUserId}`);
+        const result = await getUserFavorites(jellyfinUserId);
+        console.log("Favorites data:", result);
+        
+        // Additional debugging for items data
+        if (result && result.Items && result.Items.length > 0) {
+          console.log(`Found ${result.Items.length} favorites`);
+          console.log("First favorite item:", result.Items[0]);
+        } else {
+          console.log("No favorites found or empty result");
+          console.log("Raw result:", JSON.stringify(result));
+        }
+        
+        return result;
+      } catch (error) {
+        console.error("Error fetching favorites:", error);
+        throw error;
+      }
     },
     enabled: !!jellyfinUserId,
     staleTime: 300000, // 5 minutes
+    retry: 2, // Retry failed requests up to 2 times
   });
 
   return (
@@ -67,10 +84,18 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                     <a href={getItemLink(item.Id)} target="_blank" rel="noopener noreferrer" className="block">
                       <div className="h-16 w-28 rounded bg-blue-900/30 overflow-hidden relative">
                         <img 
-                          src={`/api/users/${jellyfinUserId}/item-image/${item.Id}${item.ImageTags?.Primary ? `?tag=${item.ImageTags.Primary}` : ''}`} 
+                          src={`/api/users/${jellyfinUserId}/item-image/${item.Id}${
+                            item.ImageTags?.Primary 
+                              ? `?tag=${item.ImageTags.Primary}` 
+                              : item.ImageTags && Object.keys(item.ImageTags).length > 0 
+                                ? `?tag=${Object.values(item.ImageTags)[0]}` 
+                                : ''
+                          }`} 
                           alt={item.Name} 
                           className="h-full w-full object-cover transition-opacity duration-500 opacity-100"
                           onError={(e) => {
+                            console.log(`Image error for item ${item.Id} (${item.Name})`);
+                            console.log(`Image tags:`, item.ImageTags);
                             // Replace broken image with placeholder
                             (e.target as HTMLImageElement).style.opacity = '0';
                           }}
