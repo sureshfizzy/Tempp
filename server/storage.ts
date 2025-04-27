@@ -19,7 +19,7 @@ import {
   InsertActivityLog
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs, userRoles } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
@@ -849,6 +849,107 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error creating activity log:", error);
       throw error;
+    }
+  }
+  
+  // User roles management
+  async getAllRoles(): Promise<UserRole[]> {
+    try {
+      return await db.select().from(userRoles).orderBy(userRoles.name);
+    } catch (error) {
+      console.error("Error fetching user roles:", error);
+      return [];
+    }
+  }
+
+  async getRoleById(id: number): Promise<UserRole | undefined> {
+    try {
+      const [role] = await db.select().from(userRoles).where(eq(userRoles.id, id));
+      return role;
+    } catch (error) {
+      console.error(`Error fetching role with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getDefaultRole(): Promise<UserRole | undefined> {
+    try {
+      const [role] = await db.select().from(userRoles).where(eq(userRoles.isDefault, true));
+      return role;
+    } catch (error) {
+      console.error("Error fetching default role:", error);
+      return undefined;
+    }
+  }
+
+  async createRole(role: InsertUserRole): Promise<UserRole> {
+    try {
+      // If this is set as the default role, unset any existing default
+      if (role.isDefault) {
+        await db.update(userRoles).set({ isDefault: false }).where(eq(userRoles.isDefault, true));
+      }
+      
+      const [newRole] = await db.insert(userRoles).values(role).returning();
+      return newRole;
+    } catch (error) {
+      console.error("Error creating user role:", error);
+      throw error;
+    }
+  }
+
+  async updateRole(id: number, role: Partial<InsertUserRole>): Promise<UserRole | undefined> {
+    try {
+      // If this is set as the default role, unset any existing default
+      if (role.isDefault) {
+        await db.update(userRoles)
+          .set({ isDefault: false })
+          .where(and(eq(userRoles.isDefault, true), ne(userRoles.id, id)));
+      }
+      
+      const [updatedRole] = await db.update(userRoles)
+        .set({
+          ...role,
+          updatedAt: new Date()
+        })
+        .where(eq(userRoles.id, id))
+        .returning();
+      
+      return updatedRole;
+    } catch (error) {
+      console.error(`Error updating role with ID ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteRole(id: number): Promise<boolean> {
+    try {
+      // Don't allow deletion if this is the default role
+      const role = await this.getRoleById(id);
+      if (role && role.isDefault) {
+        console.error("Cannot delete the default role");
+        return false;
+      }
+      
+      await db.delete(userRoles).where(eq(userRoles.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting role with ID ${id}:`, error);
+      return false;
+    }
+  }
+
+  async getUserRoleByUserId(userId: number): Promise<UserRole | undefined> {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user || !user.roleId) {
+        // If user doesn't have a role assigned, return the default role
+        return await this.getDefaultRole();
+      }
+      
+      return await this.getRoleById(user.roleId);
+    } catch (error) {
+      console.error(`Error fetching role for user ${userId}:`, error);
+      return undefined;
     }
   }
 }

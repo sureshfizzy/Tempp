@@ -13,6 +13,9 @@ import {
   InsertAppUser,
   insertUserProfileSchema,
   UserProfile,
+  UserRole,
+  InsertUserRole,
+  insertUserRoleSchema,
   invites
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
