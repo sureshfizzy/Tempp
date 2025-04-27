@@ -87,7 +87,7 @@ export default function SettingsPage() {
     defaultValues: {
       serverName: connectionQuery.data?.serverName || serverQuery.data?.serverName || "",
       serverUrl: connectionQuery.data?.serverUrl || serverQuery.data?.serverUrl || "",
-      apiKey: serverQuery.data?.apiKey || "",
+      apiKey: connectionQuery.data?.apiKey || serverQuery.data?.apiKey || "",
       logoUrl: serverQuery.data?.logoUrl || "",
       enableThemeSwitcher: serverQuery.data?.features?.enableThemeSwitcher ?? true,
       enableWatchHistory: serverQuery.data?.features?.enableWatchHistory ?? true,
@@ -102,7 +102,7 @@ export default function SettingsPage() {
       form.reset({
         serverName: connectionQuery.data?.serverName || serverQuery.data?.serverName || "",
         serverUrl: connectionQuery.data?.serverUrl || serverQuery.data?.serverUrl || "",
-        apiKey: serverQuery.data?.apiKey || "",
+        apiKey: connectionQuery.data?.apiKey || serverQuery.data?.apiKey || "",
         logoUrl: serverQuery.data?.logoUrl || "",
         enableThemeSwitcher: serverQuery.data?.features?.enableThemeSwitcher ?? true,
         enableWatchHistory: serverQuery.data?.features?.enableWatchHistory ?? true,

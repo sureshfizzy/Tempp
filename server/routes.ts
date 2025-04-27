@@ -374,7 +374,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAdmin,
         configured: Boolean(serverConfig && jellyfinCreds),
         serverUrl: serverConfig?.url,
-        serverName: serverConfig?.serverName || "Jellyfin Manager"
+        serverName: serverConfig?.serverName || "Jellyfin Manager",
+        apiKey: jellyfinCreds?.apiKey || ""
       });
     } catch (error) {
       return res.status(500).json({ message: "Failed to get connection status" });
