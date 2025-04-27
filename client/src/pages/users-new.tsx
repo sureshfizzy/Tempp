@@ -38,7 +38,8 @@ import {
   Info,
   ChevronDown,
   Check,
-  Activity
+  Activity,
+  RefreshCw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -184,11 +185,28 @@ export default function UsersPage() {
   const disableUserMutation = useMutation({
     mutationFn: ({ userId, disabled }: { userId: string; disabled: boolean }) => 
       disableUser(userId, disabled),
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       toast({
         title: "User status updated",
-        description: "The user has been updated successfully",
+        description: `${updatedUser.Name} has been ${updatedUser.Policy?.IsDisabled ? 'disabled' : 'enabled'} successfully`,
       });
+      
+      // Immediately update the user in the cache for instant UI updates
+      queryClient.setQueryData<User[]>(["/api/users"], (oldData) => {
+        if (!oldData) return undefined;
+        
+        return oldData.map(user => {
+          if (user.Id === updatedUser.Id) {
+            return {
+              ...user,
+              ...updatedUser
+            };
+          }
+          return user;
+        });
+      });
+      
+      // Then invalidate to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsDisableModalOpen(false);
     },
@@ -269,11 +287,30 @@ export default function UsersPage() {
       // Return the updated user
       return await updateResponse.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser, variables) => {
       toast({
         title: "Expiry updated",
-        description: "User expiry has been set successfully",
+        description: variables.expiryDate 
+          ? `Expiry set for ${currentUser?.Name} to ${new Date(variables.expiryDate).toLocaleString()}` 
+          : `${currentUser?.Name} set to never expire`,
       });
+      
+      // Immediately update user in the cache with new expiry date
+      queryClient.setQueryData<User[]>(["/api/users"], (oldData) => {
+        if (!oldData || !currentUser) return undefined;
+        
+        return oldData.map(user => {
+          if (user.Id === currentUser.Id) {
+            return {
+              ...user,
+              expiresAt: variables.expiryDate
+            };
+          }
+          return user;
+        });
+      });
+      
+      // Then invalidate to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsExpiryModalOpen(false);
     },
