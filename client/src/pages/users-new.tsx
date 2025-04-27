@@ -37,7 +37,8 @@ import {
   Pencil,
   Info,
   ChevronDown,
-  Check
+  Check,
+  Activity
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -471,7 +472,7 @@ export default function UsersPage() {
                   >
                     {isDisabled ? (
                       <>
-                        <UserPlus className="h-4 w-4 mr-2" />
+                        <Activity className="h-4 w-4 mr-2" />
                         Enable
                       </>
                     ) : (
@@ -634,7 +635,7 @@ export default function UsersPage() {
                                 >
                                   {user.Policy?.IsDisabled ? (
                                     <>
-                                      <UserPlus className="h-4 w-4 mr-2" />
+                                      <Activity className="h-4 w-4 mr-2" />
                                       Enable
                                     </>
                                   ) : (
@@ -702,6 +703,11 @@ export default function UsersPage() {
               <DialogTitle>
                 {currentUser.Policy?.IsDisabled ? "Enable" : "Disable"} {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}
               </DialogTitle>
+              <DialogDescription>
+                {currentUser.Policy?.IsDisabled 
+                  ? "Enabling this user will restore their access to the server." 
+                  : "Disabling this user will prevent them from accessing the server."}
+              </DialogDescription>
             </DialogHeader>
             {!currentUser.Policy?.IsDisabled && (
               <div className="flex items-center space-x-2 py-2">
@@ -827,6 +833,9 @@ export default function UsersPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Set expiry for {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}</DialogTitle>
+              <DialogDescription>
+                Set an expiration date for the user account. The account will be automatically disabled when it expires.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="space-y-2">
