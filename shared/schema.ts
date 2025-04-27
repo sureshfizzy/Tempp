@@ -181,6 +181,7 @@ export const newUserSchema = z.object({
   Email: z.string().email("Invalid email address").optional(),
   Role: z.enum(["Administrator", "User", "ContentManager"]),
   IsDisabled: z.boolean().optional(),
+  ProfileId: z.number().optional(), // Add optional profile ID for applying user profile settings
 });
 
 // Define Jellyfin User Activity schema
