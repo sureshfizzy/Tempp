@@ -1912,9 +1912,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           EnabledFolders?: string[];
         };
         
-        // If the user has specific folder permissions, save them as library access
+        // Handle library access based on policy
         if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+          // User has restricted access - use the explicitly enabled folders
           libraryAccess = JSON.stringify(policy.EnabledFolders);
+        } else if (policy.EnableAllFolders === true) {
+          // User has access to all libraries - fetch the list of all library IDs
+          try {
+            const mediaFoldersResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
+              headers: {
+                "X-Emby-Token": credentials.accessToken
+              }
+            });
+            
+            if (mediaFoldersResponse.ok) {
+              const mediaFolders = await mediaFoldersResponse.json();
+              
+              if (mediaFolders && mediaFolders.Items && Array.isArray(mediaFolders.Items)) {
+                const folderIds = mediaFolders.Items.map((folder: any) => folder.Id);
+                libraryAccess = JSON.stringify(folderIds);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching media folders:", error);
+          }
         }
       }
       
@@ -2028,12 +2049,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             EnabledFolders?: string[];
           };
           
-          // If the user has specific folder permissions, save them as library access
+          // Handle library access based on policy
           if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+            // User has restricted access - use the explicitly enabled folders
             validatedData.libraryAccess = JSON.stringify(policy.EnabledFolders);
-          } else {
-            // User has access to all libraries
-            validatedData.libraryAccess = "[]";
+          } else if (policy.EnableAllFolders === true) {
+            // User has access to all libraries - fetch the list of all library IDs
+            try {
+              const mediaFoldersResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
+                headers: {
+                  "X-Emby-Token": credentials.accessToken
+                }
+              });
+              
+              if (mediaFoldersResponse.ok) {
+                const mediaFolders = await mediaFoldersResponse.json();
+                
+                if (mediaFolders && mediaFolders.Items && Array.isArray(mediaFolders.Items)) {
+                  const folderIds = mediaFolders.Items.map((folder: any) => folder.Id);
+                  validatedData.libraryAccess = JSON.stringify(folderIds);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching media folders:", error);
+            }
           }
         }
         
