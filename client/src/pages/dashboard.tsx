@@ -420,10 +420,9 @@ export default function Dashboard() {
                             onChange={(e) => setInviteMonths(parseInt(e.target.value))}
                           >
                             <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="3">3</option>
-                            <option value="6">6</option>
-                            <option value="12">12</option>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                              <option key={`invite-month-${num}`} value={`${num}`}>{num}</option>
+                            ))}
                           </select>
                         </div>
                         <div>
@@ -434,10 +433,9 @@ export default function Dashboard() {
                             onChange={(e) => setInviteDays(parseInt(e.target.value))}
                           >
                             <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="7">7</option>
-                            <option value="14">14</option>
-                            <option value="30">30</option>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                              <option key={`invite-day-${num}`} value={`${num}`}>{num}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -450,11 +448,9 @@ export default function Dashboard() {
                             onChange={(e) => setInviteHours(parseInt(e.target.value))}
                           >
                             <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="6">6</option>
-                            <option value="12">12</option>
-                            <option value="24">24</option>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                              <option key={`invite-hour-${num}`} value={`${num}`}>{num}</option>
+                            ))}
                           </select>
                         </div>
                         <div>
@@ -465,9 +461,9 @@ export default function Dashboard() {
                             onChange={(e) => setInviteMinutes(parseInt(e.target.value))}
                           >
                             <option value="0">0</option>
-                            <option value="15">15</option>
-                            <option value="30">30</option>
-                            <option value="45">45</option>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                              <option key={`invite-minute-${num}`} value={`${num}`}>{num}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -497,10 +493,9 @@ export default function Dashboard() {
                                 onChange={(e) => setInviteMonths(parseInt(e.target.value))}
                               >
                                 <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="3">3</option>
-                                <option value="6">6</option>
-                                <option value="12">12</option>
+                                {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                                  <option key={`month-${num}`} value={`${num}`}>{num}</option>
+                                ))}
                               </select>
                             </div>
                             <div>
@@ -511,10 +506,9 @@ export default function Dashboard() {
                                 onChange={(e) => setInviteDays(parseInt(e.target.value))}
                               >
                                 <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="7">7</option>
-                                <option value="14">14</option>
-                                <option value="30">30</option>
+                                {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                                  <option key={`day-${num}`} value={`${num}`}>{num}</option>
+                                ))}
                               </select>
                             </div>
                           </div>
@@ -527,11 +521,9 @@ export default function Dashboard() {
                                 onChange={(e) => setInviteHours(parseInt(e.target.value))}
                               >
                                 <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="6">6</option>
-                                <option value="12">12</option>
-                                <option value="24">24</option>
+                                {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                                  <option key={`hour-${num}`} value={`${num}`}>{num}</option>
+                                ))}
                               </select>
                             </div>
                           </div>
