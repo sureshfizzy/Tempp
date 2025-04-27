@@ -354,14 +354,7 @@ export default function UsersPage() {
   // Get status badge for users
   const getUserStatus = (user: User) => {
     // Check if user is disabled (using both Policy.IsDisabled and our local disabled flag)
-    if (user.Policy?.IsDisabled === true) {
-      console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
-      return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Disabled</Badge>;
-    }
-    
-    // Fallback to the local disabled flag
-    if (user.disabled === true) {
-      console.log(`User ${user.Name} is disabled via local disabled flag`);
+    if (user.Policy?.IsDisabled === true || user.disabled === true) {
       return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Disabled</Badge>;
     }
     
@@ -568,7 +561,14 @@ export default function UsersPage() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <div className="font-medium">{user.Name}</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {user.Name}
+                                {(user.Policy?.IsDisabled || user.disabled) && (
+                                  <span className="inline-block bg-orange-100 text-orange-800 text-xs px-1.5 py-0.5 rounded border border-orange-300 font-medium">
+                                    Disabled
+                                  </span>
+                                )}
+                              </div>
                               <div className="md:hidden flex items-center gap-2 mt-1">
                                 <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="text-xs">
                                   {getUserRole(user)}
