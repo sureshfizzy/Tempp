@@ -484,7 +484,63 @@ export default function Dashboard() {
                         />
                         <label htmlFor="userExpiry" className="text-sm">Enabled</label>
                       </div>
-                      <p className="text-xs text-muted-foreground">A specified amount of time after each signup, the account will be disabled.</p>
+                      
+                      {userExpiryEnabled && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground mb-2">A specified amount of time after each signup, the account will be disabled.</p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs text-muted-foreground block mb-1">MONTHS</label>
+                              <select 
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={inviteMonths}
+                                onChange={(e) => setInviteMonths(parseInt(e.target.value))}
+                              >
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="3">3</option>
+                                <option value="6">6</option>
+                                <option value="12">12</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground block mb-1">DAYS</label>
+                              <select 
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={inviteDays}
+                                onChange={(e) => setInviteDays(parseInt(e.target.value))}
+                              >
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="7">7</option>
+                                <option value="14">14</option>
+                                <option value="30">30</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                              <label className="text-xs text-muted-foreground block mb-1">HOURS</label>
+                              <select 
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={inviteHours}
+                                onChange={(e) => setInviteHours(parseInt(e.target.value))}
+                              >
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="6">6</option>
+                                <option value="12">12</option>
+                                <option value="24">24</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {!userExpiryEnabled && (
+                        <p className="text-xs text-muted-foreground">A specified amount of time after each signup, the account will be disabled.</p>
+                      )}
                     </div>
                     
                     <div>

@@ -334,24 +334,29 @@ export async function deleteInvite(id: number): Promise<void> {
 }
 
 // Format expiration time for display
-export function formatExpiryTime(months: number = 0, days: number = 0, hours: number = 0): string {
-  if (months === 0 && days === 0 && hours === 0) {
+export function formatExpiryTime(months: number | null = 0, days: number | null = 0, hours: number | null = 0): string {
+  // Handle null/undefined values
+  const safeMonths = months || 0;
+  const safeDays = days || 0;
+  const safeHours = hours || 0;
+  
+  if (safeMonths === 0 && safeDays === 0 && safeHours === 0) {
     return "Never expires";
   }
   
   const parts = [];
   
-  if (months > 0) {
-    parts.push(`${months} month${months > 1 ? 's' : ''}`);
+  if (safeMonths > 0) {
+    parts.push(`${safeMonths} month${safeMonths > 1 ? 's' : ''}`);
   }
   
-  if (days > 0) {
-    parts.push(`${days} day${days > 1 ? 's' : ''}`);
+  if (safeDays > 0) {
+    parts.push(`${safeDays} day${safeDays > 1 ? 's' : ''}`);
   }
   
-  if (hours > 0) {
-    parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+  if (safeHours > 0) {
+    parts.push(`${safeHours} hour${safeHours > 1 ? 's' : ''}`);
   }
   
-  return parts.join(', ');
+  return parts.join(', ') || "Custom expiry";
 }

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatExpiryTime } from "@/lib/jellyfin";
 
 // Form schema for user registration with validation
 const inviteSignupSchema = z.object({
@@ -234,11 +235,7 @@ export default function InviteSignupPage() {
                           <span className="font-medium">Time-limited account</span>
                           <p className="text-amber-300/80 mt-1">
                             This account will expire after{' '}
-                            {invite.userExpiryMonths ? `${invite.userExpiryMonths} month${invite.userExpiryMonths !== 1 ? 's' : ''}` : ''}
-                            {invite.userExpiryMonths && invite.userExpiryDays ? ' and ' : ''}
-                            {invite.userExpiryDays ? `${invite.userExpiryDays} day${invite.userExpiryDays !== 1 ? 's' : ''}` : ''}
-                            {((invite.userExpiryMonths || invite.userExpiryDays) && invite.userExpiryHours) ? ' and ' : ''}
-                            {invite.userExpiryHours ? `${invite.userExpiryHours} hour${invite.userExpiryHours !== 1 ? 's' : ''}` : ''}
+                            {formatExpiryTime(invite.userExpiryMonths, invite.userExpiryDays, invite.userExpiryHours)}
                           </p>
                         </div>
                       </div>
