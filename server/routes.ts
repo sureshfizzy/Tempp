@@ -1930,7 +1930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(jellyfinResponse.status).json({ error: `Could not create Jellyfin user: ${errorText}` });
         }
         
-        const jellyfinUser = await jellyfinResponse.json();
+        const jellyfinUser = await jellyfinResponse.json() as { Id: string };
         
         // Create local app user with expiry if needed
         const appUser = await storage.createUser({

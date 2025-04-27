@@ -63,6 +63,7 @@ export interface IStorage {
   updateInvite(id: number, invite: Partial<InsertInvite>): Promise<Invite | undefined>;
   deleteInvite(id: number): Promise<boolean>;
   useInvite(code: string): Promise<boolean>;
+  updateInviteUsage(code: string, usedCount: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -254,7 +255,9 @@ export class DatabaseStorage implements IStorage {
           paypalEmail: user.paypalEmail || null,
           discordUsername: user.discordUsername || null,
           discordId: user.discordId || null,
-          notes: user.notes || null
+          notes: user.notes || null,
+          expiresAt: user.expiresAt || null,
+          disabled: user.disabled ?? false
         })
         .returning();
         
@@ -669,21 +672,37 @@ export class DatabaseStorage implements IStorage {
       if (!invite) return false;
       
       // Check if expired
-      if (invite.expiresAt && new Date() > invite.expiresAt) {
+      if (invite.expiresAt && new Date() > new Date(invite.expiresAt)) {
         return false;
       }
       
       // If maxUses is null, it means unlimited uses
-      if (invite.maxUses === null) {
-        return true; // Always allow if unlimited uses
+      // Otherwise check if uses remaining
+      if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+        return false;
       }
       
-      // Since we don't have a usesRemaining column, we'll need to 
-      // implement a different approach for now - for simplicity, 
-      // we'll just allow all valid invites
+      // Increment used count
+      const newUsedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
+      await this.updateInviteUsage(code, newUsedCount);
+      
       return true;
     } catch (error) {
       console.error(`Error using invite with code ${code}:`, error);
+      return false;
+    }
+  }
+  
+  async updateInviteUsage(code: string, usedCount: number): Promise<boolean> {
+    try {
+      const result = await db.update(invites)
+        .set({ usedCount })
+        .where(eq(invites.code, code))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error updating invite usage for code ${code}:`, error);
       return false;
     }
   }
