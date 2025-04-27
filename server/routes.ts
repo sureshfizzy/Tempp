@@ -2181,6 +2181,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error updating user" });
     }
   });
+  
+  // Add endpoint to disable a user when their account expires
+  app.post("/api/users/:id/disable", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get Jellyfin credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials || !credentials.url || !credentials.accessToken) {
+        return res.status(401).json({ error: "Not connected to Jellyfin server" });
+      }
+      
+      const apiUrl = credentials.url;
+      
+      // Get the complete user data which includes the current policy
+      const userResponse = await fetch(`${apiUrl}/Users/${id}`, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken || "",
+        },
+      });
+      
+      if (!userResponse.ok) {
+        return res.status(userResponse.status).json({ 
+          error: "Failed to fetch user data",
+          details: await userResponse.text() 
+        });
+      }
+      
+      const userData = await userResponse.json() as any;
+      
+      // Update the Policy.IsDisabled field
+      if (!userData.Policy) {
+        userData.Policy = {};
+      }
+      
+      userData.Policy.IsDisabled = true;
+      
+      // Update the user policy
+      const policyUpdateResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
+        method: "POST",
+        headers: {
+          "X-Emby-Token": credentials.accessToken || "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData.Policy),
+      });
+      
+      if (!policyUpdateResponse.ok) {
+        return res.status(policyUpdateResponse.status).json({ 
+          error: "Failed to disable user in Jellyfin",
+          details: await policyUpdateResponse.text()
+        });
+      }
+      
+      // Update the app_user record if it exists
+      const users = await storage.getAllUsers();
+      const appUser = users.find(u => u.jellyfinUserId === id);
+      if (appUser) {
+        await storage.updateUser(appUser.id, { disabled: true });
+      }
+      
+      console.log(`User ${id} disabled successfully - ${userData.Name}`);
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: "User disabled successfully",
+        userName: userData.Name || id
+      });
+    } catch (error) {
+      console.error("Error disabling user:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

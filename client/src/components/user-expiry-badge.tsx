@@ -95,44 +95,22 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
       // Only attempt to disable once when component mounts and is expired
       const disableExpiredUser = async () => {
         try {
-          // Get the Jellyfin user ID from the parent component context
+          // Get the Jellyfin user ID from the expiry date string
           const jellyfinUserId = expiresAt.split('_')[0]; // Get the ID if it's part of the string
           
           if (!jellyfinUserId) return;
           
-          // First get the app user ID by Jellyfin user ID
-          const appUserResponse = await fetch(`/api/app-users/by-jellyfin-id/${jellyfinUserId}`, {
-            method: "GET",
+          // Call our simplified disable endpoint that handles everything in one request
+          const response = await fetch(`/api/users/${jellyfinUserId}/disable`, {
+            method: "POST"
           });
           
-          if (!appUserResponse.ok) return;
-          
-          const appUser = await appUserResponse.json();
-          
-          // Then update the app user to be disabled
-          await fetch(`/api/app-users/${appUser.id}`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              disabled: true
-            }),
-          });
-          
-          // We don't need to wait for the API call to disable the user in Jellyfin
-          // The UI will update on the next refresh
-          fetch(`/api/users/${jellyfinUserId}/disable`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              disabled: true
-            }),
-          });
-          
-          console.log(`Auto-disabled expired user: ${jellyfinUserId}`);
+          if (response.ok) {
+            const result = await response.json();
+            console.log(`Auto-disabled expired user: ${result.userName} (${jellyfinUserId})`);
+          } else {
+            console.error(`Failed to disable user: ${await response.text()}`);
+          }
         } catch (error) {
           console.error("Failed to auto-disable expired user:", error);
         }
