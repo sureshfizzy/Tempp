@@ -91,6 +91,12 @@ const animationStyles = `
     100% { transform: scale(1); }
   }
   
+  @keyframes loader-progress {
+    0% { width: 0%; left: 0; }
+    50% { width: 100%; left: 0; }
+    100% { width: 0%; left: 100%; }
+  }
+  
   .slide-up {
     transition: transform 0.4s ease, opacity 0.4s ease;
   }
@@ -285,20 +291,17 @@ export default function LoginPage() {
         description: "You have been logged in successfully",
       });
       
-      // First, finish the login animation
+      // Use our direct DOM-based loader that will persist through navigation
       setTimeout(() => {
-        // Then, activate our global loading screen that stays visible during navigation
+        // Show the loading screen
         showGlobalLoader("Logging you in...");
         
-        // Finally, navigate
+        // Navigate after a short delay to ensure the loading screen appears
         setTimeout(() => {
-          if (responseData.user.isAdmin) {
-            window.location.href = "/dashboard";
-          } else {
-            window.location.href = "/user-profile";
-          }
-        }, 500);
-      }, 800);
+          const url = responseData.user.isAdmin ? "/dashboard" : "/user-profile";
+          window.location.href = url; // Using href for full page reload to ensure clean state
+        }, 300);
+      }, 500);
       
     } catch (err: any) {
       setLoginError(err.message || "Invalid username or password");

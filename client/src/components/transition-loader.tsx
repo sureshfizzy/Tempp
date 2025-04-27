@@ -1,130 +1,182 @@
 import { useEffect } from 'react';
 import { ClapperboardIcon } from "lucide-react";
-import { motion } from "framer-motion";
 
-// Global loading state
-let globalLoadingState = false;
-
-// Create a function to show the loader
+// Create a simpler, more direct approach that won't cause white flashes
 export function showGlobalLoader(message = "Loading...") {
-  globalLoadingState = true;
+  // Create the loader container if it doesn't exist
+  let loader = document.getElementById('global-transition-loader');
   
-  // Create or update the loader element
-  let loaderEl = document.getElementById('global-transition-loader');
-  
-  if (!loaderEl) {
-    loaderEl = document.createElement('div');
-    loaderEl.id = 'global-transition-loader';
-    loaderEl.className = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950';
+  if (!loader) {
+    // Create container element
+    loader = document.createElement('div');
+    loader.id = 'global-transition-loader';
+    loader.style.position = 'fixed';
+    loader.style.top = '0';
+    loader.style.left = '0';
+    loader.style.width = '100%';
+    loader.style.height = '100%';
+    loader.style.backgroundColor = '#0f172a'; // slate-950
+    loader.style.display = 'flex';
+    loader.style.alignItems = 'center';
+    loader.style.justifyContent = 'center';
+    loader.style.zIndex = '9999';
+    loader.style.opacity = '0';
+    loader.style.transition = 'opacity 0.3s';
     
-    const innerHtml = `
-      <div class="text-center">
-        <div class="inline-block mb-4">
-          <svg class="h-20 w-20 text-primary animate-[spin_3s_ease-in-out_infinite]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"></path><path d="M4 11v-3a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v3"></path><path d="M14 11V7a3 3 0 0 0-3-3v0a3 3 0 0 0-3 3v4"></path></svg>
-        </div>
-        <h2 id="loader-message" class="text-2xl font-bold text-white mb-2">${message}</h2>
-        <div class="relative w-48 h-1 bg-gray-800 rounded-full overflow-hidden mt-4 mx-auto">
-          <div class="absolute top-0 left-0 h-full bg-primary animate-[loader-progress_1.5s_ease-in-out_infinite]"></div>
-        </div>
-      </div>
-
-      <style>
-        @keyframes loader-progress {
-          0% { width: 0%; }
-          50% { width: 100%; }
-          100% { width: 0%; }
-        }
-      </style>
+    // Create content
+    const content = document.createElement('div');
+    content.style.textAlign = 'center';
+    
+    // Add icon
+    const iconWrapper = document.createElement('div');
+    iconWrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"></path><path d="M4 11v-3a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v3"></path><path d="M14 11V7a3 3 0 0 0-3-3v0a3 3 0 0 0-3 3v4"></path></svg>`;
+    iconWrapper.style.marginBottom = '1rem';
+    iconWrapper.style.animation = 'pulse 2s infinite';
+    
+    // Add message
+    const messageEl = document.createElement('h2');
+    messageEl.id = 'loader-message';
+    messageEl.textContent = message;
+    messageEl.style.color = 'white';
+    messageEl.style.fontSize = '1.5rem';
+    messageEl.style.fontWeight = 'bold';
+    messageEl.style.marginBottom = '1rem';
+    
+    // Add progress bar
+    const progressContainer = document.createElement('div');
+    progressContainer.style.position = 'relative';
+    progressContainer.style.width = '200px';
+    progressContainer.style.height = '4px';
+    progressContainer.style.backgroundColor = 'rgba(255,255,255,0.1)';
+    progressContainer.style.borderRadius = '9999px';
+    progressContainer.style.overflow = 'hidden';
+    progressContainer.style.margin = '0 auto';
+    
+    const progressBar = document.createElement('div');
+    progressBar.style.position = 'absolute';
+    progressBar.style.top = '0';
+    progressBar.style.left = '0';
+    progressBar.style.height = '100%';
+    progressBar.style.backgroundColor = '#3b82f6'; // primary blue
+    progressBar.style.animation = 'loaderProgress 1.5s ease-in-out infinite';
+    progressBar.style.borderRadius = '9999px';
+    progressContainer.appendChild(progressBar);
+    
+    // Add styles
+    const styles = document.createElement('style');
+    styles.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      @keyframes loaderProgress {
+        0% { width: 0%; left: 0; }
+        50% { width: 100%; left: 0; }
+        100% { width: 0%; left: 100%; }
+      }
+      
+      #global-transition-loader .icon {
+        color: #3b82f6;
+      }
     `;
     
-    loaderEl.innerHTML = innerHtml;
-    document.body.appendChild(loaderEl);
+    // Assemble elements
+    content.appendChild(iconWrapper);
+    content.appendChild(messageEl);
+    content.appendChild(progressContainer);
+    loader.appendChild(content);
+    document.head.appendChild(styles);
+    document.body.appendChild(loader);
   } else {
-    // Update the message if the loader already exists
-    const messageEl = loaderEl.querySelector('#loader-message');
+    // If loader exists, just update the message
+    const messageEl = loader.querySelector('#loader-message');
     if (messageEl) {
       messageEl.textContent = message;
     }
     
-    // Make sure the loader is visible
-    loaderEl.style.display = 'flex';
+    // Make sure it's in the document
+    if (!document.body.contains(loader)) {
+      document.body.appendChild(loader);
+    }
   }
-}
-
-// Create a function to hide the loader
-export function hideGlobalLoader() {
-  globalLoadingState = false;
   
-  const loaderEl = document.getElementById('global-transition-loader');
-  if (loaderEl) {
-    // Use a slight delay before removing to ensure the new page is rendered
+  // Force a reflow to ensure the transition works
+  loader.offsetHeight;
+  
+  // Show the loader
+  loader.style.opacity = '1';
+  loader.style.display = 'flex';
+}
+
+export function hideGlobalLoader() {
+  const loader = document.getElementById('global-transition-loader');
+  if (loader) {
+    // Fade out
+    loader.style.opacity = '0';
+    
+    // Then hide after transition completes
     setTimeout(() => {
-      if (!globalLoadingState) { // Only remove if still not loading
-        loaderEl.style.display = 'none';
-      }
-    }, 300);
+      loader.style.display = 'none';
+    }, 300); // Match the transition duration
   }
 }
 
-// A component that can monitor page transitions
+// Component to attach to React lifecycle
 export function TransitionLoader() {
   useEffect(() => {
-    // When the component unmounts (route change), we want to hide the loader
+    // Create the loader on component mount but keep it hidden
+    showGlobalLoader();
+    hideGlobalLoader();
+    
+    // Intercept all form submissions and link clicks
+    const handleNavigation = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      // If it's a link with an href that points to a different page (not an anchor or external link)
+      if (link) {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('/') && href !== window.location.pathname) {
+          showGlobalLoader("Loading page...");
+        }
+      }
+    };
+    
+    // On any click, check if it's a navigation element
+    document.addEventListener('click', handleNavigation);
+    
+    // Also handle history based navigation
+    const handlePopState = () => {
+      showGlobalLoader("Loading page...");
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
     return () => {
+      document.removeEventListener('click', handleNavigation);
+      window.removeEventListener('popstate', handlePopState);
       hideGlobalLoader();
     };
   }, []);
 
-  return null; // This component doesn't render anything
+  return null;
 }
 
-// A component that renders the loading screen directly
+// A version that renders directly in React
 export function LoadingScreen({ message = "Loading..." }: { message?: string }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="text-center"
-      >
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.1, 1],
-            rotate: [0, 5, -5, 0]
-          }}
-          transition={{ 
-            duration: 2,
-            repeat: Infinity,
-            repeatType: "loop"
-          }}
-          className="inline-block mb-4"
-        >
-          <ClapperboardIcon className="h-20 w-20 text-primary" />
-        </motion.div>
-        
-        <motion.h2 
-          className="text-2xl font-bold text-white mb-2"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          {message}
-        </motion.h2>
-        
-        <div className="relative w-48 h-1 bg-gray-800 rounded-full overflow-hidden mt-4 mx-auto">
-          <motion.div 
-            className="absolute top-0 left-0 h-full bg-primary"
-            initial={{ width: "0%" }}
-            animate={{ width: "100%" }}
-            transition={{ 
-              duration: 1.5,
-              repeat: Infinity,
-              repeatType: "loop",
-              ease: "easeInOut"
-            }}
-          />
+    <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center">
+      <div className="text-center">
+        <div className="inline-block mb-4">
+          <ClapperboardIcon className="h-20 w-20 text-primary animate-pulse" />
         </div>
-      </motion.div>
+        <h2 className="text-2xl font-bold text-white mb-2">{message}</h2>
+        <div className="relative w-48 h-1 bg-gray-800 rounded-full overflow-hidden mt-4 mx-auto">
+          <div className="absolute top-0 left-0 h-full bg-primary animate-[loader-progress_1.5s_ease-in-out_infinite]"></div>
+        </div>
+      </div>
     </div>
   );
 }
