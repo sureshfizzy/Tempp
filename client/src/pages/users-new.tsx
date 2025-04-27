@@ -169,8 +169,6 @@ export default function UsersPage() {
     }
   }, [searchQuery, usersQuery.data]);
   
-
-
   // Handle select all users
   const handleSelectAll = () => {
     if (selectedUsers.length === filteredUsers.length) {
