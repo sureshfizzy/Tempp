@@ -36,6 +36,7 @@ import { User } from "@shared/schema";
 const profileFormSchema = z.object({
   name: z.string().min(1, "Profile name is required"),
   sourceUserId: z.string().min(1, "Base user is required"),
+  sourceName: z.string().optional(),
   isDefault: z.boolean().default(false)
 });
 
@@ -77,6 +78,18 @@ export function UserProfiles() {
       isDefault: false
     }
   });
+
+  // Store the selected user name
+  const [selectedUserName, setSelectedUserName] = useState<string | undefined>();
+
+  // Update selected user name when sourceUserId changes
+  useEffect(() => {
+    const sourceUserId = form.watch("sourceUserId");
+    if (sourceUserId && users) {
+      const selectedUser = users.find(u => u.Id === sourceUserId);
+      setSelectedUserName(selectedUser?.Name);
+    }
+  }, [form.watch("sourceUserId"), users]);
 
   // Create profile mutation
   const createProfileMutation = useMutation({
@@ -132,7 +145,16 @@ export function UserProfiles() {
 
   // Handle form submission
   const onSubmit = (data: ProfileFormValues) => {
-    createProfileMutation.mutate(data);
+    // Find the selected user to get the name
+    const selectedUser = users?.find(u => u.Id === data.sourceUserId);
+    
+    // Add sourceName to the data
+    const submitData = {
+      ...data,
+      sourceName: selectedUser?.Name || 'Unknown User'
+    };
+    
+    createProfileMutation.mutate(submitData);
   };
 
   // Handle profile deletion
@@ -274,7 +296,7 @@ export function UserProfiles() {
                   <FormItem>
                     <FormLabel>Base User</FormLabel>
                     <FormControl>
-                      <div className="relative max-h-[240px] overflow-auto rounded-md border border-input bg-background">
+                      <div className="relative rounded-md border border-input bg-background">
                         <div className="max-h-[240px] overflow-y-auto p-2">
                           {isLoadingUsers ? (
                             <div className="flex justify-center py-4">
