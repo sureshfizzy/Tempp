@@ -102,7 +102,7 @@ export function AppHeader({
           <div className="flex items-center gap-2">
             <Film className="h-7 w-7 text-primary" />
             <span className="text-lg font-semibold hidden sm:inline-block">{title}</span>
-            <span className="text-lg font-semibold sm:hidden">{title.length > 12 ? title.substring(0, 12) + '...' : title}</span>
+            <span className="text-lg font-semibold sm:hidden">{title}</span>
             {/* Removed server URL subtitle as requested */}
           </div>
           

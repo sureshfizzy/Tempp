@@ -89,15 +89,7 @@ export function MobileMenu({ onClose, onDisconnect, isDisconnecting, isAdmin = f
           <span>Settings</span>
         </Link>
         
-        <Link 
-          href="/history" 
-          onClick={onClose}
-          className={`flex items-center rounded-md p-3 ${isActive("/history") ? "bg-primary/10 text-primary" : isAdmin ? "hover:bg-muted" : "text-muted-foreground/50 cursor-not-allowed"}`}
-          aria-disabled={!isAdmin}
-        >
-          <History className="h-5 w-5 mr-3" />
-          <span>Watch History</span>
-        </Link>
+        {/* Removed Watch History button for admin users per request */}
       </div>
       
       <Separator className="my-4" />
