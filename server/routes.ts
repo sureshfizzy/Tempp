@@ -40,8 +40,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     session({
       store: new PgSession({
         pool,
-        tableName: 'sessions', // Match our schema
-        createTableIfMissing: true
+        tableName: 'session', // Match the existing table name in db-init.ts
+        createTableIfMissing: false // Table is already created in db-init.ts
       }),
       secret: "jellyfin-manager-secret",
       resave: false,
