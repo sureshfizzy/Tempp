@@ -1059,12 +1059,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const isAdmin = newUser.Role === "Administrator";
         // The provided password will be properly hashed by the storage.createUser method
-        await storage.createUser({
+        const appUser = await storage.createUser({
           username: newUser.Name,
           password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
           email: newUser.Email || `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
           isAdmin: isAdmin,
           jellyfinUserId: userId
+        });
+        
+        // Log the account creation in activity logs
+        await storage.createActivityLog({
+          type: 'account_created',
+          message: `Account created: ${newUser.Name}`,
+          username: newUser.Name,
+          userId: appUser.id,
+          createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+          metadata: JSON.stringify({
+            isAdmin: isAdmin,
+            jellyfinUserId: userId,
+            createdVia: 'admin_panel'
+          })
         });
         
         console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
@@ -1246,6 +1260,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (Object.keys(updates).length > 0) {
             await storage.updateUser(localUser.id, updates);
+            
+            // Log the user update in activity logs
+            await storage.createActivityLog({
+              type: 'user_updated',
+              message: `User updated: ${localUser.username}`,
+              username: localUser.username,
+              userId: localUser.id,
+              createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+              metadata: JSON.stringify({
+                updates: Object.keys(updates),
+                adminDisabled: updateData.IsDisabled === true ? true : undefined,
+                adminEnabled: updateData.IsDisabled === false ? true : undefined,
+                roleChanged: updateData.Role ? true : undefined,
+                jellyfinUserId: id
+              })
+            });
+            
             console.log(`Updated local user ${localUser.username} with Jellyfin ID ${id}`);
           }
         } else {
@@ -1297,8 +1328,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const localUser = allUsers.find(user => user.jellyfinUserId === id);
         
         if (localUser) {
+          // Save user info before deletion for logging
+          const username = localUser.username;
+          const userId = localUser.id;
+          
+          // Delete the user
           await storage.deleteUser(localUser.id);
-          console.log(`Deleted local user ${localUser.username} with Jellyfin ID ${id}`);
+          
+          // Log the user deletion
+          await storage.createActivityLog({
+            type: 'user_deleted',
+            message: `User deleted: ${username}`,
+            username: username,
+            createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+            metadata: JSON.stringify({
+              jellyfinUserId: id,
+              deletedBy: req.session.userId ? 'admin' : 'system',
+              wasAdmin: localUser.isAdmin
+            })
+          });
+          
+          console.log(`Deleted local user ${username} with Jellyfin ID ${id}`);
         }
       } catch (err) {
         console.error("Error deleting local user:", err);
@@ -1952,6 +2002,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const inviteData = req.body;
       const invite = await storage.createInvite(inviteData, req.session.userId);
+      
+      // Get the creator's username for logging
+      const creator = await storage.getUserById(req.session.userId);
+      
+      // Log invite creation
+      await storage.createActivityLog({
+        type: 'invite_created',
+        message: `Invite created: ${invite.code}`,
+        inviteCode: invite.code,
+        createdBy: creator?.username || 'Admin',
+        metadata: JSON.stringify({
+          label: invite.label,
+          maxUses: invite.maxUses,
+          expiresAt: invite.expiresAt,
+          userExpiryEnabled: invite.userExpiryEnabled,
+          userExpiryDays: invite.userExpiryDays,
+          userExpiryMonths: invite.userExpiryMonths,
+          userExpiryHours: invite.userExpiryHours
+        })
+      });
+      
       res.status(201).json(invite);
     } catch (error) {
       console.error("Error creating invite:", error);
@@ -2124,6 +2195,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
         await storage.updateInviteUsage(code, usedCount);
         
+        // Log account creation via invite
+        await storage.createActivityLog({
+          type: 'account_created',
+          message: `Account created: ${username} (via invite)`,
+          username: username,
+          userId: appUser.id,
+          inviteCode: code,
+          metadata: JSON.stringify({
+            expiresAt: expiresAt,
+            email: email || null,
+            jellyfinUserId: jellyfinUser.Id,
+            createdVia: 'invite'
+          })
+        });
+        
+        // Log invite usage
+        await storage.createActivityLog({
+          type: 'invite_used',
+          message: `Invite used: ${code}`,
+          username: username,
+          userId: appUser.id,
+          inviteCode: code,
+          metadata: JSON.stringify({
+            usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
+            usesTotal: usedCount,
+            maxUses: invite.maxUses
+          })
+        });
+        
         // Return success
         res.status(201).json({ 
           success: true,
@@ -2253,6 +2353,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const appUser = users.find(u => u.jellyfinUserId === id);
       if (appUser) {
         await storage.updateUser(appUser.id, { disabled: true });
+        
+        // Log user account disablement
+        await storage.createActivityLog({
+          type: 'user_disabled',
+          message: `User disabled: ${userData.Name}`,
+          username: userData.Name,
+          userId: appUser.id,
+          metadata: JSON.stringify({
+            jellyfinUserId: id,
+            reason: req.body.reason || 'account_expired',
+            autoDisabled: req.body.autoDisabled || true
+          })
+        });
       }
       
       console.log(`User ${id} disabled successfully - ${userData.Name}`);
