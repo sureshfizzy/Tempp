@@ -1892,7 +1892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       console.log(`Creating profile based on source user: ${sourceUser.Name} (${sourceUserId})`);
-      console.log(`Source user policy:`, sourceUser.Policy);
+      console.log(`Debug - User Policy structure:`, JSON.stringify(sourceUser.Policy));
       
       // Fetch the user's display preferences which contains the home layout
       const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {

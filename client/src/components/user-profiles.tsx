@@ -121,9 +121,20 @@ export function UserProfiles() {
   // Delete profile mutation
   const deleteProfileMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest<any>(`/api/user-profiles/${id}`, {
-        method: "DELETE"
+      console.log(`Deleting profile with ID: ${id}`);
+      const response = await fetch(`/api/user-profiles/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || `Failed with status: ${response.status}`);
+      }
+      
+      return true; // Successful deletion
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-profiles"] });
@@ -135,6 +146,7 @@ export function UserProfiles() {
       });
     },
     onError: (error: any) => {
+      console.error("Profile deletion error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete user profile",
