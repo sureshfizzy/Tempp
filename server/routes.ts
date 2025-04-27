@@ -2452,7 +2452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
                 
                 if (currentPrefsResponse.ok) {
-                  let currentPrefs = await currentPrefsResponse.json();
+                  let currentPrefs = await currentPrefsResponse.json() as any;
                   
                   // Make sure CustomPrefs exists
                   if (!currentPrefs.CustomPrefs) {
@@ -2492,55 +2492,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Create local app user with expiry if needed
-        const appUser = await storage.createUser({
-          username,
-          password, // Will be hashed by storage implementation
-          email: email || '',
-          jellyfinUserId: jellyfinUser.Id,
-          expiresAt
-        });
-        
-        // Increment the invite used count
-        const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
-        await storage.updateInviteUsage(code, usedCount);
-        
-        // Log account creation via invite
-        await storage.createActivityLog({
-          type: 'account_created',
-          message: `Account created: ${username} (via invite)`,
-          username: username,
-          userId: String(appUser.id), // Convert number to string for userId
-          inviteCode: code,
-          metadata: JSON.stringify({
-            expiresAt: expiresAt,
-            email: email || null,
+        try {
+          // Email validation - ensure we handle empty emails correctly
+          // The database has a unique constraint on email, so we need to handle empty emails specially
+          let emailToUse = null;
+          
+          if (email && email.trim() !== '') {
+            // If a valid email is provided, use it
+            emailToUse = email.trim();
+          } else {
+            // Generate a unique placeholder email using the username and timestamp
+            // This avoids conflicts with the unique constraint
+            emailToUse = `placeholder-${username}-${Date.now()}@noemail.com`;
+            console.log(`Using placeholder email for user ${username}: ${emailToUse}`);
+          }
+          
+          const appUser = await storage.createUser({
+            username,
+            password, // Will be hashed by storage implementation
+            email: emailToUse,
             jellyfinUserId: jellyfinUser.Id,
-            createdVia: 'invite',
-            profileId: userProfile?.id || null,
-            profileName: userProfile?.name || null
-          })
-        });
+            expiresAt
+          });
         
-        // Log invite usage
-        await storage.createActivityLog({
-          type: 'invite_used',
-          message: `Invite used: ${code}`,
-          username: username,
-          userId: String(appUser.id), // Convert number to string
-          inviteCode: code,
-          metadata: JSON.stringify({
-            usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
-            usesTotal: usedCount,
-            maxUses: invite.maxUses,
-            profileId: userProfile?.id || null
-          })
-        });
-        
-        // Return success
-        res.status(201).json({ 
-          success: true,
-          message: "Account created successfully"
-        });
+          // Increment the invite used count
+          const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
+          await storage.updateInviteUsage(code, usedCount);
+          
+          // Log account creation via invite
+          await storage.createActivityLog({
+            type: 'account_created',
+            message: `Account created: ${username} (via invite)`,
+            username: username,
+            userId: String(appUser.id), // Convert number to string for userId
+            inviteCode: code,
+            metadata: JSON.stringify({
+              expiresAt: expiresAt,
+              email: email || null,
+              jellyfinUserId: jellyfinUser.Id,
+              createdVia: 'invite',
+              profileId: userProfile?.id || null,
+              profileName: userProfile?.name || null
+            })
+          });
+          
+          // Log invite usage
+          await storage.createActivityLog({
+            type: 'invite_used',
+            message: `Invite used: ${code}`,
+            username: username,
+            userId: String(appUser.id), // Convert number to string
+            inviteCode: code,
+            metadata: JSON.stringify({
+              usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
+              usesTotal: usedCount,
+              maxUses: invite.maxUses,
+              profileId: userProfile?.id || null
+            })
+          });
+          
+          // Return success
+          res.status(201).json({ 
+            success: true,
+            message: "Account created successfully"
+          });
+        } catch (error) {
+          console.error("Error creating app user:", error);
+          throw error; // Re-throw to be caught by the outer catch block
+        }
       } catch (error) {
         console.error("Error creating Jellyfin user:", error);
         res.status(500).json({ error: "Failed to create Jellyfin user account" });
