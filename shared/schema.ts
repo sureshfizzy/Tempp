@@ -292,6 +292,7 @@ export const invites = pgTable("invites", {
   label: text("label"),
   userLabel: text("user_label"),
   profileId: text("profile_id"),  // It's TEXT in the actual database
+  roleId: integer("role_id"),     // Added to specify role for new users
   maxUses: integer("max_uses"),
   usedCount: integer("used_count"),  // The database has used_count, not uses_remaining
   expiresAt: timestamp("expires_at"),
@@ -309,6 +310,7 @@ export const insertInviteSchema = createInsertSchema(invites)
     label: true,
     userLabel: true,
     profileId: true,
+    roleId: true,    // Added role ID field
     maxUses: true,
     userExpiryEnabled: true,
     userExpiryMinutes: true,
@@ -329,6 +331,7 @@ export type Invite = {
   label: string | null;
   userLabel: string | null;
   profileId: string | null;
+  roleId: number | null;  // Added role ID field
   maxUses: number | null;
   usedCount: number | null;
   expiresAt: Date | null;
