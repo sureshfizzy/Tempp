@@ -695,12 +695,24 @@ export class DatabaseStorage implements IStorage {
   
   async updateInviteUsage(code: string, usedCount: number): Promise<boolean> {
     try {
-      const result = await db.update(invites)
-        .set({ usedCount })
-        .where(eq(invites.code, code))
-        .returning();
-      
-      return result.length > 0;
+      // First get the invite to check if it should be deleted
+      const invite = await this.getInviteByCode(code);
+      if (!invite) return false;
+
+      // If this usage reaches the max uses, delete the invite
+      if (invite.maxUses !== null && usedCount >= invite.maxUses) {
+        // Delete the invite when it reaches max uses
+        console.log(`Invite ${code} has reached max uses, deleting it`);
+        return await this.deleteInvite(invite.id);
+      } else {
+        // Otherwise, just update the usedCount
+        const result = await db.update(invites)
+          .set({ usedCount })
+          .where(eq(invites.code, code))
+          .returning();
+        
+        return result.length > 0;
+      }
     } catch (error) {
       console.error(`Error updating invite usage for code ${code}:`, error);
       return false;
