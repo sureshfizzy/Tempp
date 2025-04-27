@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   LogOut, 
-  User as UserIcon, 
+  User, 
   UserCheck, 
   Settings, 
   CheckCircle,
@@ -35,7 +35,6 @@ import { queryClient } from "@/lib/queryClient";
 import { AppHeader } from "@/components/app-header";
 import { Switch } from "@/components/ui/switch";
 import { InsertInvite } from "@shared/schema";
-import { User as JellyfinUser } from "@/lib/jellyfin";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -240,28 +239,8 @@ export default function Dashboard() {
     return invitesQuery.data;
   }, [invitesQuery.data, deleteInviteId]);
   
-  // Count users by role
+  // Count user types
   const adminCount = usersQuery.data?.filter(user => user.Policy?.IsAdministrator).length || 0;
-  
-  // Get custom roles count 
-  const userRoleCounts = useMemo(() => {
-    if (!usersQuery.data) return {};
-    
-    const counts: Record<string, number> = {};
-    
-    usersQuery.data.forEach(user => {
-      // Skip admins as they are already counted
-      if (user.Policy?.IsAdministrator) return;
-      
-      // Get role name from user object (added via our getUsers enhancement)
-      const roleName = user.roleName || "Regular User";
-      counts[roleName] = (counts[roleName] || 0) + 1;
-    });
-    
-    return counts;
-  }, [usersQuery.data]);
-  
-  // Total regular (non-admin) users
   const regularUserCount = usersQuery.data?.length ? usersQuery.data.length - adminCount : 0;
   
   return (
@@ -299,7 +278,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
-                <UserIcon className="h-5 w-5 mr-2 text-primary" />
+                <User className="h-5 w-5 mr-2 text-primary" />
                 Total Users
               </CardTitle>
               <CardDescription>All users on your Jellyfin server</CardDescription>
@@ -337,27 +316,17 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
-                <UserIcon className="h-5 w-5 mr-2 text-blue-500" />
-                All User Roles
+                <User className="h-5 w-5 mr-2 text-blue-500" />
+                Regular Users
               </CardTitle>
-              <CardDescription>Users by assigned role</CardDescription>
+              <CardDescription>Users with standard access</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="text-3xl font-bold">
                 {usersQuery.isLoading ? (
                   <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
-                ) : Object.keys(userRoleCounts).length > 0 ? (
-                  Object.entries(userRoleCounts).map(([roleName, count]) => (
-                    <div key={roleName} className="flex justify-between items-center">
-                      <span className="text-sm">{roleName}</span>
-                      <span className="text-sm font-semibold">{count}</span>
-                    </div>
-                  ))
                 ) : (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Regular User</span>
-                    <span className="text-sm font-semibold">{regularUserCount}</span>
-                  </div>
+                  regularUserCount
                 )}
               </div>
             </CardContent>
@@ -453,7 +422,7 @@ export default function Dashboard() {
                             
                             {invite.userLabel && (
                               <div className="flex items-center pt-1 border-t border-border/40">
-                                <UserIcon className="h-3 w-3 mr-1" />
+                                <User className="h-3 w-3 mr-1" />
                                 <span>User label: {invite.userLabel}</span>
                               </div>
                             )}
