@@ -274,38 +274,44 @@ export function UserProfiles() {
                   <FormItem>
                     <FormLabel>Base User</FormLabel>
                     <FormControl>
-                      <RadioGroup 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-2"
-                      >
-                        {isLoadingUsers ? (
-                          <div className="flex justify-center py-4">
-                            <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                          </div>
-                        ) : !users || users.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground">
-                            No users available
-                          </div>
-                        ) : (
-                          users.map((user) => (
-                            <div key={user.Id} className="flex items-center space-x-2">
-                              <RadioGroupItem value={user.Id} id={`user-${user.Id}`} />
-                              <Label htmlFor={`user-${user.Id}`} className="flex items-center cursor-pointer">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
-                                  {user.Name?.charAt(0).toUpperCase() || "U"}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">{user.Name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {user.Policy?.IsAdministrator ? "Administrator" : "Regular User"}
-                                  </p>
-                                </div>
-                              </Label>
+                      <div className="relative max-h-[240px] overflow-auto rounded-md border border-input bg-background">
+                        <div className="max-h-[240px] overflow-y-auto p-2">
+                          {isLoadingUsers ? (
+                            <div className="flex justify-center py-4">
+                              <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                             </div>
-                          ))
-                        )}
-                      </RadioGroup>
+                          ) : !users || users.length === 0 ? (
+                            <div className="text-center py-4 text-muted-foreground">
+                              No users available
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {users.map((user) => (
+                                <div 
+                                  key={user.Id} 
+                                  className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-muted transition-colors ${field.value === user.Id ? 'bg-primary/10 border border-primary/30' : 'border border-transparent'}`}
+                                  onClick={() => field.onChange(user.Id)}
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    {user.Name?.charAt(0).toUpperCase() || "U"}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{user.Name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {user.Policy?.IsAdministrator ? "Administrator" : "Regular User"}
+                                    </p>
+                                  </div>
+                                  {field.value === user.Id && (
+                                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-white">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </FormControl>
                     <FormDescription>
                       Select a user whose library access and home layout will be used as a template
