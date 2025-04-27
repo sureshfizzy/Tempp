@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [isInfiniteUses, setIsInfiniteUses] = useState<boolean>(false);
   const [userExpiryEnabled, setUserExpiryEnabled] = useState<boolean>(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [deleteInviteId, setDeleteInviteId] = useState<number | null>(null);
 
   // Get Jellyfin connection status
@@ -119,6 +120,7 @@ export default function Dashboard() {
       setIsInfiniteUses(false);
       setUserExpiryEnabled(false);
       setSelectedProfileId(null);
+      setSelectedRoleId(null);
       
       // Refresh invites list
       queryClient.invalidateQueries({ queryKey: ["/api/invites"] });
@@ -227,7 +229,8 @@ export default function Dashboard() {
         userExpiryDays: inviteDays,
         userExpiryHours: inviteHours,
       } : {}),
-      profileId: selectedProfileId?.toString() || null
+      profileId: selectedProfileId?.toString() || null,
+      roleId: selectedRoleId
     };
     
     console.log("Creating invite with data:", inviteData);
@@ -743,6 +746,23 @@ export default function Dashboard() {
                         {profilesQuery.data && profilesQuery.data.map(profile => (
                           <option key={profile.id} value={profile.id}>
                             {profile.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">ROLE</h4>
+                      <p className="text-xs text-muted-foreground mb-2">Assign users to this role</p>
+                      <select 
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={selectedRoleId || ''}
+                        onChange={(e) => setSelectedRoleId(e.target.value ? parseInt(e.target.value) : null)}
+                      >
+                        <option value="">Default role</option>
+                        {userRolesQuery.data && userRolesQuery.data.map(role => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}{role.isDefault ? " (Default)" : ""}
                           </option>
                         ))}
                       </select>
