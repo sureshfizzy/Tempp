@@ -377,10 +377,18 @@ export default function UsersPage() {
                             {getUserStatus(user)}
                           </div>
                           <div className="md:hidden mt-1 space-y-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-1">
                               <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
-                                {getUserRole(user)}
+                                {user.Policy?.IsAdministrator ? "Administrator" : "User"}
                               </Badge>
+                              
+                              {/* Display custom role in mobile view too */}
+                              {user.roleId && rolesQuery.data && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-2">
+                                  {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                                </Badge>
+                              )}
+                              
                               <span className="text-xs text-gray-500">
                                 {formatDate(user.LastActivityDate)}
                               </span>

@@ -33,6 +33,7 @@ const inviteFormSchema = z.object({
   label: z.string().optional(),
   userLabel: z.string().optional(),
   profileId: z.string().optional(),
+  roleId: z.string().optional(), // Added role selection
   
   // Invite duration tab fields
   maxUses: z.number().nullable().optional(),
@@ -51,9 +52,13 @@ interface InviteFormProps {
     id: number;
     name: string;
   }>;
+  userRoles?: Array<{
+    id: number;
+    name: string;
+  }>;
 }
 
-export function InviteForm({ onSuccess, onCancel, userProfiles = [] }: InviteFormProps) {
+export function InviteForm({ onSuccess, onCancel, userProfiles = [], userRoles = [] }: InviteFormProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("duration");
   const queryClient = useQueryClient();
