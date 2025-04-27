@@ -389,9 +389,19 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
-                            {getUserRole(user)}
-                          </Badge>
+                          {/* Display Access */}
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                              {user.Policy?.IsAdministrator ? "Administrator" : "User"}
+                            </Badge>
+                            
+                            {/* Display Role if available */}
+                            {user.roleId && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                                Role: {rolesQuery.data?.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className="text-gray-400">
@@ -607,9 +617,25 @@ function RolesTable({ users }: { users: User[] }) {
                 <TableRow key={user.Id}>
                   <TableCell className="font-medium">{user.Name}</TableCell>
                   <TableCell>
-                    <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
-                      {getUserRole(user)}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                        {user.Policy?.IsAdministrator ? "Administrator" : "User"}
+                      </Badge>
+                      
+                      {/* Display assigned role if available */}
+                      {user.roleId && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                          {rolesQuery.data?.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                        </Badge>
+                      )}
+                      
+                      {/* Indicate if no custom role is assigned */}
+                      {!user.roleId && !user.Policy?.IsAdministrator && (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                          No custom role
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.Policy?.IsDisabled ? (
