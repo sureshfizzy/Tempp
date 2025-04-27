@@ -137,6 +137,9 @@ export const userSchema = z.object({
   EnableAutoLogin: z.boolean().optional(),
   LastLoginDate: z.string().optional(),
   LastActivityDate: z.string().optional(),
+  // Added properties for app integration
+  appUserId: z.number().optional(),
+  roleId: z.number().optional(),
   Configuration: z.object({
     AudioLanguagePreference: z.string().optional(),
     PlayDefaultAudioTrack: z.boolean().optional(),
