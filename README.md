@@ -26,7 +26,6 @@ Jellyfin User Manager is a sophisticated web application that enhances Jellyfin'
 ## Requirements
 
 - Node.js 18+ (20.x recommended)
-- PostgreSQL database
 - Jellyfin server with admin access
 - API key from your Jellyfin server
 
@@ -66,14 +65,12 @@ If you prefer to build and run the application directly:
    npm install
    ```
 
-3. Set up your PostgreSQL database and update the connection string in your environment variables.
-
-4. Build the application:
+3. Build the application:
    ```bash
    npm run build
    ```
 
-5. Start the application:
+4. Start the application:
    ```bash
    npm start
    ```
@@ -82,7 +79,7 @@ If you prefer to build and run the application directly:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | (required) |
+| `DATABASE_URL` | Database connection string (SQLite in Docker) | `sqlite:///app/data/jellyfin-manager.db` |
 | `NODE_ENV` | Environment mode | `production` |
 | `PORT` | Port for the server | `5000` |
 | `TZ` | Timezone | `UTC` |
@@ -121,20 +118,10 @@ This ensures that permissions issues are avoided when accessing mounted volumes.
    npm install
    ```
 
-3. Start a PostgreSQL database (can use Docker):
-   ```bash
-   docker run -d \
-     --name jellyfin-manager-db \
-     -e POSTGRES_USER=postgres \
-     -e POSTGRES_PASSWORD=postgres \
-     -e POSTGRES_DB=jellyfin-manager \
-     -p 5432:5432 \
-     postgres:15-alpine
-   ```
-
-4. Set environment variables in `.env` file:
+3. Create an `.env` file for development:
    ```env
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jellyfin-manager
+   # For development, you can use SQLite
+   DATABASE_URL=sqlite://./data/jellyfin-manager.db
    ```
 
 5. Run the development server:
@@ -163,7 +150,7 @@ Jellyfin User Manager uses a modern web application stack:
 
 - **Frontend**: React with TypeScript, TailwindCSS, Framer Motion
 - **Backend**: Node.js with Express
-- **Database**: PostgreSQL with Drizzle ORM
+- **Database**: SQLite with Drizzle ORM (PostgreSQL also supported)
 - **Containerization**: Docker and Docker Compose
 
 ## Contributing

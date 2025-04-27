@@ -28,9 +28,10 @@ WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV DATABASE_URL=sqlite:///app/data/jellyfin-manager.db
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init tzdata
+RUN apk add --no-cache dumb-init tzdata sqlite
 
 # Create a non-root user
 RUN addgroup -g 1000 jellyfin && \
