@@ -215,15 +215,23 @@ export default function UsersPage() {
       return null; // No expiry
     }
     
+    // Create a new date object for now
     const now = new Date();
     
-    // Add the specified time
-    now.setMonth(now.getMonth() + months);
-    now.setDate(now.getDate() + days);
-    now.setHours(now.getHours() + hours);
-    now.setMinutes(now.getMinutes() + minutes);
+    // Calculate milliseconds for each time unit (more accurate than using setMonth/setDate)
+    const monthsMs = months * 30 * 24 * 60 * 60 * 1000; // Approximate - 30 days per month
+    const daysMs = days * 24 * 60 * 60 * 1000;
+    const hoursMs = hours * 60 * 60 * 1000;
+    const minutesMs = minutes * 60 * 1000;
     
-    return now.toISOString();
+    // Add all milliseconds to the current time
+    const totalMs = now.getTime() + monthsMs + daysMs + hoursMs + minutesMs;
+    const expiryDate = new Date(totalMs);
+    
+    console.log(`Setting expiry: ${months} months, ${days} days, ${hours} hours, ${minutes} minutes`);
+    console.log(`Expiry date: ${expiryDate.toLocaleString()}`);
+    
+    return expiryDate.toISOString();
   }, [expiryMonths, expiryDays, expiryHours, expiryMinutes]);
 
   // Set expiry mutation
