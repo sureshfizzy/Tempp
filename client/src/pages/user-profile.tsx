@@ -121,6 +121,35 @@ export default function UserProfilePage() {
     enabled: !!userQuery.data?.jellyfinUserId,
     staleTime: 300000, // 5 minutes
   });
+  
+  // Fetch user policy to get enabled folders
+  const userPolicyQuery = useQuery({
+    queryKey: ["/api/users", userQuery.data?.jellyfinUserId, "policy"],
+    queryFn: async () => {
+      if (!userQuery.data?.jellyfinUserId) {
+        return { EnabledFolders: [] };
+      }
+      
+      try {
+        // Getting the full user data from the API which includes Policy
+        const response = await fetch(`/api/users/${userQuery.data.jellyfinUserId}`);
+        const userData = await response.json();
+        
+        // Extract the Policy.EnabledFolders if they exist
+        if (userData.Policy && userData.Policy.EnabledFolders) {
+          return userData.Policy;
+        }
+        
+        // Fall back to empty array if no policy or folders
+        return { EnabledFolders: [] };
+      } catch (error) {
+        console.error("Error fetching user policy:", error);
+        return { EnabledFolders: [] };
+      }
+    },
+    enabled: !!userQuery.data?.jellyfinUserId,
+    staleTime: 300000, // 5 minutes
+  });
 
   // Format watch time for display
   const formatWatchTime = (minutes: number) => {
@@ -738,11 +767,20 @@ export default function UserProfilePage() {
                   >
                     <Button 
                       variant="default" 
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white shadow-lg shadow-blue-700/30 transition-all duration-300 text-md py-6"
-                      onClick={openJellyfin}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 text-white shadow-lg shadow-indigo-700/30 transition-all duration-300 text-md py-6"
+                      onClick={() => {
+                        // Check if there are any favorites to watch
+                        if (favoritesQuery.data?.Items && favoritesQuery.data.Items.length > 0) {
+                          const firstFavorite = favoritesQuery.data.Items[0];
+                          window.open(getItemLink(firstFavorite.Id), '_blank');
+                        } else {
+                          // Fallback to opening Jellyfin if no favorites
+                          openJellyfin();
+                        }
+                      }}
                     >
-                      <Play className="mr-2 h-5 w-5" />
-                      Watch Now
+                      <Heart className="mr-2 h-5 w-5" />
+                      Watch Favorites Now
                     </Button>
                   </motion.div>
                   
@@ -772,6 +810,12 @@ export default function UserProfilePage() {
                         Your Media
                       </CardTitle>
                       <CardDescription className="text-blue-300/70 mb-4">Your Jellyfin activity and favorites</CardDescription>
+                      
+                      {/* Display enabled folders stats with animation */}
+                      <EnabledFoldersDisplay 
+                        userId={userQuery.data?.jellyfinUserId || ""} 
+                        folderList={userPolicyQuery.data?.EnabledFolders || []}
+                      />
                       
                       <TabsList className="bg-black/30 border border-blue-900/30">
                         <TabsTrigger 
