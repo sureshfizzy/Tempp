@@ -762,6 +762,47 @@ export class DatabaseStorage implements IStorage {
   private generateInviteCode(): string {
     return randomBytes(6).toString('hex').toUpperCase();
   }
+  
+  // Activity Logs methods
+  async getActivityLogs(limit: number = 100): Promise<ActivityLog[]> {
+    try {
+      return await db.select()
+        .from(activityLogs)
+        .orderBy(desc(activityLogs.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      return [];
+    }
+  }
+  
+  async createActivityLog(logData: InsertActivityLog): Promise<ActivityLog> {
+    try {
+      // Convert metadata to JSON string if provided as an object
+      let metadataStr = logData.metadata;
+      if (logData.metadata && typeof logData.metadata === 'object') {
+        metadataStr = JSON.stringify(logData.metadata);
+      }
+      
+      // Insert activity log
+      const [log] = await db.insert(activityLogs)
+        .values({
+          type: logData.type,
+          message: logData.message,
+          username: logData.username || null,
+          userId: logData.userId || null,
+          inviteCode: logData.inviteCode || null,
+          createdBy: logData.createdBy || null,
+          metadata: metadataStr || null
+        })
+        .returning();
+        
+      return log;
+    } catch (error) {
+      console.error("Error creating activity log:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
