@@ -38,6 +38,8 @@ export const appUsers = pgTable("app_users", {
   discordUsername: text("discord_username"),
   discordId: text("discord_id"),
   notes: text("notes"),
+  expiresAt: timestamp("expires_at"),
+  disabled: boolean("disabled").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -59,6 +61,8 @@ export const insertAppUserSchema = createInsertSchema(appUsers).pick({
   discordUsername: true,
   discordId: true,
   notes: true,
+  expiresAt: true,
+  disabled: true,
 });
 
 // Session schema

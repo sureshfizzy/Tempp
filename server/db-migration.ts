@@ -80,6 +80,23 @@ export async function runCustomMigrations() {
     `);
     console.log('invites table created or already exists.');
     
+    // Add user expiry columns to app_users if they don't exist
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        BEGIN
+          ALTER TABLE app_users 
+          ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP,
+          ADD COLUMN IF NOT EXISTS disabled BOOLEAN DEFAULT FALSE;
+        EXCEPTION
+          WHEN duplicate_column THEN
+            RAISE NOTICE 'expiry columns already exist in app_users';
+        END;
+      END
+      $$;
+    `);
+    console.log('Added expiry columns to app_users table');
+    
     console.log("Custom migrations completed successfully.");
   } catch (error) {
     console.error("Error running custom migrations:", error);
