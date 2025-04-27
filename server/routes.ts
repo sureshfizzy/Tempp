@@ -41,7 +41,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: new PgSession({
         pool,
         tableName: 'sessions', // Match our schema
-        createTableIfMissing: true
+        createTableIfMissing: true,
+        error: (error: Error) => {
+          // Ignore "relation already exists" errors, as they're harmless
+          if (error.message.includes('already exists')) {
+            console.log('Session table already exists, continuing...');
+            return;
+          }
+          console.error('Session store error:', error);
+        }
       }),
       secret: "jellyfin-manager-secret",
       resave: false,
