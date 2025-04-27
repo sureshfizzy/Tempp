@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./db-init";
-import { initializeSqliteDatabase } from "./db-init-sqlite";
 import { startExpiryCheckJob } from "./user-expiry";
 
 const app = express();
@@ -40,22 +39,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize database tables - use SQLite or PostgreSQL based on environment
+  // Initialize database tables
   try {
-    // Check if DATABASE_URL is a non-empty string
-    const isDatabaseUrlSet = process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '';
-    
-    if (isDatabaseUrlSet) {
-      // Use PostgreSQL if DATABASE_URL is set and not empty
-      log("Using PostgreSQL database");
-      await initializeDatabase();
-      log("PostgreSQL database initialized successfully");
-    } else {
-      // Use SQLite if no DATABASE_URL or it's empty
-      log("Using SQLite database");
-      await initializeSqliteDatabase();
-      log("SQLite database initialized successfully");
-    }
+    await initializeDatabase();
+    log("Database initialized successfully");
   } catch (error) {
     log(`Error initializing database: ${error}`, "error");
   }

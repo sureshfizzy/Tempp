@@ -17,24 +17,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=UTC
-      
-      # DATABASE CONFIGURATION OPTIONS:
-      
-      # Option 1 (Default): Use SQLite (embedded database)
-      # Set DATA_DIR to specify where SQLite database will be stored
-      - DATA_DIR=/app/data
-      # Empty DATABASE_URL explicitly forces SQLite mode
-      - DATABASE_URL=
-      
-      # Option 2: Use PostgreSQL (uncomment and configure)
-      # - DATABASE_URL=postgresql://username:password@host:5432/database
-      # Note: When using PostgreSQL, comment out DATA_DIR if not needed
-      
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/jellyfin-manager
     volumes:
-      # App configuration
       - ./config:/app/config
-      # Data storage (critical for SQLite database)
       - ./data:/app/data
+    depends_on:
+      - db
     networks:
       - jellyfin-network
     healthcheck:
@@ -44,6 +32,27 @@ services:
       retries: 3
       start_period: 10s
 
+  db:
+    image: postgres:15-alpine
+    container_name: jellyfin-manager-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=jellyfin-manager
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - jellyfin-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   jellyfin-network:
     driver: bridge
+
+volumes:
+  postgres-data:
