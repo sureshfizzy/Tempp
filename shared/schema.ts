@@ -266,6 +266,7 @@ export const invites = pgTable("invites", {
   usedCount: integer("used_count"),  // The database has used_count, not uses_remaining
   expiresAt: timestamp("expires_at"),
   userExpiryEnabled: boolean("user_expiry_enabled").default(false).notNull(),
+  userExpiryMinutes: integer("user_expiry_minutes").default(0),
   userExpiryHours: integer("user_expiry_hours").default(0),
   userExpiryDays: integer("user_expiry_days").default(0),
   userExpiryMonths: integer("user_expiry_months").default(0),
@@ -280,6 +281,7 @@ export const insertInviteSchema = createInsertSchema(invites)
     profileId: true,
     maxUses: true,
     userExpiryEnabled: true,
+    userExpiryMinutes: true,
     userExpiryHours: true,
     userExpiryDays: true,
     userExpiryMonths: true,
@@ -304,6 +306,7 @@ export type Invite = {
   userExpiryMonths?: number | null;
   userExpiryDays?: number | null;
   userExpiryHours: number | null;
+  userExpiryMinutes?: number | null;
   createdAt: Date;
   createdBy: string | null;
   

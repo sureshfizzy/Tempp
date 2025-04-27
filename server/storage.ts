@@ -600,10 +600,16 @@ export class DatabaseStorage implements IStorage {
           expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
         }
         
+        // Add minutes if specified
+        if (inviteData.userExpiryMinutes && inviteData.userExpiryMinutes > 0) {
+          expiresAt.setMinutes(expiresAt.getMinutes() + inviteData.userExpiryMinutes);
+        }
+        
         // If no expiry specified at all, set to 7 days default (instead of 30)
         if ((!inviteData.userExpiryMonths || inviteData.userExpiryMonths <= 0) && 
             (!inviteData.userExpiryDays || inviteData.userExpiryDays <= 0) && 
-            (!inviteData.userExpiryHours || inviteData.userExpiryHours <= 0)) {
+            (!inviteData.userExpiryHours || inviteData.userExpiryHours <= 0) &&
+            (!inviteData.userExpiryMinutes || inviteData.userExpiryMinutes <= 0)) {
           expiresAt.setDate(expiresAt.getDate() + 7);
         }
       }
@@ -632,14 +638,17 @@ export class DatabaseStorage implements IStorage {
         created_by: createdById.toString() // Convert to string as the DB expects it
       };
       
+      // Add the user_expiry_minutes to the values
+      values.user_expiry_minutes = inviteData.userExpiryMinutes || 0;
+      
       // Use the pool to execute raw SQL directly
       const sql = `
         INSERT INTO invites (
           code, label, user_label, profile_id, max_uses, used_count, 
-          expires_at, user_expiry_enabled, user_expiry_hours, user_expiry_days, user_expiry_months, created_by
+          expires_at, user_expiry_enabled, user_expiry_minutes, user_expiry_hours, user_expiry_days, user_expiry_months, created_by
         ) 
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         )
         RETURNING *
       `;
@@ -653,6 +662,7 @@ export class DatabaseStorage implements IStorage {
         values.used_count,
         values.expires_at,
         values.user_expiry_enabled,
+        values.user_expiry_minutes,
         values.user_expiry_hours,
         values.user_expiry_days,
         values.user_expiry_months,

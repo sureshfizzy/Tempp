@@ -55,6 +55,7 @@ export async function runCustomMigrations() {
         uses_remaining INTEGER,
         expires_at TIMESTAMP,
         user_expiry_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+        user_expiry_minutes INTEGER DEFAULT 0,
         user_expiry_months INTEGER DEFAULT 0,
         user_expiry_days INTEGER DEFAULT 0,
         user_expiry_hours INTEGER DEFAULT 0,
@@ -64,6 +65,7 @@ export async function runCustomMigrations() {
     `);
     
     // Alter table to allow NULL values for max_uses and uses_remaining columns
+    // Also add user_expiry_minutes if it doesn't exist
     await db.execute(sql`
       DO $$
       BEGIN
@@ -74,6 +76,14 @@ export async function runCustomMigrations() {
         EXCEPTION
           WHEN undefined_column THEN
             RAISE NOTICE 'column does not exist, ignoring';
+        END;
+        
+        BEGIN
+          ALTER TABLE invites
+          ADD COLUMN IF NOT EXISTS user_expiry_minutes INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN
+            RAISE NOTICE 'user_expiry_minutes column already exists';
         END;
       END
       $$;
