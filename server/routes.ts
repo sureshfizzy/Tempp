@@ -819,13 +819,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Enhance users with expiry information from our database
+      // Note: We use Policy.IsDisabled from Jellyfin as the source of truth for disabled state
+      // but keep our local expiresAt information
       const usersWithExpiry = parsedUsers.map(user => {
         const appUser = appUsersByJellyfinId.get(user.Id);
         if (appUser) {
+          // If Jellyfin shows the user as not disabled but our DB says disabled,
+          // update our DB to match Jellyfin's state
+          if (!user.Policy?.IsDisabled && appUser.disabled) {
+            console.log(`Fixing mismatch: Jellyfin shows ${user.Name} as enabled but local DB has disabled=true`);
+            storage.updateUser(appUser.id, { disabled: false })
+              .catch(err => console.error(`Failed to update disabled state for ${user.Name}:`, err));
+          }
+          
           return {
             ...user,
-            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
-            disabled: appUser.disabled
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null
+            // Don't use appUser.disabled, use Jellyfin's Policy.IsDisabled flag
           };
         }
         return user;
@@ -900,10 +910,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const appUser = appUsers.find(u => u.jellyfinUserId === id);
         
         if (appUser) {
+          // If Jellyfin shows the user as not disabled but our DB says disabled,
+          // update our DB to match Jellyfin's state
+          if (parsedUser.Policy?.IsDisabled === false && appUser.disabled) {
+            console.log(`Fixing mismatch: Jellyfin shows ${parsedUser.Name} as enabled but local DB has disabled=true`);
+            storage.updateUser(appUser.id, { disabled: false })
+              .catch(err => console.error(`Failed to update disabled state for ${parsedUser.Name}:`, err));
+          }
+          
           return res.status(200).json({
             ...parsedUser,
-            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
-            disabled: appUser.disabled
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null
+            // Don't add our DB disabled state, rely on Policy.IsDisabled
           });
         }
       } catch (err) {
