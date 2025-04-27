@@ -85,8 +85,8 @@ export default function SettingsPage() {
   const form = useForm<ServerSettingsFormValues>({
     resolver: zodResolver(serverSettingsSchema),
     defaultValues: {
-      serverName: serverQuery.data?.serverName || "",
-      serverUrl: serverQuery.data?.url || "",
+      serverName: connectionQuery.data?.serverName || serverQuery.data?.serverName || "",
+      serverUrl: connectionQuery.data?.serverUrl || serverQuery.data?.serverUrl || "",
       apiKey: serverQuery.data?.apiKey || "",
       logoUrl: serverQuery.data?.logoUrl || "",
       enableThemeSwitcher: serverQuery.data?.features?.enableThemeSwitcher ?? true,
@@ -96,13 +96,13 @@ export default function SettingsPage() {
     }
   });
 
-  // Update form values when server data is loaded
+  // Update form values when server data or connection data is loaded
   useEffect(() => {
-    if (serverQuery.data) {
+    if (serverQuery.data || connectionQuery.data) {
       form.reset({
-        serverName: serverQuery.data.serverName || "",
-        serverUrl: serverQuery.data.url || "",
-        apiKey: serverQuery.data.apiKey || "",
+        serverName: connectionQuery.data?.serverName || serverQuery.data?.serverName || "",
+        serverUrl: connectionQuery.data?.serverUrl || serverQuery.data?.serverUrl || "",
+        apiKey: serverQuery.data?.apiKey || "",
         logoUrl: serverQuery.data?.logoUrl || "",
         enableThemeSwitcher: serverQuery.data?.features?.enableThemeSwitcher ?? true,
         enableWatchHistory: serverQuery.data?.features?.enableWatchHistory ?? true,
@@ -110,7 +110,7 @@ export default function SettingsPage() {
         inviteDuration: serverQuery.data?.inviteDuration || 24
       });
     }
-  }, [serverQuery.data, form]);
+  }, [serverQuery.data, connectionQuery.data, form]);
 
   // Check if user is admin
   useEffect(() => {
