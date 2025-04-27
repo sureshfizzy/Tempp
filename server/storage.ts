@@ -493,6 +493,8 @@ export class DatabaseStorage implements IStorage {
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
         userExpiryHours: invites.userExpiryHours,
+        userExpiryDays: invites.userExpiryDays,
+        userExpiryMonths: invites.userExpiryMonths,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
       })
@@ -518,6 +520,8 @@ export class DatabaseStorage implements IStorage {
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
         userExpiryHours: invites.userExpiryHours,
+        userExpiryDays: invites.userExpiryDays, 
+        userExpiryMonths: invites.userExpiryMonths,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
       })
@@ -563,16 +567,35 @@ export class DatabaseStorage implements IStorage {
       // Generate a unique invite code
       const code = this.generateInviteCode();
       
-      // Calculate expiration date - we must always set a value due to NOT NULL constraint
-      // Default to 30 days if not specified
-      let expiresAt = new Date();
+      // Calculate expiration date
+      let expiresAt: Date | null = null;
       
-      // Use the hours for expiry if specified
-      if (inviteData.userExpiryHours && inviteData.userExpiryHours > 0) {
-        expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
+      // If we have an explicit expiration date, use it
+      if (inviteData.expiresAt) {
+        expiresAt = new Date(inviteData.expiresAt);
       } else {
-        // Default to 30 days expiration
-        expiresAt.setDate(expiresAt.getDate() + 30);
+        // Otherwise calculate from parts
+        expiresAt = new Date();
+        
+        // Add months if specified
+        if (inviteData.userExpiryMonths && inviteData.userExpiryMonths > 0) {
+          expiresAt.setMonth(expiresAt.getMonth() + inviteData.userExpiryMonths);
+        }
+        
+        // Add days if specified
+        if (inviteData.userExpiryDays && inviteData.userExpiryDays > 0) {
+          expiresAt.setDate(expiresAt.getDate() + inviteData.userExpiryDays);
+        }
+        
+        // Add hours if specified
+        if (inviteData.userExpiryHours && inviteData.userExpiryHours > 0) {
+          expiresAt.setHours(expiresAt.getHours() + inviteData.userExpiryHours);
+        }
+        
+        // If no expiry specified at all, set to 7 days default (instead of 30)
+        if (!inviteData.userExpiryMonths && !inviteData.userExpiryDays && !inviteData.userExpiryHours) {
+          expiresAt.setDate(expiresAt.getDate() + 7);
+        }
       }
 
       // Handle max uses properly (can be null for unlimited)
@@ -589,6 +612,8 @@ export class DatabaseStorage implements IStorage {
         expires_at: expiresAt,
         user_expiry_enabled: inviteData.userExpiryEnabled || false,
         user_expiry_hours: inviteData.userExpiryHours || 0,
+        user_expiry_days: inviteData.userExpiryDays || 0,
+        user_expiry_months: inviteData.userExpiryMonths || 0,
         created_by: createdById.toString() // Convert to string as the DB expects it
       };
       
@@ -596,10 +621,10 @@ export class DatabaseStorage implements IStorage {
       const sql = `
         INSERT INTO invites (
           code, label, user_label, profile_id, max_uses, used_count, 
-          expires_at, user_expiry_enabled, user_expiry_hours, created_by
+          expires_at, user_expiry_enabled, user_expiry_hours, user_expiry_days, user_expiry_months, created_by
         ) 
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         )
         RETURNING *
       `;
@@ -614,6 +639,8 @@ export class DatabaseStorage implements IStorage {
         values.expires_at,
         values.user_expiry_enabled,
         values.user_expiry_hours,
+        values.user_expiry_days,
+        values.user_expiry_months,
         values.created_by
       ]);
       

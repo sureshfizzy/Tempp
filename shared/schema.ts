@@ -267,6 +267,8 @@ export const invites = pgTable("invites", {
   expiresAt: timestamp("expires_at"),
   userExpiryEnabled: boolean("user_expiry_enabled").default(false).notNull(),
   userExpiryHours: integer("user_expiry_hours").default(0),
+  userExpiryDays: integer("user_expiry_days").default(0),
+  userExpiryMonths: integer("user_expiry_months").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   createdBy: text("created_by"),  // It's TEXT in the actual database
 });
@@ -279,12 +281,13 @@ export const insertInviteSchema = createInsertSchema(invites)
     maxUses: true,
     userExpiryEnabled: true,
     userExpiryHours: true,
+    userExpiryDays: true,
+    userExpiryMonths: true,
     createdBy: true,
+    expiresAt: true,
   })
   .extend({
     maxUses: z.number().nullable(), // Allow null for unlimited uses
-    userExpiryMonths: z.number().optional(),
-    userExpiryDays: z.number().optional(),
   });
 
 // Custom Invite type to match the actual database structure
