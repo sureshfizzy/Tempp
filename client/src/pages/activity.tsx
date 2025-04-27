@@ -301,12 +301,6 @@ function ActivityPage() {
                         </div>
                         <div className="text-sm opacity-80">{activity.timestamp}</div>
                       </div>
-                      
-                      <div className="flex justify-end mt-2">
-                        <button className="p-1 rounded-full bg-black/10 hover:bg-black/20">
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
                     </div>
                   );
                 })}
