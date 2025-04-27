@@ -77,9 +77,8 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // We no longer need the expiry check job as we handle expiry directly in the UI
-    // This reduces CPU usage and prevents unnecessary API calls to Jellyfin
-    // startExpiryCheckJob();
-    log("User expiry handled directly without background job");
+    // Start the expiry check job to automatically disable expired accounts
+    startExpiryCheckJob();
+    log("User expiry check job started");
   });
 })();

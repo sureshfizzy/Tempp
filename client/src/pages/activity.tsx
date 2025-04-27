@@ -3,9 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { getConnectionStatus } from "@/lib/jellyfin";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { LogOut, Settings, CheckCircle, Users, Search, X, FileBarChart } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Select,
@@ -94,7 +93,8 @@ function ActivityPage() {
       activity.type === 'account_created' || 
       activity.type === 'user_updated' || 
       activity.type === 'user_deleted' ||
-      activity.type === 'user_disabled'
+      activity.type === 'user_disabled' ||
+      activity.type === 'user_enabled'
     )) return true;
     if (activityFilter === 'invites' && activity.type.includes('invite_')) return true;
     if (activityFilter === 'system' && activity.type === 'system') return true;
@@ -165,162 +165,45 @@ function ActivityPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold">Activity</h2>
-            <p className="text-muted-foreground">View all server activity and event logs</p>
+        <div className="flex-1 p-4 md:p-8 pt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Activity</h2>
+              <p className="text-muted-foreground mt-1">View all server activity and event logs</p>
+            </div>
           </div>
 
-          {/* Activity Filters */}
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="w-full md:w-1/3 relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    className="pl-8 w-full" 
-                    placeholder="Search" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <button 
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2" 
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">Filters</span>
-                    <Select 
-                      value={activityFilter}
-                      onValueChange={(value) => setActivityFilter(value)}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="All" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="accounts">Accounts</SelectItem>
-                        <SelectItem value="invites">Invites</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">Sort Direction</span>
-                    <Select 
-                      value={sortDirection}
-                      onValueChange={(value) => setSortDirection(value as "asc" | "desc")}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Newest first" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="desc">Newest first</SelectItem>
-                        <SelectItem value="asc">Oldest first</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Loading state */}
-          {activityQuery.isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <p className="ml-3 text-muted-foreground">Loading activity logs...</p>
-            </div>
-          )}
-
-          {/* Error state */}
-          {activityQuery.isError && (
-            <div className="text-center py-8 bg-destructive/10 rounded-md text-destructive">
-              <p>Error loading activity logs. Please try again later.</p>
-            </div>
-          )}
-
-          {/* Activity Listing - only show when data is loaded */}
-          {activityQuery.isSuccess && (
-            <div>
-              <div className="text-sm text-muted-foreground mb-4">
-                {filteredActivities.length} TOTAL RECORDS {filteredActivities.length} LOADED {filteredActivities.length} SHOWN
-              </div>
-              
+          {/* Activity records */}
+          <div className="space-y-4">
+            {activityQuery.isLoading && (
+              <p>Loading activity logs...</p>
+            )}
+            
+            {activityQuery.isError && (
+              <p>Error loading activity logs</p>
+            )}
+            
+            {activityQuery.isSuccess && sortedActivities.length > 0 && (
               <div className="space-y-4">
-                {sortedActivities.map((activity) => {
-                  // Replace the dynamic color classes with fixed ones based on activity type
-                  let bgColorClass = 'bg-blue-500'; 
-                  let textColorClass = 'text-white';
-                  
-                  // Set appropriate colors based on activity type
-                  if (activity.type.includes('expired')) {
-                    bgColorClass = 'bg-amber-500';
-                  } else if (activity.type === 'account_created') {
-                    bgColorClass = 'bg-blue-500';
-                  } else if (activity.type.includes('invite_')) {
-                    bgColorClass = 'bg-green-500';
-                  } else if (activity.type === 'user_updated') {
-                    bgColorClass = 'bg-purple-500';
-                  } else if (activity.type === 'user_deleted') {
-                    bgColorClass = 'bg-red-500';
-                  } else if (activity.type === 'user_disabled') {
-                    bgColorClass = 'bg-orange-500';
-                  } else if (activity.type === 'user_enabled') {
-                    bgColorClass = 'bg-green-500';
-                  } else if (activity.type === 'system') {
-                    bgColorClass = 'bg-gray-500';
-                  }
-                  
-                  return (
-                    <div 
-                      key={activity.id} 
-                      className={`${bgColorClass} ${textColorClass} p-4 rounded-md shadow-sm transition-all hover:shadow-md`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{activity.message}</h3>
-                          {activity.type === "account_created" && activity.inviteCode && (
-                            <p className="text-sm opacity-90">FROM INVITE {activity.inviteCode}</p>
-                          )}
-                          {activity.createdBy && (
-                            <p className="text-sm opacity-90">BY {activity.createdBy}</p>
-                          )}
-                          {activity.type === "user_disabled" && activity.metadata?.reason && (
-                            <p className="text-sm opacity-90">REASON: {activity.metadata.reason}</p>
-                          )}
-                          {activity.type === "user_enabled" && activity.metadata?.expiryReset && (
-                            <p className="text-sm opacity-90">ACCOUNT EXPIRY RESET TO PERMANENT</p>
-                          )}
-                          {activity.type === "user_updated" && activity.metadata?.updates && Array.isArray(activity.metadata.updates) && (
-                            <p className="text-sm opacity-90">UPDATES: {activity.metadata.updates.join(', ')}</p>
-                          )}
-                          {activity.type === "invite_used" && activity.metadata?.usesLeft !== undefined && (
-                            <p className="text-sm opacity-90">USES LEFT: {activity.metadata.usesLeft}</p>
-                          )}
-                        </div>
-                        <div className="text-sm opacity-80">{activity.timestamp}</div>
+                {sortedActivities.map((activity) => (
+                  <Card key={activity.id} className="p-4">
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="font-medium">{activity.message}</p>
+                        <p className="text-sm text-muted-foreground">Type: {activity.type}</p>
                       </div>
+                      <p className="text-sm text-muted-foreground">{activity.timestamp}</p>
                     </div>
-                  );
-                })}
-                
-                {filteredActivities.length === 0 && (
-                  <div className="text-center py-8 bg-card rounded-md">
-                    <p className="text-muted-foreground">No activities found matching your search</p>
-                  </div>
-                )}
+                  </Card>
+                ))}
               </div>
-            </div>
-          )}
-        </main>
+            )}
+            
+            {activityQuery.isSuccess && sortedActivities.length === 0 && (
+              <p className="text-center p-4">No activity logs found</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
