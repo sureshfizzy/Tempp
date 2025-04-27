@@ -13,6 +13,7 @@ import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
 import SettingsPage from "@/pages/settings";
+import InviteSignupPage from "@/pages/invite-signup";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeProvider } from "@/hooks/use-theme";
 
@@ -94,6 +95,7 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/login" component={LoginPage} />
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/invite/:code" component={InviteSignupPage} />
       
       {/* Protected routes - only when connected */}
       {connectionStatus.connected && (
