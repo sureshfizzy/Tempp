@@ -8,12 +8,15 @@ import { User as JellyfinUser, UserActivity } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   LogOut, User as UserIcon, Clock, FileBarChart, Film, 
   Home, Mail, Play, AlarmClock, CalendarClock, Pencil, ExternalLink,
   TimerReset, Sparkles, Settings, Calendar, ImageIcon, AlertTriangle,
   Heart, Star, Tv2
 } from "lucide-react";
+import RecentActivityTab from "@/components/recent-activity-tab";
+import FavoritesTab from "@/components/favorites-tab";
 import { formatDate } from "@/lib/jellyfin";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
@@ -21,7 +24,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserExpiryBadge } from "@/components/user-expiry-badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function UserProfilePage() {
   const [, setLocation] = useLocation();
