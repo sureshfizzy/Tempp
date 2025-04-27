@@ -930,6 +930,31 @@ export class DatabaseStorage implements IStorage {
         return false;
       }
       
+      // Find the default role to assign users to
+      const defaultRole = await this.getDefaultRole();
+      if (!defaultRole) {
+        console.error("No default role found for user reassignment");
+        return false;
+      }
+      
+      // Get all users that have this role assigned and update them to the default role
+      const usersWithRole = await db.select()
+        .from(appUsers)
+        .where(eq(appUsers.roleId, id));
+      
+      if (usersWithRole.length > 0) {
+        console.log(`Moving ${usersWithRole.length} users from role "${role?.name}" to default role "${defaultRole.name}"`);
+        
+        // Update all users with this role to the default role
+        await db.update(appUsers)
+          .set({ 
+            roleId: defaultRole.id,
+            updatedAt: new Date()
+          })
+          .where(eq(appUsers.roleId, id));
+      }
+      
+      // Now it's safe to delete the role
       await db.delete(userRoles).where(eq(userRoles.id, id));
       return true;
     } catch (error) {

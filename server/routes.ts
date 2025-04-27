@@ -2289,23 +2289,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot delete the default role" });
       }
       
-      // Delete the role
+      // Get the default role for the response message
+      const defaultRole = await storage.getDefaultRole();
+      if (!defaultRole) {
+        return res.status(500).json({ message: "No default role found. Please create a default role first." });
+      }
+      
+      // Count users who will be affected
+      const usersWithRole = await db.select({ count: count() })
+        .from(appUsers)
+        .where(eq(appUsers.roleId, roleId));
+      
+      const affectedUsersCount = usersWithRole[0]?.count || 0;
+      
+      // Delete the role - users will be moved to the default role inside this method
       const success = await storage.deleteRole(roleId);
       
       if (success) {
-        // Log role deletion
+        // Log role deletion and user role reassignment
         await storage.createActivityLog({
           type: 'role_deleted',
-          message: `User role deleted: ${role.name}`,
+          message: `User role deleted: ${role.name}. ${affectedUsersCount} users were moved to ${defaultRole.name} role.`,
           username: req.session?.userId ? (await storage.getUserById(req.session.userId))?.username : undefined,
           userId: req.session?.userId ? String(req.session.userId) : undefined,
           metadata: JSON.stringify({
             roleId: roleId,
-            roleName: role.name
+            roleName: role.name,
+            defaultRoleId: defaultRole.id,
+            defaultRoleName: defaultRole.name,
+            affectedUsers: affectedUsersCount
           })
         });
         
-        return res.status(200).json({ message: "Role deleted successfully" });
+        return res.status(200).json({ 
+          message: `Role deleted successfully. ${affectedUsersCount > 0 ? `${affectedUsersCount} users moved to ${defaultRole.name} role.` : ''}`, 
+          affectedUsers: affectedUsersCount,
+          defaultRole: defaultRole
+        });
       } else {
         return res.status(500).json({ message: "Failed to delete role" });
       }
