@@ -9,7 +9,8 @@ import {
   createInvite,
   getInvites,
   deleteInvite,
-  formatExpiryTime 
+  formatExpiryTime,
+  getUserRoles
 } from "@/lib/jellyfin";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -239,9 +240,52 @@ export default function Dashboard() {
     return invitesQuery.data;
   }, [invitesQuery.data, deleteInviteId]);
   
-  // Count user types
-  const adminCount = usersQuery.data?.filter(user => user.Policy?.IsAdministrator).length || 0;
-  const regularUserCount = usersQuery.data?.length ? usersQuery.data.length - adminCount : 0;
+  // Fetch user roles to show in dashboard
+  const userRolesQuery = useQuery({
+    queryKey: ["/api/user-roles"],
+    queryFn: getUserRoles,
+    enabled: connectionStatusQuery.data?.isAdmin === true,
+  });
+
+  // Count users by their roles
+  const roleCounts = useMemo(() => {
+    if (!usersQuery.data) return { Administrator: 0, User: 0 };
+
+    // Create a map with all roles initialized to 0
+    const counts: Record<string, number> = {};
+    
+    // Initialize counts for all known roles from the roles table
+    if (userRolesQuery.data && Array.isArray(userRolesQuery.data)) {
+      userRolesQuery.data.forEach((role: { id: number, name: string }) => {
+        counts[role.name] = 0;
+      });
+    }
+    
+    // Initialize default system roles
+    counts["Administrator"] = 0;
+    counts["User"] = 0;
+    
+    // Count users by role
+    usersQuery.data.forEach(user => {
+      if (user.Policy?.IsAdministrator) {
+        counts["Administrator"] = (counts["Administrator"] || 0) + 1;
+      } else if (user.roleId && Array.isArray(userRolesQuery.data)) {
+        // Find role name from role ID
+        const role = userRolesQuery.data.find((r: { id: number }) => r.id === user.roleId);
+        if (role) {
+          counts[role.name] = (counts[role.name] || 0) + 1;
+        } else {
+          // Default to "User" if role not found
+          counts["User"] = (counts["User"] || 0) + 1;
+        }
+      } else {
+        // Default to "User" if no role ID
+        counts["User"] = (counts["User"] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  }, [usersQuery.data, userRolesQuery.data]);
   
   return (
     <div className="min-h-screen bg-background">
@@ -307,7 +351,7 @@ export default function Dashboard() {
                 {usersQuery.isLoading ? (
                   <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
                 ) : (
-                  adminCount
+                  roleCounts["Administrator"] || 0
                 )}
               </div>
             </CardContent>
@@ -326,12 +370,45 @@ export default function Dashboard() {
                 {usersQuery.isLoading ? (
                   <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
                 ) : (
-                  regularUserCount
+                  roleCounts["User"] || 0
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
+        
+        {/* Custom Roles Cards */}
+        {userRolesQuery.data && userRolesQuery.data.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold mb-4">User Roles</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+              {userRolesQuery.data
+                .filter(role => role.name !== "User" && role.name !== "Administrator")
+                .map(role => (
+                  <Card key={role.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center text-lg">
+                        <Users className="h-5 w-5 mr-2 text-indigo-500" />
+                        {role.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {role.description || `Custom role #${role.id}`}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        {usersQuery.isLoading ? (
+                          <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                        ) : (
+                          roleCounts[role.name] || 0
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          </>
+        )}
 
         {/* Invite System Card */}
         <Card className="mb-6">

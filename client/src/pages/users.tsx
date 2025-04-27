@@ -274,7 +274,13 @@ export default function UsersPage() {
                   onChange={handleSearch}
                 />
               </div>
-              <Button variant="outline">Filters</Button>
+              <Button 
+                variant="outline"
+                onClick={() => setIsRolesTableOpen(true)}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Roles
+              </Button>
             </div>
           </div>
 
