@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
-import { 
-  getConnectionStatus
-} from "@/lib/jellyfin";
+import { getConnectionStatus } from "@/lib/jellyfin";
 import { 
   Form, 
   FormControl, 
@@ -27,28 +24,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   AlertCircle, 
   ArrowRight, 
-  CheckCircle, 
-  Film, 
-  Settings,
-  ClapperboardIcon
+  ClapperboardIcon,
+  Lock,
+  User
 } from "lucide-react";
-import { MovieBackground } from "@/components/movie-background";
-import { CinemaDecoration } from "@/components/cinema-decoration";
 
-// Form schema for the login form
+// Form schema
 const loginFormSchema = z.object({
-  username: z.string()
-    .min(1, "Username is required"),
-  password: z.string()
-    .min(1, "Password is required")
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required")
 });
 
-// Infer the type from the schema
 type LoginFormData = z.infer<typeof loginFormSchema>;
 
 // API Response type
@@ -61,308 +50,359 @@ interface LoginResponse {
   };
 }
 
+// Add some CSS for animations
+const animationStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  @keyframes glow {
+    0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.6s ease forwards;
+  }
+  
+  .scale-in {
+    animation: scaleIn 0.4s ease forwards;
+  }
+  
+  .blue-glow {
+    animation: glow 3s infinite;
+  }
+  
+  .icon-pulse {
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .slide-up {
+    transition: transform 0.4s ease, opacity 0.4s ease;
+  }
+  
+  .slide-up:hover {
+    transform: translateY(-5px);
+  }
+`;
+
+// Memo-ized login form component to prevent unnecessary re-renders
+const LoginForm = memo(({ onSubmit, isLoading, loginError, form }: any) => (
+  <Form {...form}>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <AnimatePresence>
+        {loginError && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-800 text-white">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{loginError}</AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-200">Username</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input 
+                    placeholder="Enter your username" 
+                    className="border-gray-600 bg-gray-800/60 text-white pl-10 placeholder:text-gray-500"
+                    {...field} 
+                  />
+                  <User className="absolute top-1/2 left-3 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+      </motion.div>
+
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-200">Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input 
+                    type="password" 
+                    placeholder="Enter your password" 
+                    className="border-gray-600 bg-gray-800/60 text-white pl-10 placeholder:text-gray-500"
+                    {...field} 
+                  />
+                  <Lock className="absolute top-1/2 left-3 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+      </motion.div>
+
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <Button 
+          type="submit" 
+          className="w-full mt-4 bg-primary hover:bg-primary/90 text-white transition-all duration-300 relative overflow-hidden"
+          disabled={isLoading}
+        >
+          <motion.div
+            initial={{ scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center justify-center"
+          >
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Logging in...
+              </span>
+            ) : (
+              <>
+                Sign In
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </motion.div>
+        </Button>
+      </motion.div>
+    </form>
+  </Form>
+));
+
+// Prevent unnecessary re-renders by using memo
+LoginForm.displayName = "LoginForm";
+
 export default function LoginPage() {
   const [, setLocation] = useLocation();
-  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-
-  // Get connection status to check if we have a server URL configured
-  // Disable auto-refresh completely with fetched data
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   
-  // One-time fetch on component mount only, no refetching or polling
-  useEffect(() => {
-    const fetchConnectionStatus = async () => {
-      try {
-        const data = await getConnectionStatus();
-        setConnectionStatus(data);
-      } catch (error) {
-        console.error("Failed to fetch connection status:", error);
-      }
-    };
-    
-    fetchConnectionStatus();
-  }, []);
-
-  // Login mutation
-  const loginMutation = useMutation<LoginResponse, Error, LoginFormData>({
-    mutationFn: async (data: LoginFormData) => {
-      return await apiRequest<LoginResponse>("/api/login", data);
-    },
-    onSuccess: (data: LoginResponse) => {
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully",
-      });
-      
-      // Force an immediate navigation based on admin status
-      if (data.user.isAdmin) {
-        window.location.href = "/dashboard";
-      } else {
-        window.location.href = "/user-profile";
-      }
-    },
-    onError: (error) => {
-      // Extract the main error message
-      const errorMessage = error instanceof Error ? error.message : "Invalid username or password";
-      
-      // Check if the error contains additional details
-      const responseData = (error as any).responseData;
-      const errorDetails = responseData?.details;
-      
-      // Set the user-facing error message
-      setLoginError(errorDetails || errorMessage);
-      
-      toast({
-        title: "Login failed",
-        description: errorDetails || errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Form definition
+  // Form definition with memo to prevent re-renders
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       username: "",
       password: "",
     },
+    mode: "onSubmit", // Only validate on submit to prevent constant re-renders
   });
 
-  // Submit handler with debounce to prevent accidental multiple submissions
-  const onSubmit = async (data: LoginFormData) => {
-    // Prevent submitting if already in progress
+  // One-time fetch on component mount only
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchConnectionStatus = async () => {
+      try {
+        const data = await getConnectionStatus();
+        if (isMounted) {
+          setConnectionStatus(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch connection status:", error);
+      }
+    };
+    
+    fetchConnectionStatus();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Memoize submit handler to prevent recreation on each render
+  const onSubmit = useCallback(async (data: LoginFormData) => {
     if (isLoading) return;
     
-    // Clear any previous errors
     setLoginError(null);
     setIsLoading(true);
     
     try {
-      await loginMutation.mutateAsync(data);
-    } catch (err) {
-      console.error("Login error:", err);
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500); // Small delay to prevent accidental double-clicks
-    }
-  };
-
-  // Handle reconnect (if the server connection is lost)
-  const handleReconnect = () => {
-    setLocation("/onboarding");
-  };
-
-  // Desktop render
-  const DesktopLogin = () => (
-    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
-      {/* Plain background with no movie images */}
+      // Use fetch directly instead of React Query mutation to reduce re-renders
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
       
-      {/* Content Panel (Centered) */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center fade-in">
-            <div className="flex items-center justify-center mb-4">
-              <Film className="h-14 w-14 text-primary blue-glow" />
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow">
-              Jellyfin Manager
-            </h1>
-            <p className="text-gray-300">
-              Your complete media server management solution
-            </p>
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Invalid username or password");
+      }
+      
+      const responseData: LoginResponse = await response.json();
+      
+      // Show success toast
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully",
+      });
+      
+      // Smooth transition animation before navigation
+      setTimeout(() => {
+        // Force navigation based on admin status
+        if (responseData.user.isAdmin) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/user-profile";
+        }
+      }, 800);
+      
+    } catch (err: any) {
+      setLoginError(err.message || "Invalid username or password");
+      
+      toast({
+        title: "Login failed",
+        description: err.message || "Invalid username or password",
+        variant: "destructive",
+      });
+      
+      setIsLoading(false);
+    }
+  }, [isLoading, toast]);
+
+  // Handle reconnect
+  const handleReconnect = useCallback(() => {
+    setLocation("/onboarding");
+  }, [setLocation]);
+
+  return (
+    <>
+      <style>{animationStyles}</style>
+      
+      <div className="min-h-screen overflow-hidden bg-slate-950 flex flex-col">
+        {/* Logo and server information at the top */}
+        <motion.div
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="pt-8 pb-4 text-center"
+        >
+          <div className="inline-block mb-2">
+            <ClapperboardIcon className="h-16 w-16 text-primary icon-pulse" />
           </div>
-          
-          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
-            <Card className="bg-slate-900 border-primary/30 shadow-lg">
-              <CardContent className="pt-6">
-                {!connectionStatus?.connected ? (
-                  <div className="text-center py-4">
-                    {connectionStatus?.configured ? (
-                      <>
-                        <p className="mb-4 text-gray-300">
-                          Your Jellyfin server is configured but you are not connected.
-                          Please log in with your credentials.
-                        </p>
-                        <LoginForm />
-                      </>
-                    ) : (
-                      <>
-                        <p className="mb-4 text-gray-300">
-                          You need to connect to a Jellyfin server first before you can log in.
-                        </p>
+          <motion.h1 
+            className="text-3xl font-bold text-white mb-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+          >
+            {connectionStatus?.serverName || "Jellyfin Manager"}
+          </motion.h1>
+          {connectionStatus?.serverUrl && (
+            <motion.p 
+              className="text-gray-400 text-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              {connectionStatus.serverUrl}
+            </motion.p>
+          )}
+        </motion.div>
+        
+        {/* Main content - Login card */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <motion.div 
+            className="w-full max-w-md"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <Card className="bg-slate-900 border-primary/30 shadow-xl overflow-hidden">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <CardContent className="p-6">
+                  {!connectionStatus ? (
+                    <div className="flex justify-center py-8">
+                      <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                    </div>
+                  ) : !connectionStatus.configured ? (
+                    <div className="text-center py-4">
+                      <motion.p 
+                        className="mb-4 text-gray-300"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        You need to connect to a Jellyfin server first before you can log in.
+                      </motion.p>
+                      <motion.div
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                      >
                         <Button 
                           onClick={handleReconnect}
                           className="bg-primary hover:bg-primary/90 text-white"
                         >
                           Connect to Server
                         </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center text-teal-400 mb-4 text-sm">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span>Connected to {connectionStatus.serverUrl}</span>
+                      </motion.div>
                     </div>
-                    <LoginForm />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Mobile render - simplified design with plain background
-  const MobileLogin = () => (
-    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
-      {/* Plain background with no decorations */}
-      
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md text-center mb-8 fade-in">
-          <div className="inline-block mb-4">
-            <ClapperboardIcon className="h-16 w-16 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2 blue-text-glow">
-            Welcome Back
-          </h1>
-          <p className="text-gray-300">
-            Sign in to manage your Jellyfin server
-          </p>
-        </div>
-        
-        <div className="w-full max-w-md fade-in" style={{ animationDelay: "0.2s" }}>
-          <Card className="bg-slate-900 border-primary/30">
-            <CardContent className="pt-6">
-              {!connectionStatus?.connected ? (
-                <div className="text-center py-4">
-                  {connectionStatus?.configured ? (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Server is configured but you are not connected
-                      </p>
-                      <LoginForm />
-                    </>
                   ) : (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Connect to your Jellyfin server to get started
-                      </p>
-                      <Button 
-                        onClick={handleReconnect}
-                        className="bg-primary hover:bg-primary/90 text-white"
-                      >
-                        Connect Server
-                      </Button>
-                    </>
+                    <LoginForm 
+                      onSubmit={onSubmit} 
+                      isLoading={isLoading} 
+                      loginError={loginError}
+                      form={form}
+                    />
                   )}
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-center text-teal-400 mb-4 text-sm">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Connected to server</span>
-                  </div>
-                  <LoginForm />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </motion.div>
+            </Card>
+          </motion.div>
         </div>
       </div>
-    </div>
-  );
-
-  // Login form component (used in both mobile and desktop views)
-  const LoginForm = () => (
-    <>
-      {loginError && (
-        <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-800 text-white">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{loginError}</AlertDescription>
-        </Alert>
-      )}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-200">Username</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Enter your username" 
-                    className="border-gray-600 bg-gray-800/60 text-white placeholder:text-gray-500" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage className="text-red-400" />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-gray-200">Password</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="password" 
-                    placeholder="Enter your password" 
-                    className="border-gray-600 bg-gray-800/60 text-white placeholder:text-gray-500" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage className="text-red-400" />
-              </FormItem>
-            )}
-          />
-          <Button 
-            type="submit" 
-            className="w-full mt-4 bg-primary hover:bg-primary/90 text-white transition-all duration-300 relative overflow-hidden group"
-            disabled={isLoading}
-          >
-            <span className="relative z-10">
-              {isLoading ? "Logging in..." : "Sign In"}
-              {!isLoading && <ArrowRight className="ml-2 h-4 w-4 inline" />}
-            </span>
-            <span className="absolute inset-0 w-0 bg-blue-700 transition-all duration-500 ease-out group-hover:w-full"></span>
-          </Button>
-
-          <div className="mt-4 pt-4 border-t border-gray-700 text-center">
-            <p className="text-sm text-gray-400 mb-2">
-              Need to connect to a different server?
-            </p>
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleReconnect}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Reconfigure Server
-            </Button>
-          </div>
-
-          <p className="text-center text-xs text-gray-500 mt-4">
-            Need help? Contact your Jellyfin administrator.
-          </p>
-        </form>
-      </Form>
     </>
   );
-
-  // Render based on screen size
-  return isMobile ? <MobileLogin /> : <DesktopLogin />;
 }
