@@ -25,8 +25,7 @@ import {
   LogOut,
   Users,
   Settings,
-  Menu,
-  Clock
+  Menu
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
@@ -58,7 +57,6 @@ export default function UsersPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userWatchTimes, setUserWatchTimes] = useState<Record<string, number>>({});
   const isMobile = useIsMobile();
 
   // Get all users
@@ -113,11 +111,7 @@ export default function UsersPage() {
     }
   }, [searchQuery, usersQuery.data]);
   
-  // No longer fetching watch time for users in the users table
-  useEffect(() => {
-    // Reset the user watch times state since we're not using it anymore
-    setUserWatchTimes({});
-  }, []);
+  // No longer fetching watch time data for users
 
   // Handle select all users
   const handleSelectAll = () => {
