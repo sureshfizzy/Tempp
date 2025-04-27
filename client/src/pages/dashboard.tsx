@@ -201,7 +201,7 @@ export default function Dashboard() {
       userExpiryMonths: inviteMonths,
       userExpiryDays: inviteDays,
       userExpiryHours: inviteHours,
-      profileId: selectedProfileId
+      profileId: selectedProfileId?.toString() || null
     };
     
     createInviteMutation.mutate(inviteData);

@@ -277,7 +277,17 @@ export async function getInvites(): Promise<Invite[]> {
       throw new Error("Failed to fetch invites");
     }
 
-    return await response.json();
+    const invites = await response.json();
+    
+    // Calculate uses remaining for each invite
+    return invites.map((invite: Invite) => ({
+      ...invite,
+      usesRemaining: invite.maxUses === null ? null : (invite.maxUses - (invite.usedCount || 0)),
+      
+      // Ensure we have values for displaying expiry info
+      userExpiryMonths: invite.userExpiryMonths || 0,
+      userExpiryDays: invite.userExpiryDays || 0
+    }));
   } catch (error) {
     console.error("Error fetching invites:", error);
     throw error;

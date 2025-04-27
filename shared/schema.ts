@@ -283,6 +283,8 @@ export const insertInviteSchema = createInsertSchema(invites)
   })
   .extend({
     maxUses: z.number().nullable(), // Allow null for unlimited uses
+    userExpiryMonths: z.number().optional(),
+    userExpiryDays: z.number().optional(),
   });
 
 // Custom Invite type to match the actual database structure
@@ -296,8 +298,13 @@ export type Invite = {
   usedCount: number | null;
   expiresAt: Date | null;
   userExpiryEnabled: boolean;
+  userExpiryMonths?: number | null;
+  userExpiryDays?: number | null;
   userExpiryHours: number | null;
   createdAt: Date;
   createdBy: string | null;
+  
+  // Calculated properties for UI rendering
+  usesRemaining?: number | null;
 };
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
