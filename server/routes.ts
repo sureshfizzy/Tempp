@@ -3125,10 +3125,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log this activity
       await storage.createActivityLog({
-        action: "PASSWORD_CHANGED",
-        userId: req.session.userId || 0,
-        targetUserId: user.id,
-        details: `Password changed for user ${user.username}`
+        type: "PASSWORD_CHANGED",
+        message: `Password changed for user ${user.username}`,
+        userId: String(user.jellyfinUserId),
+        username: user.username,
+        metadata: JSON.stringify({
+          changedBy: req.session.userId ? "self" : "admin",
+          timestamp: new Date().toISOString()
+        })
       });
       
       res.status(200).send({ success: true, message: "Password changed successfully" });
