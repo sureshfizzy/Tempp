@@ -2340,32 +2340,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        // Check if the invite has an associated user profile
-        let profileLibraryAccess = [];
-        let profileHomeLayout = null;
-        
-        if (invite.profileId) {
-          console.log(`Invite has associated profile ID: ${invite.profileId}`);
-          try {
-            const profile = await storage.getUserProfileById(parseInt(invite.profileId));
-            if (profile) {
-              console.log(`Found associated profile: ${profile.name}`);
-              // Parse the library access and home layout from the profile
-              try {
-                profileLibraryAccess = JSON.parse(profile.libraryAccess || "[]");
-                profileHomeLayout = profile.homeLayout;
-                console.log(`Using profile library access: ${profile.libraryAccess}`);
-                console.log(`Using profile home layout: ${profileHomeLayout}`);
-              } catch (e) {
-                console.error("Error parsing profile settings:", e);
-              }
-            }
-          } catch (e) {
-            console.error("Error retrieving user profile:", e);
-          }
-        }
-        
-        // Create the user in Jellyfin
         const jellyfinResponse = await fetch(`${apiUrl}/Users/New`, {
           method: 'POST',
           headers: {
@@ -2383,100 +2357,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
-        
-        // Apply library access restrictions if we have a profile
-        if (profileLibraryAccess.length > 0) {
-          try {
-            console.log(`Applying library access for user ${jellyfinUser.Id}`);
-            // Get the user's current policy
-            const policyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-              method: 'GET',
-              headers: {
-                'X-Emby-Token': credentials.accessToken || ''
-              }
-            });
-            
-            if (policyResponse.ok) {
-              const policy = await policyResponse.json() as { 
-                EnableAllFolders: boolean; 
-                EnabledFolders: string[];
-                [key: string]: any;
-              };
-              
-              // Update the policy with our library access
-              policy.EnableAllFolders = false;
-              policy.EnabledFolders = profileLibraryAccess;
-              
-              // Save the updated policy
-              const updateResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Emby-Token': credentials.accessToken || ''
-                },
-                body: JSON.stringify(policy)
-              });
-              
-              if (!updateResponse.ok) {
-                console.error("Failed to update user policy:", await updateResponse.text());
-              } else {
-                console.log("Successfully applied library access restrictions");
-              }
-            }
-          } catch (e) {
-            console.error("Error applying library access:", e);
-          }
-        }
-        
-        // Apply home layout if we have one from the profile
-        if (profileHomeLayout) {
-          try {
-            console.log(`Applying home layout for user ${jellyfinUser.Id}`);
-            // Set the user's display preferences / home layout
-            const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-              method: 'GET',
-              headers: {
-                'X-Emby-Token': credentials.accessToken || ''
-              }
-            });
-            
-            if (displayPrefsResponse.ok) {
-              let displayPrefs = await displayPrefsResponse.json() as {
-                CustomPrefs?: {
-                  homeLayout?: string;
-                  [key: string]: any;
-                };
-                [key: string]: any;
-              };
-              
-              // Create CustomPrefs if it doesn't exist
-              if (!displayPrefs.CustomPrefs) {
-                displayPrefs.CustomPrefs = {};
-              }
-              
-              // Set the home layout
-              displayPrefs.CustomPrefs.homeLayout = profileHomeLayout;
-              
-              // Save the updated display preferences
-              const updateDisplayResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Emby-Token': credentials.accessToken || ''
-                },
-                body: JSON.stringify(displayPrefs)
-              });
-              
-              if (!updateDisplayResponse.ok) {
-                console.error("Failed to update display preferences:", await updateDisplayResponse.text());
-              } else {
-                console.log("Successfully applied home layout");
-              }
-            }
-          } catch (e) {
-            console.error("Error applying home layout:", e);
-          }
-        }
         
         // Create local app user with expiry if needed
         const appUser = await storage.createUser({
@@ -2502,11 +2382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             expiresAt: expiresAt,
             email: email || null,
             jellyfinUserId: jellyfinUser.Id,
-            createdVia: 'invite',
-            profileId: invite.profileId || null,
-            appliedLibraryAccess: profileLibraryAccess.length > 0,
-            appliedHomeLayout: profileHomeLayout !== null,
-            libraryCount: profileLibraryAccess.length
+            createdVia: 'invite'
           })
         });
         
