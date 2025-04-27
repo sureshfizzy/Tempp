@@ -335,8 +335,7 @@ export default function UsersPage() {
                     <TableHead className="hidden md:table-cell">Access</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
-                    <TableHead className="hidden md:table-cell">Watch Time</TableHead>
-                    <TableHead className="hidden md:table-cell">Expiry</TableHead>
+                    <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -384,12 +383,11 @@ export default function UsersPage() {
                               </span>
                             </div>
                             <div className="flex items-center text-xs text-gray-500 mt-1">
-                              <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                              {userWatchTimes[user.Id] !== undefined ? (
-                                <span>{formatWatchTime(userWatchTimes[user.Id])}</span>
-                              ) : (
-                                <div className="h-3 w-6 bg-gray-200 animate-pulse rounded"></div>
-                              )}
+                              <UserExpiryBadge 
+                                expiresAt={user.expiresAt} 
+                                disabled={user.Policy?.IsDisabled}
+                                small={true}
+                              />
                             </div>
                           </div>
                         </TableCell>
@@ -405,16 +403,6 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {formatDate(user.LastActivityDate)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            {userWatchTimes[user.Id] !== undefined ? (
-                              <span>{formatWatchTime(userWatchTimes[user.Id])}</span>
-                            ) : (
-                              <div className="h-4 w-8 bg-gray-200 animate-pulse rounded"></div>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <UserExpiryBadge 
