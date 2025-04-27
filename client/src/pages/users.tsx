@@ -79,7 +79,7 @@ export default function UsersPage() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
   
-  // Get all roles
+  // Get all roles for role display
   const rolesQuery = useQuery({
     queryKey: ["/api/user-roles"],
     queryFn: getUserRoles
@@ -336,7 +336,7 @@ export default function UsersPage() {
                     </TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead className="hidden md:table-cell">Access</TableHead>
-                    <TableHead className="hidden md:table-cell">Custom Role</TableHead>
+                    <TableHead className="hidden md:table-cell">Role</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -346,7 +346,7 @@ export default function UsersPage() {
                 <TableBody>
                   {usersQuery.isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                           <span className="ml-2">Loading users...</span>
@@ -355,7 +355,7 @@ export default function UsersPage() {
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <Users className="h-10 w-10 text-gray-300" />
                           <span>No users found</span>
@@ -386,13 +386,6 @@ export default function UsersPage() {
                                 {formatDate(user.LastActivityDate)}
                               </span>
                             </div>
-                            {user.roleId && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 mr-2">
-                                  {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
-                                </Badge>
-                              </div>
-                            )}
                             <div className="flex items-center text-xs text-gray-500 mt-1">
                               <UserExpiryBadge 
                                 expiresAt={user.expiresAt} 
@@ -408,12 +401,12 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {user.roleId ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
+                          {user.roleId && rolesQuery.data ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                              {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
                             </Badge>
                           ) : (
-                            <span className="text-gray-400">None</span>
+                            <span className="text-gray-400">No custom role</span>
                           )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
@@ -629,16 +622,10 @@ function RolesTable({ users }: { users: User[] }) {
               users.map((user) => (
                 <TableRow key={user.Id}>
                   <TableCell className="font-medium">{user.Name}</TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell>
                     <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
                       {getUserRole(user)}
                     </Badge>
-                    
-                    {user.roleId && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {rolesQuery.data && rolesQuery.data.find(role => role.id === user.roleId)?.name || "Custom Role"}
-                      </Badge>
-                    )}
                   </TableCell>
                   <TableCell>
                     {user.Policy?.IsDisabled ? (
