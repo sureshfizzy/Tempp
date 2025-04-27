@@ -1601,7 +1601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Forward request to Jellyfin
       const imageUrl = `${apiUrl}/Users/${req.params.id}/Images/Primary`;
-      console.log("Fetching user image from:", imageUrl);
+      // Fetch user image from Jellyfin
       
       const response = await fetch(imageUrl, { 
         headers: { 
@@ -1661,7 +1661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Construct the URL for the primary image
       const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary`;
-      console.log("Fetching item image from:", imageUrl);
+      // Fetch item image from Jellyfin
       
       // Forward request to Jellyfin
       const response = await fetch(imageUrl, { 
@@ -1896,8 +1896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      console.log(`Creating profile based on source user: ${sourceUser.Name} (${sourceUserId})`);
-      console.log(`Debug - User Policy structure:`, JSON.stringify(sourceUser.Policy));
+      // Creating profile based on source user with appropriate permissions
       
       // Fetch the user's display preferences which contains the home layout
       const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {
@@ -2036,8 +2035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Update the name in the validated data
         validatedData.sourceName = sourceUser.Name;
-        console.log(`Updating profile based on source user: ${sourceUser.Name} (${sourceUserId})`);
-        console.log(`Source user policy:`, sourceUser.Policy);
+        // Updating profile based on source user with appropriate permissions
         
         // Fetch the user's display preferences which contains the home layout
         const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {

@@ -1,5 +1,15 @@
 import { User, NewUser, UserActivity, Invite, InsertInvite, UserProfile } from "@shared/schema";
 
+// Connection status interface
+export interface ConnectionStatus {
+  connected: boolean;
+  isAdmin: boolean;
+  configured: boolean;
+  serverUrl?: string;
+  serverName?: string;
+  apiKey?: string;
+}
+
 // Validate Jellyfin server URL is reachable
 export async function validateJellyfinUrl(url: string): Promise<boolean> {
   try {
@@ -65,12 +75,7 @@ export async function disconnectFromJellyfin(): Promise<{ message: string; confi
 }
 
 // Get connection status
-export async function getConnectionStatus(): Promise<{ 
-  connected: boolean; 
-  isAdmin: boolean;
-  configured: boolean;
-  serverUrl?: string 
-}> {
+export async function getConnectionStatus(): Promise<ConnectionStatus> {
   try {
     const response = await fetch("/api/connection-status");
     
