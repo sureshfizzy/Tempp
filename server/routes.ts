@@ -2334,7 +2334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'account_created',
           message: `Account created: ${username} (via invite)`,
           username: username,
-          userId: appUser.id,
+          userId: String(appUser.id), // Convert number to string for userId
           inviteCode: code,
           metadata: JSON.stringify({
             expiresAt: expiresAt,
@@ -2349,7 +2349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'invite_used',
           message: `Invite used: ${code}`,
           username: username,
-          userId: appUser.id,
+          userId: String(appUser.id), // Convert number to string
           inviteCode: code,
           metadata: JSON.stringify({
             usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
@@ -2501,7 +2501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'user_disabled',
           message: `User disabled: ${userData.Name}`,
           username: userData.Name,
-          userId: appUser.id,
+          userId: String(appUser.id), // Convert number to string
           metadata: JSON.stringify({
             jellyfinUserId: id,
             reason: req.body.reason || 'account_expired',
