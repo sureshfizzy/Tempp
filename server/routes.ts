@@ -1718,6 +1718,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get user's favorites
+  app.get("/api/users/:id/favorites", async (req: Request, res: Response) => {
+    try {
+      // Check if connected to Jellyfin
+      if (!req.session.connected) {
+        return res.status(401).json({ message: "Not connected to Jellyfin" });
+      }
+
+      const { id } = req.params;
+      
+      // Get credentials
+      const credentials = await storage.getJellyfinCredentials();
+      if (!credentials) {
+        return res.status(500).json({ message: "Jellyfin credentials not found" });
+      }
+
+      // We're using the Items endpoint with a filter for favorites
+      const url = `${credentials.url}/Users/${id}/Items?Recursive=true&IsFavorite=true&Limit=20&SortBy=DateCreated&SortOrder=Descending&Fields=PrimaryImageAspectRatio,BasicSyncInfo,MediaSourceCount,Overview,Path,MediaSources,Name,Type,ImageTags`;
+      
+      // Make request to Jellyfin
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-Emby-Token": credentials.accessToken || "",
+        },
+      });
+
+      // Check if response is valid
+      if (!response.ok) {
+        return res.status(response.status).json({ message: "Failed to fetch favorites" });
+      }
+
+      // Return data
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Get activity logs
   app.get("/api/activity", async (req: Request, res: Response) => {
     try {
