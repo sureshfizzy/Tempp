@@ -2905,20 +2905,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // App User API Routes
-  // Get all app users
-  app.get("/api/app-users", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const users = await storage.getAllUsers();
-      
-      // Add cache headers for 5 minutes to improve performance
-      res.set('Cache-Control', 'public, max-age=300');
-      res.status(200).json(users);
-    } catch (error) {
-      console.error("Error fetching app users:", error);
-      res.status(500).json({ message: "Error retrieving app users" });
-    }
-  });
-  
   // Get app user by Jellyfin user ID
   app.get("/api/app-users/by-jellyfin-id/:jellyfinId", requireAuth, async (req: Request, res: Response) => {
     try {
