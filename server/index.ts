@@ -77,8 +77,9 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start the user expiry check job - check every minute
-    startExpiryCheckJob();
-    log("Started user expiry check job");
+    // We no longer need the expiry check job as we handle expiry directly in the UI
+    // This reduces CPU usage and prevents unnecessary API calls to Jellyfin
+    // startExpiryCheckJob();
+    log("User expiry handled directly without background job");
   });
 })();

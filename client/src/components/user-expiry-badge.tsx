@@ -65,6 +65,12 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
   // Parse the expiry date once
   const expiryDate = useMemo(() => expiresAt ? new Date(expiresAt) : null, [expiresAt]);
   
+  // Check if expired
+  const isExpired = useMemo(() => {
+    if (!timeRemaining) return false;
+    return timeRemaining.total <= 0;
+  }, [timeRemaining]);
+  
   // Update the countdown timer every minute
   useEffect(() => {
     if (!expiryDate) return;
@@ -82,6 +88,59 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
     
     return () => clearInterval(intervalId);
   }, [expiryDate]);
+  
+  // If the account is expired, we should trigger the disable process 
+  useEffect(() => {
+    if (isExpired && expiryDate && expiresAt) {
+      // Only attempt to disable once when component mounts and is expired
+      const disableExpiredUser = async () => {
+        try {
+          // Get the Jellyfin user ID from the parent component context
+          const jellyfinUserId = expiresAt.split('_')[0]; // Get the ID if it's part of the string
+          
+          if (!jellyfinUserId) return;
+          
+          // First get the app user ID by Jellyfin user ID
+          const appUserResponse = await fetch(`/api/app-users/by-jellyfin-id/${jellyfinUserId}`, {
+            method: "GET",
+          });
+          
+          if (!appUserResponse.ok) return;
+          
+          const appUser = await appUserResponse.json();
+          
+          // Then update the app user to be disabled
+          await fetch(`/api/app-users/${appUser.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              disabled: true
+            }),
+          });
+          
+          // We don't need to wait for the API call to disable the user in Jellyfin
+          // The UI will update on the next refresh
+          fetch(`/api/users/${jellyfinUserId}/disable`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              disabled: true
+            }),
+          });
+          
+          console.log(`Auto-disabled expired user: ${jellyfinUserId}`);
+        } catch (error) {
+          console.error("Failed to auto-disable expired user:", error);
+        }
+      };
+      
+      disableExpiredUser();
+    }
+  }, [isExpired, expiryDate, expiresAt]);
   
   // Permanent account (no expiry)
   if (!expiresAt && !disabled) {
@@ -124,9 +183,6 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
   if (!expiryDate || !timeRemaining) {
     return null; // Loading state
   }
-  
-  // Check if expired
-  const isExpired = timeRemaining.total <= 0;
   
   if (isExpired) {
     return (
