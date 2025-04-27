@@ -102,7 +102,7 @@ function ActivityPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader 
-        title="Jellyfin User Management"
+        title={connectionStatusQuery.data?.serverName || "Jellyfin User Management"}
         subtitle={connectionStatusQuery.data?.serverUrl}
         user={{
           username: connectionStatusQuery.data?.isAdmin ? "Admin" : "User", 
