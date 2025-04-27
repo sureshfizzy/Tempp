@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import fetch from "node-fetch";
+import { z } from "zod";
 import { 
   insertJellyfinCredentialsSchema, 
   userSchema, 
@@ -19,7 +20,6 @@ import {
   invites
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import connectPgSimple from "connect-pg-simple";
@@ -2141,6 +2141,269 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user profile:", error);
       res.status(500).json({ message: "Error deleting user profile" });
+    }
+  });
+
+  // User Role Management Routes
+  app.get("/api/user-roles", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const roles = await storage.getAllRoles();
+      return res.status(200).json(roles);
+    } catch (error) {
+      console.error("Error fetching user roles:", error);
+      return res.status(500).json({ message: "An error occurred while fetching user roles" });
+    }
+  });
+  
+  app.get("/api/user-roles/default", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const role = await storage.getDefaultRole();
+      if (!role) {
+        return res.status(404).json({ message: "No default role found" });
+      }
+      return res.status(200).json(role);
+    } catch (error) {
+      console.error("Error fetching default role:", error);
+      return res.status(500).json({ message: "An error occurred while fetching the default role" });
+    }
+  });
+  
+  app.get("/api/user-roles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const roleId = parseInt(id, 10);
+      
+      if (isNaN(roleId)) {
+        return res.status(400).json({ message: "Invalid role ID" });
+      }
+      
+      const role = await storage.getRoleById(roleId);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      return res.status(200).json(role);
+    } catch (error) {
+      console.error(`Error fetching role:`, error);
+      return res.status(500).json({ message: "An error occurred while fetching the role" });
+    }
+  });
+  
+  app.post("/api/user-roles", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Validate role data
+      const roleData = insertUserRoleSchema.parse(req.body);
+      
+      // Create the role
+      const newRole = await storage.createRole(roleData);
+      
+      // Log role creation
+      await storage.createActivityLog({
+        type: 'role_created',
+        message: `User role created: ${newRole.name}`,
+        username: req.session?.userId ? (await storage.getUserById(req.session.userId))?.username : undefined,
+        userId: req.session?.userId ? String(req.session.userId) : undefined,
+        metadata: JSON.stringify({
+          roleId: newRole.id,
+          roleName: newRole.name,
+          isDefault: newRole.isDefault
+        })
+      });
+      
+      return res.status(201).json(newRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid role data", errors: error.errors });
+      }
+      console.error("Error creating role:", error);
+      return res.status(500).json({ message: "An error occurred while creating the role" });
+    }
+  });
+  
+  app.patch("/api/user-roles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const roleId = parseInt(id, 10);
+      
+      if (isNaN(roleId)) {
+        return res.status(400).json({ message: "Invalid role ID" });
+      }
+      
+      // Verify role exists
+      const existingRole = await storage.getRoleById(roleId);
+      if (!existingRole) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Validate update data
+      const updateData = insertUserRoleSchema.partial().parse(req.body);
+      
+      // Update the role
+      const updatedRole = await storage.updateRole(roleId, updateData);
+      
+      if (!updatedRole) {
+        return res.status(500).json({ message: "Failed to update role" });
+      }
+      
+      // Log role update
+      await storage.createActivityLog({
+        type: 'role_updated',
+        message: `User role updated: ${updatedRole.name}`,
+        username: req.session?.userId ? (await storage.getUserById(req.session.userId))?.username : undefined,
+        userId: req.session?.userId ? String(req.session.userId) : undefined,
+        metadata: JSON.stringify({
+          roleId: updatedRole.id,
+          roleName: updatedRole.name,
+          isDefault: updatedRole.isDefault,
+          changes: updateData
+        })
+      });
+      
+      return res.status(200).json(updatedRole);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid role data", errors: error.errors });
+      }
+      console.error(`Error updating role:`, error);
+      return res.status(500).json({ message: "An error occurred while updating the role" });
+    }
+  });
+  
+  app.delete("/api/user-roles/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const roleId = parseInt(id, 10);
+      
+      if (isNaN(roleId)) {
+        return res.status(400).json({ message: "Invalid role ID" });
+      }
+      
+      // Verify role exists
+      const role = await storage.getRoleById(roleId);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Prevent deleting the default role
+      if (role.isDefault) {
+        return res.status(400).json({ message: "Cannot delete the default role" });
+      }
+      
+      // Delete the role
+      const success = await storage.deleteRole(roleId);
+      
+      if (success) {
+        // Log role deletion
+        await storage.createActivityLog({
+          type: 'role_deleted',
+          message: `User role deleted: ${role.name}`,
+          username: req.session?.userId ? (await storage.getUserById(req.session.userId))?.username : undefined,
+          userId: req.session?.userId ? String(req.session.userId) : undefined,
+          metadata: JSON.stringify({
+            roleId: roleId,
+            roleName: role.name
+          })
+        });
+        
+        return res.status(200).json({ message: "Role deleted successfully" });
+      } else {
+        return res.status(500).json({ message: "Failed to delete role" });
+      }
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      return res.status(500).json({ message: "An error occurred while deleting the role" });
+    }
+  });
+  
+  app.get("/api/users/:userId/role", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Only allow users to get their own role unless they're admin
+      if (!req.session?.isAdmin && req.session?.userId?.toString() !== req.params.userId) {
+        return res.status(403).json({ message: "Not authorized to view other users' roles" });
+      }
+      
+      const userId = parseInt(req.params.userId, 10);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const role = await storage.getUserRoleByUserId(userId);
+      
+      if (!role) {
+        return res.status(404).json({ message: "No role found for user" });
+      }
+      
+      return res.status(200).json(role);
+    } catch (error) {
+      console.error(`Error fetching user role:`, error);
+      return res.status(500).json({ message: "An error occurred while fetching the user role" });
+    }
+  });
+  
+  app.post("/api/users/:userId/role", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const userIdNum = parseInt(userId, 10);
+      
+      if (isNaN(userIdNum)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Verify user exists
+      const user = await storage.getUserById(userIdNum);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Validate role data
+      const { roleId } = req.body;
+      
+      if (!roleId) {
+        return res.status(400).json({ message: "Role ID is required" });
+      }
+      
+      const roleIdNum = parseInt(roleId, 10);
+      
+      if (isNaN(roleIdNum)) {
+        return res.status(400).json({ message: "Invalid role ID" });
+      }
+      
+      // Verify role exists
+      const role = await storage.getRoleById(roleIdNum);
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+      
+      // Update user with new role
+      const updatedUser = await storage.updateUser(userIdNum, { roleId: roleIdNum });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update user role" });
+      }
+      
+      // Log role assignment
+      await storage.createActivityLog({
+        type: 'role_assigned',
+        message: `Role assigned to user: ${user.username} -> ${role.name}`,
+        username: req.session?.userId ? (await storage.getUserById(req.session.userId))?.username : undefined,
+        userId: req.session?.userId ? String(req.session.userId) : undefined,
+        metadata: JSON.stringify({
+          userId: userIdNum,
+          username: user.username,
+          roleId: roleIdNum,
+          roleName: role.name
+        })
+      });
+      
+      return res.status(200).json({ 
+        message: "User role updated successfully",
+        user: updatedUser,
+        role
+      });
+    } catch (error) {
+      console.error(`Error assigning role to user:`, error);
+      return res.status(500).json({ message: "An error occurred while assigning role to user" });
     }
   });
 
