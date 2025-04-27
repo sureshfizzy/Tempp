@@ -143,34 +143,6 @@ export function AppHeader({
         <div className="flex items-center gap-2 md:gap-4">
           <ThemeToggle />
           
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onDisconnect}
-            disabled={isDisconnecting}
-            className="hidden md:flex"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Disconnect</span>
-            {isDisconnecting && (
-              <span className="ml-2 h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-            )}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDisconnect}
-            disabled={isDisconnecting}
-            className="md:hidden"
-            aria-label="Disconnect"
-          >
-            <LogOut className="h-4 w-4" />
-            {isDisconnecting && (
-              <span className="absolute top-1 right-1 h-2 w-2 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-            )}
-          </Button>
-          
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
