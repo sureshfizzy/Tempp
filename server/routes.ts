@@ -2828,6 +2828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username,
           password, // Will be hashed by storage implementation
           email: uniqueEmail,
+          roleId: invite.roleId, // Set role from invite
           jellyfinUserId: jellyfinUser.Id,
           expiresAt
         });

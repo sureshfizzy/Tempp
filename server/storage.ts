@@ -505,6 +505,7 @@ export class DatabaseStorage implements IStorage {
         label: invites.label,
         userLabel: invites.userLabel,
         profileId: invites.profileId,
+        roleId: invites.roleId,
         maxUses: invites.maxUses,
         usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
@@ -532,6 +533,7 @@ export class DatabaseStorage implements IStorage {
         label: invites.label,
         userLabel: invites.userLabel,
         profileId: invites.profileId,
+        roleId: invites.roleId,
         maxUses: invites.maxUses,
         usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
@@ -561,6 +563,7 @@ export class DatabaseStorage implements IStorage {
         label: invites.label,
         userLabel: invites.userLabel,
         profileId: invites.profileId,
+        roleId: invites.roleId,
         maxUses: invites.maxUses,
         usedCount: invites.usedCount,
         expiresAt: invites.expiresAt,
@@ -639,6 +642,7 @@ export class DatabaseStorage implements IStorage {
         label: inviteLabel,
         user_label: inviteData.userLabel || null,
         profile_id: inviteData.profileId || null,
+        role_id: inviteData.roleId || null,
         max_uses: maxUses,
         used_count: 0, // Start with 0 uses
         expires_at: expiresAt,
@@ -655,11 +659,11 @@ export class DatabaseStorage implements IStorage {
       // Use the pool to execute raw SQL directly
       const sql = `
         INSERT INTO invites (
-          code, label, user_label, profile_id, max_uses, used_count, 
+          code, label, user_label, profile_id, role_id, max_uses, used_count, 
           expires_at, user_expiry_enabled, user_expiry_minutes, user_expiry_hours, user_expiry_days, user_expiry_months, created_by
         ) 
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         )
         RETURNING *
       `;
@@ -669,6 +673,7 @@ export class DatabaseStorage implements IStorage {
         values.label,
         values.user_label,
         values.profile_id,
+        values.role_id,
         values.max_uses,
         values.used_count,
         values.expires_at,
