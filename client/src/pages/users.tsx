@@ -78,9 +78,6 @@ export default function UsersPage() {
     queryFn: getUsers,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
-  
-  // We'll get roles for individual users as needed
-  // This query removed as it requires admin privileges
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
@@ -332,7 +329,7 @@ export default function UsersPage() {
                       />
                     </TableHead>
                     <TableHead>Username</TableHead>
-                    <TableHead>Access / Role</TableHead>
+                    <TableHead className="hidden md:table-cell">Access</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -342,7 +339,7 @@ export default function UsersPage() {
                 <TableBody>
                   {usersQuery.isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                           <span className="ml-2">Loading users...</span>
@@ -351,7 +348,7 @@ export default function UsersPage() {
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <Users className="h-10 w-10 text-gray-300" />
                           <span>No users found</span>
@@ -374,15 +371,10 @@ export default function UsersPage() {
                             {getUserStatus(user)}
                           </div>
                           <div className="md:hidden mt-1 space-y-1">
-                            <div className="flex flex-wrap items-center gap-1">
-                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-1">
+                            <div className="flex items-center gap-1">
+                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
                                 {getUserRole(user)}
                               </Badge>
-                              {user.roleName && (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-1 text-xs">
-                                  {user.roleName}
-                                </Badge>
-                              )}
                               <span className="text-xs text-gray-500">
                                 {formatDate(user.LastActivityDate)}
                               </span>
@@ -396,19 +388,10 @@ export default function UsersPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1 md:flex-row md:gap-2 md:items-center">
-                            <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
-                              {getUserRole(user)}
-                            </Badge>
-                            {user.roleName ? (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                                {user.roleName}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-gray-400">No custom role</span>
-                            )}
-                          </div>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                            {getUserRole(user)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className="text-gray-400">
