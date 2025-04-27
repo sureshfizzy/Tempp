@@ -126,12 +126,23 @@ export const UserRolesList: React.FC = () => {
       }
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      let successMessage = "The role has been deleted successfully";
+      
+      // If users were moved to default role, include that in the message
+      if (data.affectedUsers && data.affectedUsers > 0) {
+        successMessage += `. ${data.affectedUsers} user${data.affectedUsers > 1 ? 's' : ''} moved to ${data.defaultRole?.name || 'default role'}.`;
+      }
+      
       toast({
         title: "Role deleted",
-        description: "The role has been deleted successfully",
+        description: successMessage,
       });
+      
+      // Invalidate all queries that might be affected by this change
       queryClient.invalidateQueries({ queryKey: ["/api/user-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/app-users"] });
     },
     onError: (error: any) => {
       toast({
@@ -358,7 +369,7 @@ export const UserRolesList: React.FC = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete the "{role.name}" role. This action cannot be undone.
+                            This will permanently delete the "{role.name}" role. Any users assigned to this role will be moved to the default role. This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

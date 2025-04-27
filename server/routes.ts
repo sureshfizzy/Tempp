@@ -17,8 +17,10 @@ import {
   UserRole,
   InsertUserRole,
   insertUserRoleSchema,
-  invites
+  invites,
+  appUsers
 } from "@shared/schema";
+import { count } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -2296,11 +2298,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Count users who will be affected
-      const usersWithRole = await db.select({ count: count() })
+      const usersWithRole = await db.select()
         .from(appUsers)
         .where(eq(appUsers.roleId, roleId));
       
-      const affectedUsersCount = usersWithRole[0]?.count || 0;
+      const affectedUsersCount = usersWithRole.length;
       
       // Delete the role - users will be moved to the default role inside this method
       const success = await storage.deleteRole(roleId);
