@@ -44,14 +44,6 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
     staleTime: 300000, // 5 minutes
     retry: 2, // Retry failed requests up to 2 times
   });
-  
-  // Get permalink to first favorite if available
-  const getFirstFavoriteLink = () => {
-    if (favoritesQuery.data?.Items && favoritesQuery.data.Items.length > 0) {
-      return getItemLink(favoritesQuery.data.Items[0].Id);
-    }
-    return null;
-  };
 
   return (
     <div>
@@ -81,7 +73,7 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="group bg-gradient-to-r from-blue-950 to-blue-950/90 hover:from-blue-900 hover:to-blue-900/90 border-b border-blue-800/20"
+                className="group rounded-lg overflow-hidden transition-all bg-gradient-to-r from-indigo-950 to-indigo-900/80 hover:from-indigo-900 hover:to-indigo-800/80 border border-indigo-800/30 hover:border-indigo-700/50 shadow-md hover:shadow-indigo-900/20"
               >
                 <a 
                   href={getItemLink(item.Id)} 
@@ -89,7 +81,7 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                   rel="noopener noreferrer"
                   className="block"
                 >
-                  <div className="flex items-center p-4">
+                  <div className="flex items-center">
                     {/* Item Image */}
                     <motion.div className="relative flex-shrink-0"
                       whileHover={{ scale: 1.05 }}
@@ -97,8 +89,8 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                     >
                       {item.ImageTags?.Primary || (item.ImageTags && Object.keys(item.ImageTags).length > 0) ? (
                         <div className="relative">
-                          <div className="absolute -inset-0.5 rounded-sm bg-blue-500/20 blur-sm"></div>
-                          <div className="h-[68px] w-[50px] rounded-sm overflow-hidden relative shadow-lg shadow-blue-900/30">
+                          <div className="absolute -inset-0.5 rounded-lg bg-indigo-500/20 blur-sm"></div>
+                          <div className="h-20 w-14 rounded-lg overflow-hidden relative shadow-lg shadow-indigo-900/30">
                             <img 
                               src={`/api/users/${jellyfinUserId}/item-image/${item.Id}${
                                 item.ImageTags?.Primary 
@@ -123,44 +115,41 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
                                 }
                               }}
                             />
-                            <div className="h-full w-full rounded-sm bg-blue-900/80 hidden items-center justify-center absolute inset-0">
-                              <Film className="h-5 w-5 text-blue-300" />
+                            <div className="h-full w-full rounded-lg bg-indigo-900/80 hidden items-center justify-center absolute inset-0">
+                              <Film className="h-6 w-6 text-indigo-300" />
                             </div>
                           </div>
                         </div>
                       ) : (
                         <div className="relative">
-                          <div className="absolute -inset-0.5 rounded-sm bg-blue-500/20 blur-sm"></div>
-                          <div className="h-[68px] w-[50px] rounded-sm bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center relative shadow-lg shadow-blue-900/30">
-                            <Film className="h-5 w-5 text-blue-300" />
+                          <div className="absolute -inset-0.5 rounded-lg bg-indigo-500/20 blur-sm"></div>
+                          <div className="h-20 w-14 rounded-lg bg-gradient-to-br from-indigo-900 to-indigo-800 flex items-center justify-center relative shadow-lg shadow-indigo-900/30">
+                            <Film className="h-6 w-6 text-indigo-300" />
                           </div>
                         </div>
                       )}
                     </motion.div>
                     
                     {/* Media Details */}
-                    <div className="flex-1 ml-4">
-                      <div className="flex items-center">
-                        <ExternalLink className="h-3 w-3 text-blue-500 mr-1.5" />
-                        <p className="font-semibold text-blue-100 group-hover:text-white transition-colors duration-200">
-                          {item.Name}
-                        </p>
-                      </div>
+                    <div className="flex-1 p-4">
+                      <p className="font-semibold text-indigo-100 group-hover:text-white transition-colors duration-200 mb-1">
+                        {item.Name}
+                      </p>
                       
                       {item.SeriesName && (
-                        <p className="text-sm text-blue-300/80 mt-1">
+                        <p className="text-sm text-indigo-300/80">
                           {item.SeriesName} {item.SeasonName ? `• ${item.SeasonName}` : ''}
                         </p>
                       )}
                       
-                      <div className="flex items-center mt-2">
+                      <div className="flex items-center mt-1.5">
                         {item.ProductionYear && (
-                          <span className="text-xs text-blue-400/80 mr-2 bg-blue-900/40 px-2 py-0.5 rounded">
+                          <span className="text-xs text-indigo-400/80 mr-2">
                             {item.ProductionYear}
                           </span>
                         )}
                         
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-900/30 text-blue-200 border border-blue-800/30">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-900/30 text-indigo-200 border border-indigo-800/30">
                           {item.Type === "Movie" ? "Movie" : 
                           item.Type === "Series" ? "Series" : 
                           item.Type === "Episode" ? "Episode" : item.Type}
@@ -172,30 +161,10 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
               </motion.div>
             ))}
           </AnimatePresence>
-          
-          {/* Watch Favorites Now button */}
-          {favoritesQuery.data?.Items?.length > 0 && (
-            <div className="pt-4 flex justify-center">
-              <motion.div
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <a 
-                  href={getFirstFavoriteLink() || '#'} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-blue-700 hover:bg-blue-600 text-white border border-blue-500/50 shadow-lg shadow-blue-900/20 transition-colors ${!getFirstFavoriteLink() && 'opacity-50 pointer-events-none'}`}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Watch Favorites Now
-                </a>
-              </motion.div>
-            </div>
-          )}
         </div>
       ) : (
         <motion.div 
-          className="text-center py-12 rounded-xl bg-gradient-to-b from-transparent to-blue-950/10"
+          className="text-center py-12 rounded-xl bg-gradient-to-b from-transparent to-indigo-950/10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.7 }}
@@ -205,9 +174,9 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Heart className="h-16 w-16 mx-auto mb-4 text-blue-700/50" />
-            <p className="text-blue-200 font-medium">No favorites yet</p>
-            <p className="text-blue-400/60 text-sm mt-1 mb-4">Mark items as favorites in Jellyfin to see them here</p>
+            <Heart className="h-16 w-16 mx-auto mb-4 text-indigo-700/50" />
+            <p className="text-indigo-200 font-medium">No favorites yet</p>
+            <p className="text-indigo-400/60 text-sm mt-1 mb-4">Mark items as favorites in Jellyfin to see them here</p>
             
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -216,7 +185,7 @@ export default function FavoritesTab({ jellyfinUserId, getItemLink, openJellyfin
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="mt-3 px-4 py-2 text-blue-300 border-blue-700/40 bg-blue-900/20 hover:bg-blue-800/30 shadow-lg shadow-blue-900/20"
+                className="mt-3 text-indigo-300 border-indigo-700/40 bg-indigo-900/20 hover:bg-indigo-800/30 shadow-lg shadow-indigo-900/20"
                 onClick={openJellyfin}
               >
                 <Play className="mr-2 h-4 w-4" />
