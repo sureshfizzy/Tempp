@@ -9,8 +9,8 @@ export function StatusBadge({ user }: StatusBadgeProps) {
   
   return (
     <span className="inline-flex items-center space-x-1">
-      <span className={`status-indicator ${isDisabled ? 'disabled' : 'active'}`}></span>
-      <span className={`text-sm font-medium transition-all duration-300 ${isDisabled ? 'text-destructive' : 'text-success'}`}>
+      <span className={`h-2.5 w-2.5 rounded-full ${isDisabled ? 'bg-neutral-400' : 'bg-green-500'}`}></span>
+      <span className="text-sm font-medium text-neutral-700">
         {isDisabled ? 'Disabled' : 'Active'}
       </span>
     </span>
