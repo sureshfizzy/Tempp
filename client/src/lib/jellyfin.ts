@@ -508,3 +508,19 @@ export async function disableUser(userId: string, disable: boolean = true): Prom
     throw error;
   }
 }
+
+// Get user's favorite items
+export async function getUserFavorites(userId: string): Promise<{ Items: any[], TotalRecordCount: number }> {
+  try {
+    const response = await fetch(`/api/users/${userId}/favorites`);
+    
+    if (!response.ok) {
+      throw new Error("Failed to fetch user favorites");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching favorites for user ${userId}:`, error);
+    return { Items: [], TotalRecordCount: 0 }; // Return empty result as fallback
+  }
+}
