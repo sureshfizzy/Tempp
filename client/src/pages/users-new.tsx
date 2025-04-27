@@ -6,10 +6,9 @@ import {
   getUsers, 
   deleteUser, 
   getUserRole, 
-  getUserWatchTime,
-  formatWatchTime,
   getConnectionStatus
 } from "@/lib/jellyfin";
+import { UserExpiryBadge } from "@/components/user-expiry-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,7 +60,6 @@ export default function UsersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userWatchTimes, setUserWatchTimes] = useState<Record<string, number>>({});
   const isMobile = useIsMobile();
 
   // Get connection status
@@ -171,31 +169,7 @@ export default function UsersPage() {
     }
   }, [searchQuery, usersQuery.data]);
   
-  // Fetch watch time data for users
-  useEffect(() => {
-    async function fetchWatchTimes() {
-      if (!filteredUsers.length) return;
-      
-      const watchTimes: Record<string, number> = {};
-      
-      // Only fetch for a reasonable number of users to avoid too many requests
-      const usersToFetch = filteredUsers.slice(0, 10);
-      
-      for (const user of usersToFetch) {
-        try {
-          const watchTime = await getUserWatchTime(user.Id);
-          watchTimes[user.Id] = watchTime;
-        } catch (error) {
-          console.error(`Error fetching watch time for user ${user.Name}:`, error);
-          watchTimes[user.Id] = 0;
-        }
-      }
-      
-      setUserWatchTimes(watchTimes);
-    }
-    
-    fetchWatchTimes();
-  }, [filteredUsers]);
+
 
   // Handle select all users
   const handleSelectAll = () => {
@@ -314,7 +288,7 @@ export default function UsersPage() {
                     <TableHead>Username</TableHead>
                     <TableHead className="hidden md:table-cell">Access</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
-                    <TableHead className="hidden md:table-cell">Watch Time</TableHead>
+                    <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -375,14 +349,14 @@ export default function UsersPage() {
                           {formatDate(user.LastActivityDate)}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            {userWatchTimes[user.Id] !== undefined ? (
-                              <span>{formatWatchTime(userWatchTimes[user.Id])}</span>
-                            ) : (
-                              <div className="h-4 w-8 bg-muted animate-pulse rounded"></div>
-                            )}
-                          </div>
+                          {user.expiresAt ? (
+                            <UserExpiryBadge expiresAt={user.expiresAt} small />
+                          ) : (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Permanent
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end md:justify-start items-center gap-2">
