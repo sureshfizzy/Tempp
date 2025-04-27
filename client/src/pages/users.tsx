@@ -335,8 +335,8 @@ export default function UsersPage() {
                       />
                     </TableHead>
                     <TableHead>Username</TableHead>
-                    <TableHead className="hidden md:table-cell">Access</TableHead>
-                    <TableHead className="hidden md:table-cell">Role</TableHead>
+                    <TableHead>Access</TableHead>
+                    <TableHead>Custom Role</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -378,12 +378,12 @@ export default function UsersPage() {
                             {getUserStatus(user)}
                           </div>
                           <div className="md:hidden mt-1 space-y-1">
-                            <div className="flex items-center gap-1">
-                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-1 mb-1">
                                 {getUserRole(user)}
                               </Badge>
                               {user.roleName && (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-2 text-xs">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-1 mb-1 text-xs">
                                   {user.roleName}
                                 </Badge>
                               )}
@@ -405,7 +405,7 @@ export default function UsersPage() {
                             {getUserRole(user)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell>
                           {user.roleName ? (
                             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
                               {user.roleName}
