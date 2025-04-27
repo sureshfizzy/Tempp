@@ -239,8 +239,28 @@ export default function Dashboard() {
     return invitesQuery.data;
   }, [invitesQuery.data, deleteInviteId]);
   
-  // Count user types
+  // Count users by role
   const adminCount = usersQuery.data?.filter(user => user.Policy?.IsAdministrator).length || 0;
+  
+  // Get custom roles count 
+  const userRoleCounts = useMemo(() => {
+    if (!usersQuery.data) return {};
+    
+    const counts: Record<string, number> = {};
+    
+    usersQuery.data.forEach(user => {
+      // Skip admins as they are already counted
+      if (user.Policy?.IsAdministrator) return;
+      
+      // Get role name from user object (added via our getUsers enhancement)
+      const roleName = user.roleName || "Regular User";
+      counts[roleName] = (counts[roleName] || 0) + 1;
+    });
+    
+    return counts;
+  }, [usersQuery.data]);
+  
+  // Total regular (non-admin) users
   const regularUserCount = usersQuery.data?.length ? usersQuery.data.length - adminCount : 0;
   
   return (
