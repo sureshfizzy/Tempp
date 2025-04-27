@@ -43,12 +43,16 @@ app.use((req, res, next) => {
   // Initialize database tables - use SQLite or PostgreSQL based on environment
   try {
     // Check if DATABASE_URL is a non-empty string
-    if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '') {
+    const isDatabaseUrlSet = process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '';
+    
+    if (isDatabaseUrlSet) {
       // Use PostgreSQL if DATABASE_URL is set and not empty
+      log("Using PostgreSQL database");
       await initializeDatabase();
       log("PostgreSQL database initialized successfully");
     } else {
       // Use SQLite if no DATABASE_URL or it's empty
+      log("Using SQLite database");
       await initializeSqliteDatabase();
       log("SQLite database initialized successfully");
     }
