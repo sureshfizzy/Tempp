@@ -335,8 +335,7 @@ export default function UsersPage() {
                       />
                     </TableHead>
                     <TableHead>Username</TableHead>
-                    <TableHead>Access</TableHead>
-                    <TableHead>Custom Role</TableHead>
+                    <TableHead>Roles & Access</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Account Expiry</TableHead>
@@ -346,7 +345,7 @@ export default function UsersPage() {
                 <TableBody>
                   {usersQuery.isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                           <span className="ml-2">Loading users...</span>
@@ -355,7 +354,7 @@ export default function UsersPage() {
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <Users className="h-10 w-10 text-gray-300" />
                           <span>No users found</span>
@@ -400,19 +399,17 @@ export default function UsersPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
-                            {getUserRole(user)}
-                          </Badge>
-                        </TableCell>
                         <TableCell>
-                          {user.roleName ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                              {user.roleName}
+                          <div className="flex flex-col gap-1 md:flex-row md:gap-2 md:items-center">
+                            <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                              {getUserRole(user)}
                             </Badge>
-                          ) : (
-                            <span className="text-gray-400">No custom role</span>
-                          )}
+                            {user.roleName && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                                {user.roleName}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className="text-gray-400">
