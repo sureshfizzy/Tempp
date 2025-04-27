@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import Onboarding from "@/pages/onboarding";
 import Dashboard from "@/pages/dashboard";
 // Import the new users page instead of the old one
-import UsersPage from "@/pages/users-new";
+import UsersNewPage from "@/pages/users-new";
 import LoginPage from "@/pages/login";
 import UserProfilePage from "@/pages/user-profile";
 import ActivityPage from "@/pages/activity";
@@ -113,7 +113,7 @@ function Router() {
             <>
               <Route path="/" component={Dashboard} />
               <Route path="/dashboard" component={Dashboard} />
-              <Route path="/users" component={UsersPage} />
+              <Route path="/users" component={UsersNewPage} />
               <Route path="/activity" component={ActivityPage} />
               <Route path="/settings" component={SettingsPage} />
             </>
