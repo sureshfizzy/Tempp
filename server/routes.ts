@@ -731,7 +731,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const users = await response.json();
+      const users = await response.json() as any[];
+      
+      // Log the first user's policy data for debugging
+      if (users && users.length > 0 && users[0]) {
+        const firstUser = users[0];
+        console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
+      }
+      
       // Validate the response with zod
       const parsedUsers = z.array(userSchema).parse(users);
       

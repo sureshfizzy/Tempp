@@ -353,7 +353,15 @@ export default function UsersPage() {
 
   // Get status badge for users
   const getUserStatus = (user: User) => {
-    if (user.Policy?.IsDisabled) {
+    // Check if user is disabled (using both Policy.IsDisabled and our local disabled flag)
+    if (user.Policy?.IsDisabled === true) {
+      console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
+      return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Disabled</Badge>;
+    }
+    
+    // Fallback to the local disabled flag
+    if (user.disabled === true) {
+      console.log(`User ${user.Name} is disabled via local disabled flag`);
       return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Disabled</Badge>;
     }
     
