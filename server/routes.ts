@@ -739,8 +739,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
       }
       
-      // Validate the response with zod
-      const parsedUsers = z.array(userSchema).parse(users);
+      // For each user, fetch their individual policy when needed
+      const usersWithFullPolicy = await Promise.all(users.map(async (user) => {
+        try {
+          // Check if the basic policy info already exists and has the IsDisabled field
+          // If not, fetch the full policy details
+          if (!user.Policy || user.Policy.IsDisabled === undefined) {
+            console.log(`Fetching detailed policy for user ${user.Name} (${user.Id})`);
+            const policyResponse = await fetch(`${apiUrl}/Users/${user.Id}/Policy`, {
+              headers: {
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+            });
+            
+            if (policyResponse.ok) {
+              const policyData = await policyResponse.json();
+              console.log(`Detailed policy for ${user.Name}:`, JSON.stringify(policyData));
+              
+              // Merge the policy data with the user
+              user.Policy = policyData;
+            }
+          }
+          return user;
+        } catch (error) {
+          console.error(`Error fetching policy for user ${user.Name}:`, error);
+          return user;
+        }
+      }));
+      
+      // Validate the response with zod 
+      const parsedUsers = z.array(userSchema).parse(usersWithFullPolicy);
       
       // Get local app users for expiry information
       const appUsers = await storage.getAllUsers();
@@ -845,7 +873,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const user = await response.json();
+      const user: any = await response.json();
+      
+      // Fetch user policy if not present or incomplete
+      if (!user.Policy || user.Policy.IsDisabled === undefined) {
+        try {
+          console.log(`Fetching detailed policy for user ${user.Name} (${user.Id})`);
+          const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
+            headers: {
+              "X-Emby-Token": credentials.accessToken || "",
+            },
+          });
+          
+          if (policyResponse.ok) {
+            const policyData = await policyResponse.json();
+            console.log(`Detailed policy for ${user.Name}:`, JSON.stringify(policyData));
+            
+            // Merge the policy data with the user
+            user.Policy = policyData;
+          }
+        } catch (error) {
+          console.error(`Error fetching policy for user ${user.Name}:`, error);
+        }
+      }
+      
       // Validate the response with zod
       const parsedUser = userSchema.parse(user);
       
@@ -1125,6 +1176,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await updatedUserResponse.json();
+      
+      // Fetch the policy explicitly if not available or missing IsDisabled
+      if (!updatedUser.Policy || updatedUser.Policy.IsDisabled === undefined) {
+        try {
+          console.log(`Fetching detailed policy for updated user ${updatedUser.Name} (${id})`);
+          const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
+            headers: {
+              "X-Emby-Token": credentials.accessToken || "",
+            },
+          });
+          
+          if (policyResponse.ok) {
+            const policyData = await policyResponse.json();
+            console.log(`Detailed policy for updated user ${updatedUser.Name}:`, JSON.stringify(policyData));
+            
+            // Merge the policy data with the user
+            updatedUser.Policy = policyData;
+          }
+        } catch (error) {
+          console.error(`Error fetching policy for updated user ${updatedUser.Name}:`, error);
+        }
+      }
       
       // Update user in our local database too if they exist
       try {
