@@ -2334,38 +2334,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiUrl = credentials.url;
       const apiKey = credentials.apiKey;
       
-      // Define basic user data
-      let jellyfinUserData: any = {
+      const jellyfinUserData = {
         Name: username,
         Password: password
       };
       
-      // Check if a user profile is associated with this invite
-      let userProfile = null;
-      if (invite.profileId) {
-        try {
-          // Convert profileId to number - make sure to handle string values properly
-          const profileId = parseInt(invite.profileId, 10);
-          if (!isNaN(profileId)) {
-            userProfile = await storage.getUserProfileById(profileId);
-            console.log(`Using profile ID ${profileId} for new user creation:`, 
-              userProfile ? `${userProfile.name} (exists)` : 'NOT FOUND');
-            
-            if (!userProfile) {
-              console.error(`Profile with ID ${profileId} not found in database`);
-            }
-          } else {
-            console.error(`Invalid profile ID format: ${invite.profileId}`);
-          }
-        } catch (error) {
-          console.error(`Error fetching user profile with ID ${invite.profileId}:`, error);
-        }
-      } else {
-        console.log('No profile ID associated with this invite');
-      }
-      
       try {
-        // Create the user first
         const jellyfinResponse = await fetch(`${apiUrl}/Users/New`, {
           method: 'POST',
           headers: {
@@ -2383,183 +2357,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
-        console.log(`Created Jellyfin user: ${username} (${jellyfinUser.Id})`);
-        
-        // If a user profile is attached to the invite, apply its settings to the new user
-        if (userProfile) {
-          console.log(`Applying user profile "${userProfile.name}" to new user ${username}`);
-          
-          // Parse library access from user profile
-          let libraryAccess = [];
-          try {
-            libraryAccess = JSON.parse(userProfile.libraryAccess || '[]');
-            console.log(`Profile has ${libraryAccess.length} libraries:`, libraryAccess);
-          } catch (error) {
-            console.error("Error parsing library access from profile:", error);
-          }
-          
-          // Apply library access to the new user
-          if (libraryAccess.length > 0) {
-            try {
-              // Prepare policy data with the library access from the profile
-              const policyData = {
-                EnableAllFolders: false,
-                EnabledFolders: libraryAccess,
-                BlockedMediaFolders: [],
-                EnableContentDownloading: true,
-                EnableSyncTranscoding: true
-              };
-              
-              console.log(`Setting policy for user ${jellyfinUser.Id} with library access:`, JSON.stringify(policyData));
-              
-              // Update the user's policy
-              const policyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Emby-Token': credentials.accessToken || ''
-                },
-                body: JSON.stringify(policyData)
-              });
-              
-              if (!policyResponse.ok) {
-                console.error(`Failed to set user policy: ${policyResponse.status}`, await policyResponse.text());
-              } else {
-                console.log(`Successfully set library access for user ${username}`);
-              }
-            } catch (error) {
-              console.error("Error applying library access policy:", error);
-            }
-          }
-          
-          // Parse and set home layout if available
-          if (userProfile.homeLayout) {
-            try {
-              let homeLayout = userProfile.homeLayout;
-              
-              // Log the raw homeLayout from the profile for debugging
-              console.log(`Raw home layout from profile: ${homeLayout}`);
-              
-              // Check if the layout is just an empty array string
-              if (homeLayout === '[]') {
-                console.log('Home layout is empty, skipping this step');
-              } else {
-                // Get the user's current display preferences first to ensure we're updating the existing structure
-                const currentPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-                  headers: {
-                    'X-Emby-Token': credentials.accessToken || ''
-                  }
-                });
-                
-                if (currentPrefsResponse.ok) {
-                  let currentPrefs = await currentPrefsResponse.json() as any;
-                  
-                  // Make sure CustomPrefs exists
-                  if (!currentPrefs.CustomPrefs) {
-                    currentPrefs.CustomPrefs = {};
-                  }
-                  
-                  // Set the homeLayout preference
-                  currentPrefs.CustomPrefs.homeLayout = homeLayout;
-                  
-                  console.log(`Setting home layout for user ${jellyfinUser.Id}:`, JSON.stringify(currentPrefs));
-                  
-                  // Update the user's display preferences
-                  const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'X-Emby-Token': credentials.accessToken || ''
-                    },
-                    body: JSON.stringify(currentPrefs)
-                  });
-                  
-                  if (!displayPrefsResponse.ok) {
-                    console.error(`Failed to set home layout: ${displayPrefsResponse.status}`, await displayPrefsResponse.text());
-                  } else {
-                    console.log(`Successfully set home layout for user ${username}`);
-                  }
-                } else {
-                  console.error(`Failed to get current display preferences: ${currentPrefsResponse.status}`, await currentPrefsResponse.text());
-                }
-              }
-            } catch (error) {
-              console.error("Error setting home layout:", error);
-            }
-          } else {
-            console.log('No home layout in profile, skipping this step');
-          }
-        }
         
         // Create local app user with expiry if needed
-        try {
-          // Email validation - ensure we handle empty emails correctly
-          // The database has a unique constraint on email, so we need to handle empty emails specially
-          let emailToUse = null;
-          
-          if (email && email.trim() !== '') {
-            // If a valid email is provided, use it
-            emailToUse = email.trim();
-          } else {
-            // Generate a unique placeholder email using the username and timestamp
-            // This avoids conflicts with the unique constraint
-            emailToUse = `placeholder-${username}-${Date.now()}@noemail.com`;
-            console.log(`Using placeholder email for user ${username}: ${emailToUse}`);
-          }
-          
-          const appUser = await storage.createUser({
-            username,
-            password, // Will be hashed by storage implementation
-            email: emailToUse,
-            jellyfinUserId: jellyfinUser.Id,
-            expiresAt
-          });
+        const appUser = await storage.createUser({
+          username,
+          password, // Will be hashed by storage implementation
+          email: email || '',
+          jellyfinUserId: jellyfinUser.Id,
+          expiresAt
+        });
         
-          // Increment the invite used count
-          const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
-          await storage.updateInviteUsage(code, usedCount);
-          
-          // Log account creation via invite
-          await storage.createActivityLog({
-            type: 'account_created',
-            message: `Account created: ${username} (via invite)`,
-            username: username,
-            userId: String(appUser.id), // Convert number to string for userId
-            inviteCode: code,
-            metadata: JSON.stringify({
-              expiresAt: expiresAt,
-              email: email || null,
-              jellyfinUserId: jellyfinUser.Id,
-              createdVia: 'invite',
-              profileId: userProfile?.id || null,
-              profileName: userProfile?.name || null
-            })
-          });
-          
-          // Log invite usage
-          await storage.createActivityLog({
-            type: 'invite_used',
-            message: `Invite used: ${code}`,
-            username: username,
-            userId: String(appUser.id), // Convert number to string
-            inviteCode: code,
-            metadata: JSON.stringify({
-              usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
-              usesTotal: usedCount,
-              maxUses: invite.maxUses,
-              profileId: userProfile?.id || null
-            })
-          });
-          
-          // Return success
-          res.status(201).json({ 
-            success: true,
-            message: "Account created successfully"
-          });
-        } catch (error) {
-          console.error("Error creating app user:", error);
-          throw error; // Re-throw to be caught by the outer catch block
-        }
+        // Increment the invite used count
+        const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
+        await storage.updateInviteUsage(code, usedCount);
+        
+        // Log account creation via invite
+        await storage.createActivityLog({
+          type: 'account_created',
+          message: `Account created: ${username} (via invite)`,
+          username: username,
+          userId: String(appUser.id), // Convert number to string for userId
+          inviteCode: code,
+          metadata: JSON.stringify({
+            expiresAt: expiresAt,
+            email: email || null,
+            jellyfinUserId: jellyfinUser.Id,
+            createdVia: 'invite'
+          })
+        });
+        
+        // Log invite usage
+        await storage.createActivityLog({
+          type: 'invite_used',
+          message: `Invite used: ${code}`,
+          username: username,
+          userId: String(appUser.id), // Convert number to string
+          inviteCode: code,
+          metadata: JSON.stringify({
+            usesLeft: invite.maxUses !== null ? (invite.maxUses - usedCount) : null,
+            usesTotal: usedCount,
+            maxUses: invite.maxUses
+          })
+        });
+        
+        // Return success
+        res.status(201).json({ 
+          success: true,
+          message: "Account created successfully"
+        });
       } catch (error) {
         console.error("Error creating Jellyfin user:", error);
         res.status(500).json({ error: "Failed to create Jellyfin user account" });
