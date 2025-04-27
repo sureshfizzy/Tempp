@@ -6,6 +6,8 @@ echo "======================================================"
 echo "Jellyfin User Manager - Quick Start Script"
 echo "======================================================"
 
+SETUP_DATABASE=true
+
 # Check if .env file exists
 if [ -f .env ]; then
     echo "Existing .env file found. Would you like to recreate it? (y/n)"
@@ -19,24 +21,51 @@ if [ -f .env ]; then
         echo "Current .env content:"
         cat .env
         echo ""
-        echo "Do you want to proceed with the rest of the setup? (y/n)"
-        read -r CONTINUE
-        if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
-            exit 0
-        fi
+        SETUP_DATABASE=false
     fi
 else
     RECREATE_ENV="y"
 fi
 
-# Create new .env file if needed
-if [[ "$RECREATE_ENV" =~ ^[Yy]$ ]]; then
-    # Check if Docker is available for PostgreSQL
+# Database setup
+if [ "$SETUP_DATABASE" = true ]; then
+    echo "======================================================"
+    echo "Database Setup"
+    echo "======================================================"
+    
+    # Show available options
+    echo "Available database setup options:"
+    
+    # Option 1: Docker PostgreSQL
     if command -v docker &> /dev/null; then
-        echo "Docker detected. Would you like to start a PostgreSQL database container? (y/n)"
-        read -r START_DB
-        
-        if [[ "$START_DB" =~ ^[Yy]$ ]]; then
+        echo "1: Use Docker PostgreSQL container (recommended)"
+        HAS_DOCKER=true
+    else
+        HAS_DOCKER=false
+    fi
+    
+    # Option 2: Local PostgreSQL
+    if command -v psql &> /dev/null; then
+        echo "2: Use existing PostgreSQL server"
+        HAS_PSQL=true
+    else
+        HAS_PSQL=false
+    fi
+    
+    # Option 3: Manual entry
+    echo "3: Enter database connection string manually"
+    
+    echo ""
+    echo "Select database setup method (1-3):"
+    read -r DB_OPTION
+    
+    case $DB_OPTION in
+        1)
+            if [ "$HAS_DOCKER" = false ]; then
+                echo "Error: Docker is not installed. Please select another option."
+                exit 1
+            fi
+            
             # Check if container already exists
             if docker ps -a --format '{{.Names}}' | grep -q "jellyfin-manager-db"; then
                 echo "A container named jellyfin-manager-db already exists."
@@ -47,25 +76,29 @@ if [[ "$RECREATE_ENV" =~ ^[Yy]$ ]]; then
                     echo "Stopping and removing existing container..."
                     docker stop jellyfin-manager-db || true
                     docker rm jellyfin-manager-db || true
-                    START_NEW_CONTAINER="y"
+                    CREATE_NEW_CONTAINER=true
                 else
                     # Check if container is running
                     if docker ps --format '{{.Names}}' | grep -q "jellyfin-manager-db"; then
                         echo "Using existing running PostgreSQL container."
-                        START_NEW_CONTAINER="n"
+                        CREATE_NEW_CONTAINER=false
                     else
                         echo "Starting existing PostgreSQL container..."
                         docker start jellyfin-manager-db
-                        START_NEW_CONTAINER="n"
+                        CREATE_NEW_CONTAINER=false
                     fi
                 fi
             else
-                START_NEW_CONTAINER="y"
+                CREATE_NEW_CONTAINER=true
             fi
             
-            # Start a new container if needed
-            if [[ "$START_NEW_CONTAINER" = "y" ]]; then
-                echo "Enter a password for PostgreSQL (default: postgres):"
+            if [ "$CREATE_NEW_CONTAINER" = true ]; then
+                echo "Create a new database with:"
+                echo "Enter database name (default: jellyfin_manager):"
+                read -r DB_NAME
+                DB_NAME=${DB_NAME:-jellyfin_manager}
+                
+                echo "Enter PostgreSQL password (default: postgres):"
                 read -rs PG_PASS
                 PG_PASS=${PG_PASS:-postgres}
                 
@@ -74,36 +107,80 @@ if [[ "$RECREATE_ENV" =~ ^[Yy]$ ]]; then
                     --name jellyfin-manager-db \
                     -e POSTGRES_USER=postgres \
                     -e POSTGRES_PASSWORD=$PG_PASS \
-                    -e POSTGRES_DB=jellyfin_manager \
+                    -e POSTGRES_DB=$DB_NAME \
                     -p 5432:5432 \
                     postgres:15-alpine
                 
-                # Wait for PostgreSQL to start
-                echo "Waiting for PostgreSQL to start (this may take a few seconds)..."
-                sleep 5
-            fi
-            
-            # Create .env file with Docker PostgreSQL
-            if [[ "$START_NEW_CONTAINER" = "y" ]]; then
-                DB_URL="postgresql://postgres:$PG_PASS@localhost:5432/jellyfin_manager"
+                echo "Waiting for PostgreSQL to initialize (this may take a few seconds)..."
+                sleep 10
+                
+                DB_URL="postgresql://postgres:$PG_PASS@localhost:5432/$DB_NAME"
             else
-                echo "Enter your PostgreSQL password (default: postgres):"
+                # Using existing container
+                echo "Enter PostgreSQL password (default: postgres):"
                 read -rs PG_PASS
                 PG_PASS=${PG_PASS:-postgres}
-                DB_URL="postgresql://postgres:$PG_PASS@localhost:5432/jellyfin_manager"
+                
+                echo "Enter database name (default: jellyfin_manager):"
+                read -r DB_NAME
+                DB_NAME=${DB_NAME:-jellyfin_manager}
+                
+                DB_URL="postgresql://postgres:$PG_PASS@localhost:5432/$DB_NAME"
             fi
-        else
-            # Manual database setup
-            echo "Please enter your PostgreSQL connection string (e.g., postgresql://user:password@localhost:5432/database):"
+            ;;
+            
+        2)
+            if [ "$HAS_PSQL" = false ]; then
+                echo "Error: PostgreSQL client is not installed. Please select another option."
+                exit 1
+            fi
+            
+            echo "Enter PostgreSQL connection details:"
+            echo "Username (default: postgres):"
+            read -r PG_USER
+            PG_USER=${PG_USER:-postgres}
+            
+            echo "Password:"
+            read -rs PG_PASS
+            
+            echo "Host (default: localhost):"
+            read -r PG_HOST
+            PG_HOST=${PG_HOST:-localhost}
+            
+            echo "Port (default: 5432):"
+            read -r PG_PORT
+            PG_PORT=${PG_PORT:-5432}
+            
+            echo "Database name (default: jellyfin_manager):"
+            read -r DB_NAME
+            DB_NAME=${DB_NAME:-jellyfin_manager}
+            
+            echo "Do you want to create this database if it doesn't exist? (y/n)"
+            read -r CREATE_DB
+            
+            if [[ "$CREATE_DB" =~ ^[Yy]$ ]]; then
+                echo "Creating database..."
+                PGPASSWORD=$PG_PASS psql -h $PG_HOST -p $PG_PORT -U $PG_USER -c "CREATE DATABASE $DB_NAME;" || {
+                    echo "Warning: Failed to create database. It might already exist."
+                }
+            fi
+            
+            DB_URL="postgresql://$PG_USER:$PG_PASS@$PG_HOST:$PG_PORT/$DB_NAME"
+            ;;
+            
+        3)
+            echo "Enter complete PostgreSQL connection URL:"
+            echo "Format: postgresql://username:password@hostname:port/database_name"
             read -r DB_URL
-        fi
-    else
-        # No Docker, manual entry
-        echo "Please enter your PostgreSQL connection string (e.g., postgresql://user:password@localhost:5432/database):"
-        read -r DB_URL
-    fi
+            ;;
+            
+        *)
+            echo "Invalid option. Exiting."
+            exit 1
+            ;;
+    esac
     
-    # Create the .env file
+    # Create .env file
     echo "Creating .env file with database connection..."
     cat > .env << EOF
 DATABASE_URL=$DB_URL
@@ -111,16 +188,28 @@ NODE_ENV=development
 PORT=5000
 EOF
     
-    echo ".env file created successfully."
+    echo "Database configuration saved to .env file."
 fi
 
-# Ask if user wants to install NPM dependencies
-echo "Do you want to install/update NPM dependencies? (y/n)"
-read -r INSTALL_DEPS
+# Application setup
+echo "======================================================"
+echo "Application Setup"
+echo "======================================================"
 
-if [[ "$INSTALL_DEPS" =~ ^[Yy]$ ]]; then
-    echo "Installing dependencies..."
-    npm install
+# Ask if user wants to install dependencies
+if [ ! -d "node_modules" ] || [[ "$RECREATE_ENV" =~ ^[Yy]$ ]]; then
+    echo "Do you want to install/update dependencies? (y/n)"
+    read -r INSTALL_DEPS
+    
+    if [[ "$INSTALL_DEPS" =~ ^[Yy]$ ]]; then
+        echo "Installing dependencies (this may take a few minutes)..."
+        npm install
+    else
+        echo "Skipping dependency installation."
+        if [ ! -d "node_modules" ]; then
+            echo "Warning: Dependencies are not installed. You will need to run 'npm install' before starting the application."
+        fi
+    fi
 fi
 
 # Ask if user wants to start the application
