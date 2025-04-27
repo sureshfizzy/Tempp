@@ -5,6 +5,8 @@ import { useLocation } from "wouter";
 import { 
   getUsers, 
   deleteUser, 
+  updateUser,
+  disableUser,
   getUserRole, 
   getConnectionStatus
 } from "@/lib/jellyfin";
@@ -27,9 +29,35 @@ import {
   Trash2,
   Users,
   Clock,
-  Filter
+  Filter,
+  Settings,
+  CalendarClock,
+  X,
+  Ban,
+  Pencil,
+  Info,
+  ChevronDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate } from "@/lib/jellyfin";
 import { debounce } from "@/lib/utils";
 import { User } from "@shared/schema";
@@ -59,7 +87,18 @@ export default function UsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
+  const [isModifySettingsModalOpen, setIsModifySettingsModalOpen] = useState(false);
+  const [isExpiryModalOpen, setIsExpiryModalOpen] = useState(false);
+  const [sendNotification, setSendNotification] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedTab, setSelectedTab] = useState<string>("profile");
+  const [selectedProfile, setSelectedProfile] = useState<string>("basic-profile");
+  const [applyHomescreenLayout, setApplyHomescreenLayout] = useState(true);
+  const [expiryMonths, setExpiryMonths] = useState<string>("0");
+  const [expiryDays, setExpiryDays] = useState<string>("0");
+  const [expiryHours, setExpiryHours] = useState<string>("0");
+  const [expiryMinutes, setExpiryMinutes] = useState<string>("0");
   const isMobile = useIsMobile();
 
   // Get connection status
