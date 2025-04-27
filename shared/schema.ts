@@ -2,6 +2,26 @@ import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// User Roles schema
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  isAdmin: boolean("is_admin").default(false),
+  permissions: text("permissions").default("{}"), // JSON string of permissions
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserRoleSchema = createInsertSchema(userRoles).pick({
+  name: true,
+  description: true,
+  isDefault: true,
+  isAdmin: true,
+  permissions: true,
+});
+
 // Server Configuration schema
 export const serverConfig = pgTable("server_config", {
   id: serial("id").primaryKey(),
@@ -31,6 +51,7 @@ export const appUsers = pgTable("app_users", {
   password: text("password").notNull(),
   email: text("email").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  roleId: integer("role_id").references(() => userRoles.id),
   jellyfinUserId: text("jellyfin_user_id").notNull(),
   plexEmail: text("plex_email"),
   embyEmail: text("emby_email"),
@@ -54,6 +75,7 @@ export const insertAppUserSchema = createInsertSchema(appUsers).pick({
   password: true, 
   email: true,
   isAdmin: true,
+  roleId: true,
   jellyfinUserId: true,
   plexEmail: true,
   embyEmail: true,
@@ -228,6 +250,11 @@ export type User = z.infer<typeof userSchema>;
 export type NewUser = z.infer<typeof newUserSchema>;
 export type UserActivity = z.infer<typeof userActivitySchema>;
 export type Login = z.infer<typeof loginSchema>;
+
+export type UserRole = typeof userRoles.$inferSelect;
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+
+
 
 // User Profiles schema
 export const userProfiles = pgTable("user_profiles", {
