@@ -739,35 +739,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
       }
       
-      // For each user, ALWAYS fetch their individual policy according to the official Jellyfin API
-      // This ensures we have accurate policy data, including the IsDisabled field
+      // Get individual user details which include the full policy
+      // This is needed because the list API might not return complete policy data
       const usersWithFullPolicy = await Promise.all(users.map(async (user) => {
         try {
-          // According to the Jellyfin API Documentation, we need to fetch the full policy
-          // for each user to ensure we have accurate disabled status
-          console.log(`Fetching policy for user ${user.Name} (${user.Id})`);
-          const policyResponse = await fetch(`${apiUrl}/Users/${user.Id}/Policy`, {
+          // According to the Jellyfin API documentation, we should fetch the complete user
+          // which includes their policy, as there's no GET method for policy directly
+          console.log(`Fetching complete user data for ${user.Name} (${user.Id})`);
+          const userResponse = await fetch(`${apiUrl}/Users/${user.Id}`, {
             headers: {
               "X-Emby-Token": credentials.accessToken || "",
             },
           });
           
-          if (policyResponse.ok) {
-            const policyData = await policyResponse.json();
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
             
             // Check for disabled state and log
-            if (policyData && policyData.IsDisabled) {
+            if (userData?.Policy?.IsDisabled) {
               console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
             }
             
-            // Merge the policy data with the user
-            user.Policy = policyData;
+            // Return the complete user data
+            return userData;
           } else {
-            console.error(`Failed to fetch policy for user ${user.Name}: ${policyResponse.statusText}`);
+            console.error(`Failed to fetch complete data for user ${user.Name}: ${userResponse.statusText}`);
+            return user;
           }
-          return user;
         } catch (error) {
-          console.error(`Error fetching policy for user ${user.Name}:`, error);
+          console.error(`Error fetching data for user ${user.Name}:`, error);
           return user;
         }
       }));
@@ -880,31 +880,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user: any = await response.json();
       
-      // According to the Jellyfin API documentation, always fetch the full policy
-      // to ensure we have accurate disabled status
+      // The user data retrieved from /Users/{userId} already includes complete policy data
+      // We don't need to fetch the policy separately
       try {
-        console.log(`Fetching policy for user ${user.Name} (${user.Id})`);
-        const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken || "",
-          },
-        });
-        
-        if (policyResponse.ok) {
-          const policyData = await policyResponse.json();
-          
-          // Check for disabled state and log
-          if (policyData && policyData.IsDisabled) {
-            console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
-          }
-          
-          // Merge the policy data with the user
-          user.Policy = policyData;
-        } else {
-          console.error(`Failed to fetch policy for user ${user.Name}: ${policyResponse.statusText}`);
+        // Check for disabled state and log
+        if (user?.Policy?.IsDisabled) {
+          console.log(`User ${user.Name} is disabled via Policy.IsDisabled`);
         }
       } catch (error) {
-        console.error(`Error fetching policy for user ${user.Name}:`, error);
+        console.error(`Error checking disabled status for user ${user.Name}:`, error);
       }
       
       // Validate the response with zod
@@ -993,43 +977,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update user policy
       if (newUser.Role || newUser.IsDisabled !== undefined) {
-        // First get the current policy
-        const policyResponse = await fetch(`${apiUrl}/Users/${userId}/Policy`, {
+        // First, get the complete user data which includes the current policy
+        const userResponse = await fetch(`${apiUrl}/Users/${userId}`, {
           headers: {
             "X-Emby-Token": credentials.accessToken || "",
           },
         });
 
-        if (policyResponse.ok) {
-          const currentPolicy = await policyResponse.json() as { 
-            IsAdministrator: boolean;
-            IsDisabled: boolean;
-          };
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
           
-          // Update policy based on role and disabled status
-          if (newUser.Role === "Administrator") {
-            currentPolicy.IsAdministrator = true;
+          if (userData && userData.Policy) {
+            const currentPolicy = userData.Policy;
+            
+            // Update policy based on role and disabled status
+            if (newUser.Role === "Administrator") {
+              currentPolicy.IsAdministrator = true;
+            } else {
+              currentPolicy.IsAdministrator = false;
+            }
+
+            if (newUser.IsDisabled !== undefined) {
+              currentPolicy.IsDisabled = newUser.IsDisabled;
+            }
+
+            // Update policy using the POST endpoint
+            const updatePolicyResponse = await fetch(`${apiUrl}/Users/${userId}/Policy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+              body: JSON.stringify(currentPolicy),
+            });
+
+            if (!updatePolicyResponse.ok) {
+              console.error(`Failed to update user policy: ${updatePolicyResponse.statusText}`);
+            } else {
+              console.log(`Successfully updated policy for new user ${userId}, IsDisabled: ${currentPolicy.IsDisabled}`);
+            }
           } else {
-            currentPolicy.IsAdministrator = false;
+            console.error("Unable to retrieve current policy from user data for new user");
           }
-
-          if (newUser.IsDisabled !== undefined) {
-            currentPolicy.IsDisabled = newUser.IsDisabled;
-          }
-
-          // Update policy
-          const updatePolicyResponse = await fetch(`${apiUrl}/Users/${userId}/Policy`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Emby-Token": credentials.accessToken || "",
-            },
-            body: JSON.stringify(currentPolicy),
-          });
-
-          if (!updatePolicyResponse.ok) {
-            console.error(`Failed to update user policy: ${updatePolicyResponse.statusText}`);
-          }
+        } else {
+          console.error(`Failed to get user data for policy update: ${userResponse.statusText}`);
         }
       }
 
@@ -1132,43 +1123,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update user policy
       if (updateData.Role || updateData.IsDisabled !== undefined) {
-        // First get the current policy
-        const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
+        // First, get the complete user data which includes the current policy
+        const userResponse = await fetch(`${apiUrl}/Users/${id}`, {
           headers: {
             "X-Emby-Token": credentials.accessToken || "",
           },
         });
 
-        if (policyResponse.ok) {
-          const currentPolicy = await policyResponse.json() as { 
-            IsAdministrator: boolean;
-            IsDisabled: boolean;
-          };
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
           
-          // Update policy based on role and disabled status
-          if (updateData.Role === "Administrator") {
-            currentPolicy.IsAdministrator = true;
-          } else if (updateData.Role) {
-            currentPolicy.IsAdministrator = false;
-          }
+          if (userData && userData.Policy) {
+            const currentPolicy = userData.Policy;
+            
+            // Update policy based on role and disabled status
+            if (updateData.Role === "Administrator") {
+              currentPolicy.IsAdministrator = true;
+            } else if (updateData.Role) {
+              currentPolicy.IsAdministrator = false;
+            }
 
-          if (updateData.IsDisabled !== undefined) {
-            currentPolicy.IsDisabled = updateData.IsDisabled;
-          }
+            if (updateData.IsDisabled !== undefined) {
+              currentPolicy.IsDisabled = updateData.IsDisabled;
+            }
 
-          // Update policy
-          const updatePolicyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Emby-Token": credentials.accessToken || "",
-            },
-            body: JSON.stringify(currentPolicy),
-          });
+            // Update policy using the POST endpoint
+            const updatePolicyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+              body: JSON.stringify(currentPolicy),
+            });
 
-          if (!updatePolicyResponse.ok) {
-            console.error(`Failed to update user policy: ${updatePolicyResponse.statusText}`);
+            if (!updatePolicyResponse.ok) {
+              console.error(`Failed to update user policy: ${updatePolicyResponse.statusText}`);
+            } else {
+              console.log(`Successfully updated policy for user ${id}, IsDisabled: ${currentPolicy.IsDisabled}`);
+            }
+          } else {
+            console.error("Unable to retrieve current policy from user data");
           }
+        } else {
+          console.error(`Failed to get user data for policy update: ${userResponse.statusText}`);
         }
       }
 
@@ -1187,31 +1185,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await updatedUserResponse.json();
       
-      // Always fetch the most up-to-date policy according to Jellyfin API documentation
+      // The user data retrieved from /Users/{userId} already includes complete policy data
       try {
         const updatedUserTyped = updatedUser as any;
-        console.log(`Fetching policy for updated user ${updatedUserTyped.Name} (${id})`);
-        const policyResponse = await fetch(`${apiUrl}/Users/${id}/Policy`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken || "",
-          },
-        });
         
-        if (policyResponse.ok) {
-          const policyData = await policyResponse.json();
-          
-          // Check for disabled state and log
-          if (policyData && policyData.IsDisabled) {
-            console.log(`Updated user ${updatedUserTyped.Name} is disabled via Policy.IsDisabled`);
-          }
-          
-          // Merge the policy data with the user
-          updatedUserTyped.Policy = policyData;
-        } else {
-          console.error(`Failed to fetch policy for updated user ${updatedUserTyped.Name}: ${policyResponse.statusText}`);
+        // Check for disabled state and log
+        if (updatedUserTyped?.Policy?.IsDisabled) {
+          console.log(`Updated user ${updatedUserTyped.Name} is disabled via Policy.IsDisabled`);
         }
       } catch (error) {
-        console.error(`Error fetching policy for updated user:`, error);
+        console.error(`Error checking disabled status for updated user:`, error);
       }
       
       // Update user in our local database too if they exist
