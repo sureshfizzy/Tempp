@@ -140,9 +140,10 @@ export const UserRolesList: React.FC = () => {
       });
       
       // Invalidate all queries that might be affected by this change
-      queryClient.invalidateQueries({ queryKey: ["/api/user-roles"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/app-users"] });
+      setTimeout(() => {
+        // Using setTimeout to ensure database operations have completed
+        queryClient.invalidateQueries();
+      }, 300);
     },
     onError: (error: any) => {
       toast({

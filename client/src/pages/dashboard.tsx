@@ -330,7 +330,17 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Overview of your server management</p>
           </div>
           <Button 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/users"] })}
+            onClick={() => {
+              // Refresh all relevant data
+              queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/app-users"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/user-roles"] });
+              
+              toast({
+                title: "Data refreshed",
+                description: "Dashboard data has been refreshed",
+              });
+            }}
             variant="outline"
             size="sm"
           >
