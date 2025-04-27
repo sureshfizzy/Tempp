@@ -1774,7 +1774,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let libraryCount = 0;
         try {
           const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+          console.log(`Profile ${profile.id}: ${profile.name}, library access:`, libraryAccess);
           libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+          console.log(`Calculated library count: ${libraryCount}`);
         } catch (e) {
           console.error("Error parsing library access:", e);
         }
@@ -1919,6 +1921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (policy.EnableAllFolders === true) {
           // User has access to all libraries - fetch the list of all library IDs
           try {
+            console.log("Fetching all media folders for user with EnableAllFolders=true");
             const mediaFoldersResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
               headers: {
                 "X-Emby-Token": credentials.accessToken
@@ -1927,11 +1930,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (mediaFoldersResponse.ok) {
               const mediaFolders = await mediaFoldersResponse.json();
+              console.log("Media folders response:", JSON.stringify(mediaFolders));
               
               if (mediaFolders && mediaFolders.Items && Array.isArray(mediaFolders.Items)) {
                 const folderIds = mediaFolders.Items.map((folder: any) => folder.Id);
+                console.log(`Found ${folderIds.length} media folders:`, folderIds);
                 libraryAccess = JSON.stringify(folderIds);
+              } else {
+                console.error("Media folders response did not contain expected Items array:", mediaFolders);
               }
+            } else {
+              console.error("Failed to fetch media folders:", mediaFoldersResponse.status, await mediaFoldersResponse.text());
             }
           } catch (error) {
             console.error("Error fetching media folders:", error);
@@ -2056,6 +2065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (policy.EnableAllFolders === true) {
             // User has access to all libraries - fetch the list of all library IDs
             try {
+              console.log("Fetching all media folders for user with EnableAllFolders=true");
               const mediaFoldersResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
                 headers: {
                   "X-Emby-Token": credentials.accessToken
@@ -2064,11 +2074,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (mediaFoldersResponse.ok) {
                 const mediaFolders = await mediaFoldersResponse.json();
+                console.log("Media folders response:", JSON.stringify(mediaFolders));
                 
                 if (mediaFolders && mediaFolders.Items && Array.isArray(mediaFolders.Items)) {
                   const folderIds = mediaFolders.Items.map((folder: any) => folder.Id);
+                  console.log(`Found ${folderIds.length} media folders:`, folderIds);
                   validatedData.libraryAccess = JSON.stringify(folderIds);
+                } else {
+                  console.error("Media folders response did not contain expected Items array:", mediaFolders);
                 }
+              } else {
+                console.error("Failed to fetch media folders:", mediaFoldersResponse.status, await mediaFoldersResponse.text());
               }
             } catch (error) {
               console.error("Error fetching media folders:", error);
