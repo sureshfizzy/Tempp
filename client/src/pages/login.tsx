@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { getConnectionStatus } from "@/lib/jellyfin";
-import { LoadingScreen } from "@/components/loading-screen";
+import { showGlobalLoader } from "@/components/transition-loader";
 import { 
   Form, 
   FormControl, 
@@ -219,7 +219,6 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   
@@ -286,18 +285,20 @@ export default function LoginPage() {
         description: "You have been logged in successfully",
       });
       
-      // Show loading screen immediately after successful login
-      setShowLoadingScreen(true);
-      
-      // Wait a moment before navigating to show the loading screen
+      // First, finish the login animation
       setTimeout(() => {
-        // Navigate based on admin status
-        if (responseData.user.isAdmin) {
-          window.location.href = "/dashboard";
-        } else {
-          window.location.href = "/user-profile";
-        }
-      }, 1500); // Slightly longer delay to ensure the loading screen is visible
+        // Then, activate our global loading screen that stays visible during navigation
+        showGlobalLoader("Logging you in...");
+        
+        // Finally, navigate
+        setTimeout(() => {
+          if (responseData.user.isAdmin) {
+            window.location.href = "/dashboard";
+          } else {
+            window.location.href = "/user-profile";
+          }
+        }, 500);
+      }, 800);
       
     } catch (err: any) {
       setLoginError(err.message || "Invalid username or password");
@@ -321,19 +322,7 @@ export default function LoginPage() {
     <>
       <style>{animationStyles}</style>
       
-      {/* Loading screen overlay */}
-      <AnimatePresence>
-        {showLoadingScreen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <LoadingScreen message="Logging you in..." />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* We no longer need this local loading screen as we're using the global one */}
       
       <div className="min-h-screen overflow-hidden bg-slate-950 flex flex-col">
         {/* Logo and server information at the top */}

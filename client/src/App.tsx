@@ -16,6 +16,7 @@ import SettingsPage from "@/pages/settings";
 import InviteSignupPage from "@/pages/invite-signup";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { TransitionLoader } from "@/components/transition-loader";
 
 // Helper function to check if the user is connected to Jellyfin
 const checkConnectionStatus = async () => {
@@ -151,6 +152,8 @@ function App() {
       <ThemeProvider defaultTheme="system">
         <TooltipProvider>
           <Toaster />
+          {/* The TransitionLoader is a non-rendering component that handles page transitions */}
+          <TransitionLoader />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
