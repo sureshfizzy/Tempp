@@ -1,6 +1,6 @@
 import { db } from './db';
 import { appUsers } from '@shared/schema';
-import { eq, and, isNull, lt } from 'drizzle-orm';
+import { eq, and, isNotNull, lt } from 'drizzle-orm';
 
 /**
  * Background job to check for expired user accounts and disable them
@@ -21,7 +21,7 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
         and(
           eq(appUsers.disabled, false),
           lt(appUsers.expiresAt, now),
-          isNull(appUsers.expiresAt).not()
+          isNotNull(appUsers.expiresAt)
         )
       )
       .returning();

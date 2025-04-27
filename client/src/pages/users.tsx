@@ -335,6 +335,7 @@ export default function UsersPage() {
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Last Active</TableHead>
                     <TableHead className="hidden md:table-cell">Watch Time</TableHead>
+                    <TableHead className="hidden md:table-cell">Expiry</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>

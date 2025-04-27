@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./db-init";
+import { startExpiryCheckJob } from "./user-expiry";
 
 const app = express();
 app.use(express.json());
@@ -75,5 +76,9 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the user expiry check job - check every hour
+    startExpiryCheckJob();
+    log("Started user expiry check job");
   });
 })();
