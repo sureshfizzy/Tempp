@@ -1,189 +1,124 @@
 # Jellyfin User Manager
 
-<div align="center">
-  <img src="generated-icon.png" alt="Jellyfin User Manager Logo" width="200">
-  <h3>Advanced User Management for Jellyfin Media Server</h3>
-</div>
-
-Jellyfin User Manager is a sophisticated web application that enhances Jellyfin's user management capabilities with features like invite systems, user account expiration, advanced role management, and activity tracking.
+A sophisticated Jellyfin user management web application that provides advanced account control and invite management capabilities with enhanced cinematic user experience design.
 
 ## Features
 
-- 🔒 **Multi-step onboarding process**: Connect to your Jellyfin server with API key and admin credentials
-- 👥 **Advanced user management**: Create, edit, and manage Jellyfin users with extended capabilities
-- 📧 **Invite system**: Generate invite links with custom profiles and expiration dates
-- ⏱️ **Account expiration**: Set and track expiration dates for user accounts
-- 👑 **Custom roles**: Create and assign custom roles with specific permissions
-- 📊 **User activity tracking**: Monitor watch history and media consumption
-- 🎨 **Cinematic UI**: Beautiful dark theme with film-inspired visual elements
-- 🎬 **Media library access control**: Fine-grained control over which libraries users can access
-- 📱 **Responsive design**: Works on mobile, tablet, and desktop devices
+- **Authentication**: Secure login and user management
+- **Jellyfin Integration**: Seamless connection with your Jellyfin server
+- **User Management**: Create, edit, and manage Jellyfin user accounts
+- **Invite System**: Generate and manage invites for new users
+- **Watch History**: Track user media consumption
+- **Activity Logs**: Monitor user activities and system events
+- **Dashboard**: Cinematic UI with movie-themed design elements
+- **Responsive Design**: Works on mobile, tablet, and desktop
+- **User Roles**: Custom permission sets for different users
+- **User Expiry**: Set account expiration dates for temporary access
+- **Library Folders**: Control which libraries users can access
+- **Favorites**: View users' favorite movies and shows
+- **Custom Branding**: Configure server name and logo
+- **Docker Support**: Multi-architecture containers for easy deployment
 
-## Screenshots
+## Database Options
 
-*Coming soon*
+This application supports two database options:
 
-## Requirements
+1. **Embedded SQLite** (Default): No configuration required, data is stored in a local SQLite file
+2. **External PostgreSQL**: Connect to an external PostgreSQL database (optional)
 
-- Node.js 18+ (20.x recommended)
-- PostgreSQL database
-- Jellyfin server with admin access
-- API key from your Jellyfin server
-
-## Installation
+## Quick Start
 
 ### Using Docker (Recommended)
 
-The easiest way to run Jellyfin User Manager is with Docker and Docker Compose.
+```bash
+# Pull and run the latest image
+docker run -d \
+  --name jellyfin-manager \
+  -p 5000:5000 \
+  -v ./data:/app/data \
+  -v ./config:/app/config \
+  <your-dockerhub-username>/jellyfin-manager:latest
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/jellyfin-user-manager.git
-   cd jellyfin-user-manager
-   ```
+### Using Docker Compose
 
-2. Modify the `docker-compose.yml` file if needed to adjust ports, environment variables, or volume mounts.
+1. Create a `docker-compose.yml` file:
 
-3. Start the application:
-   ```bash
-   docker-compose up -d
-   ```
+```yaml
+version: '3.8'
 
-4. Access the application at `http://localhost:5000`
+services:
+  jellyfin-manager:
+    image: <your-dockerhub-username>/jellyfin-manager:latest
+    container_name: jellyfin-manager
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+```
+
+2. Start the container:
+
+```bash
+docker-compose up -d
+```
 
 ### Building from Source
 
-If you prefer to build and run the application directly:
+```bash
+# Clone the repository
+git clone https://github.com/<your-username>/jellyfin-manager.git
+cd jellyfin-manager
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/jellyfin-user-manager.git
-   cd jellyfin-user-manager
-   ```
+# Install dependencies
+npm install
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Build the application
+npm run build
 
-3. Set up your PostgreSQL database and update the connection string in your environment variables.
-
-4. Build the application:
-   ```bash
-   npm run build
-   ```
-
-5. Start the application:
-   ```bash
-   npm start
-   ```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | (required) |
-| `NODE_ENV` | Environment mode | `production` |
-| `PORT` | Port for the server | `5000` |
-| `TZ` | Timezone | `UTC` |
-| `PUID` | User ID (Docker only) | `1000` |
-| `PGID` | Group ID (Docker only) | `1000` |
-
-## Docker Configuration
-
-### User / Group Identifiers
-
-When using Docker, you can specify the user `PUID` and group `PGID` to match the ownership of your mounted volumes:
-
-```yaml
-environment:
-  - PUID=1000
-  - PGID=1000
+# Start the server
+npm start
 ```
 
-This ensures that permissions issues are avoided when accessing mounted volumes.
+## Configuration
 
-### Volumes
+### Environment Variables
 
-- `/app/config`: Application configuration files
-- `/app/data`: Application data storage
+- `NODE_ENV`: Set to `production` for production use
+- `DATA_DIR`: Directory where SQLite database files are stored (default: `./data`)
+- `DATABASE_URL`: PostgreSQL connection string (optional, uses SQLite if not set)
+- `PUID`/`PGID`: User/Group IDs for Docker container (default: 1000/1000)
+- `TZ`: Time zone (default: UTC)
 
-## Development Setup
+## Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/jellyfin-user-manager.git
-   cd jellyfin-user-manager
-   ```
+```bash
+# Install dependencies
+npm install
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Start the development server
+npm run dev
+```
 
-3. Start a PostgreSQL database (can use Docker):
-   ```bash
-   docker run -d \
-     --name jellyfin-manager-db \
-     -e POSTGRES_USER=postgres \
-     -e POSTGRES_PASSWORD=postgres \
-     -e POSTGRES_DB=jellyfin-manager \
-     -p 5432:5432 \
-     postgres:15-alpine
-   ```
+## Building Docker Images
 
-4. Set environment variables in `.env` file:
-   ```env
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jellyfin-manager
-   ```
+The repository includes scripts for building multi-architecture Docker images:
 
-5. Run the development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+# Build for current architecture
+./build.sh
 
-6. Access the application at `http://localhost:5000`
-
-## Getting Started
-
-1. After installation, navigate to the application URL
-2. You'll be guided through a setup process:
-   - Enter your Jellyfin server URL and API key
-   - Log in with an admin account
-3. Once connected, you can:
-   - View and manage users
-   - Create user profiles
-   - Generate invite links
-   - Manage roles
-   - Track user activity
-
-## Architecture
-
-Jellyfin User Manager uses a modern web application stack:
-
-- **Frontend**: React with TypeScript, TailwindCSS, Framer Motion
-- **Backend**: Node.js with Express
-- **Database**: PostgreSQL with Drizzle ORM
-- **Containerization**: Docker and Docker Compose
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+# Build for multiple architectures (amd64, arm64)
+./build-multi-arch.sh
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support, issues, or feature requests, please file an issue on the GitHub repository.
-
----
-
-Jellyfin User Manager is not affiliated with or endorsed by Jellyfin or the Jellyfin Project.
+[MIT License](LICENSE)

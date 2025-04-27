@@ -28,6 +28,7 @@ WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV DATA_DIR=/app/data
 
 # Install runtime dependencies
 RUN apk add --no-cache dumb-init tzdata

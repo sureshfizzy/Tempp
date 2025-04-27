@@ -40,10 +40,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize database tables
+  // Initialize database tables - use SQLite or PostgreSQL based on environment
   try {
-    await initializeDatabase();
-    log("Database initialized successfully");
+    if (process.env.DATABASE_URL) {
+      // Use PostgreSQL if DATABASE_URL is set
+      await initializeDatabase();
+      log("PostgreSQL database initialized successfully");
+    } else {
+      // Use SQLite if no DATABASE_URL
+      await initializeSqliteDatabase();
+      log("SQLite database initialized successfully");
+    }
   } catch (error) {
     log(`Error initializing database: ${error}`, "error");
   }

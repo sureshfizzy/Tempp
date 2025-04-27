@@ -22,6 +22,7 @@ import { eq, and, desc, ne } from "drizzle-orm";
 import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs, userRoles } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { db, pool } from "./db";
 import { SQLiteStorage } from "./sqlite-storage";
 
 // Interface for API storage operations
@@ -986,6 +987,11 @@ export class DatabaseStorage implements IStorage {
 
 // Choose storage implementation based on environment
 // If DATABASE_URL is set, use PostgreSQL, otherwise use SQLite
+// Check if we should use SQLite (no DATABASE_URL) or PostgreSQL
+// We need to make this check here to avoid importing unnecessary modules
 export const storage: IStorage = process.env.DATABASE_URL 
   ? new DatabaseStorage() 
   : new SQLiteStorage();
+
+// Export the storage instance for use in other modules
+export default storage;
