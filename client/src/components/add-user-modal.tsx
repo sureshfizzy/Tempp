@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -41,23 +41,12 @@ interface AddUserModalProps {
   onClose: () => void;
 }
 
-interface UserProfile {
-  id: number;
-  name: string;
-  sourceUserId: string;
-  sourceName: string;
-  isDefault: boolean;
-  libraryCount: number;
-  createdAt: string;
-}
-
 const formSchema = z.object({
   Name: z.string().min(2, "Username must be at least 2 characters"),
   Password: z.string().min(5, "Password must be at least 5 characters"),
   Role: z.enum(["Administrator", "User", "ContentManager"]),
   IsDisabled: z.boolean().default(false),
   Email: z.string().email("Please enter a valid email").optional(),
-  ProfileId: z.number().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -65,12 +54,6 @@ type FormData = z.infer<typeof formSchema>;
 export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Fetch user profiles
-  const profilesQuery = useQuery<UserProfile[]>({
-    queryKey: ["/api/user-profiles"],
-    enabled: isOpen, // Only fetch when modal is open
-  });
 
   // Create form with validation
   const form = useForm<FormData>({
