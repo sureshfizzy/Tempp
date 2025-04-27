@@ -45,8 +45,11 @@ export function AssignRoleModal({ isOpen, onClose, userId, userName, currentRole
   useEffect(() => {
     if (isOpen && currentRoleId) {
       setSelectedRoleId(currentRoleId.toString());
+    } else if (isOpen && roles && roles.length > 0) {
+      // If we don't have a current role but have available roles, select the first one
+      setSelectedRoleId(roles[0].id.toString());
     }
-  }, [isOpen, currentRoleId]);
+  }, [isOpen, currentRoleId, roles]);
 
   // Assign role mutation
   const assignRoleMutation = useMutation({

@@ -93,13 +93,45 @@ export async function getConnectionStatus(): Promise<ConnectionStatus> {
 // Get all users
 export async function getUsers(): Promise<User[]> {
   try {
-    const response = await fetch("/api/users");
+    const response = await authenticatedFetch("/api/users");
     
     if (!response.ok) {
       throw new Error("Failed to fetch users");
     }
-
-    return await response.json();
+    
+    // Get basic users
+    const users = await response.json();
+    
+    try {
+      // Fetch all app users to get role information
+      const appUsersRes = await authenticatedFetch("/api/app-users");
+      if (appUsersRes.ok) {
+        const appUsers = await appUsersRes.json();
+        
+        // Get all roles first to avoid multiple requests
+        const rolesRes = await authenticatedFetch("/api/user-roles");
+        const roles = rolesRes.ok ? await rolesRes.json() : [];
+        
+        // Map role names to users
+        for (const user of users) {
+          const appUser = appUsers.find((au: any) => au.jellyfinUserId === user.Id);
+          if (appUser && appUser.roleId) {
+            // Find role from our cached roles
+            const role = roles.find((r: any) => r.id === appUser.roleId);
+            if (role) {
+              // Add role name and appUserId to user object
+              user.roleName = role.name;
+              user.appUserId = appUser.id;
+            }
+          }
+        }
+      }
+    } catch (appErr) {
+      console.error("Error fetching app users or roles:", appErr);
+      // Continue with basic users even if app users fetch fails
+    }
+    
+    return users;
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -203,21 +235,51 @@ export async function getUserActivity(id: string, limit: number = 10): Promise<{
 
 // Helper function to determine user role from policy
 export function getUserRole(user: User): string {
+  // First check if we have a custom role name stored
+  if (user.roleName) {
+    return user.roleName;
+  }
+  
+  // Otherwise fallback to system-determined roles
   if (user.Policy?.IsAdministrator) {
     return "Administrator";
   } else if (user.Policy?.EnableMediaPlayback && user.Policy?.EnableContentDeletion) {
     return "ContentManager";
   } else {
-    return user.roleName || "User";
+    return "User";
   }
 }
+
+// Function to ensure authenticated API requests
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const fetchOptions: RequestInit = {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...options.headers,
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  try {
+    const response = await fetch(url, fetchOptions);
+    
+    if (response.status === 401) {
+      console.error('Authentication required for this request');
+      throw new Error('Authentication required');
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`Error during authenticated fetch to ${url}:`, error);
+    throw error;
+  }
+};
 
 // Get all user roles
 export async function getUserRoles(): Promise<any[]> {
   try {
-    const response = await fetch('/api/user-roles', {
-      credentials: 'include',
-    });
+    const response = await authenticatedFetch('/api/user-roles');
     
     if (!response.ok) {
       console.error('Failed to fetch user roles:', response.statusText);
@@ -234,9 +296,7 @@ export async function getUserRoles(): Promise<any[]> {
 // Get role for a specific user
 export async function getUserRoleById(userId: number): Promise<any> {
   try {
-    const response = await fetch(`/api/users/${userId}/role`, {
-      credentials: 'include',
-    });
+    const response = await authenticatedFetch(`/api/users/${userId}/role`);
     
     if (!response.ok) {
       console.error(`Failed to fetch role for user ${userId}:`, response.statusText);
@@ -253,24 +313,20 @@ export async function getUserRoleById(userId: number): Promise<any> {
 // Assign role to user
 export async function assignRoleToUser(userId: number, roleId: number): Promise<boolean> {
   try {
-    const response = await fetch(`/api/users/${userId}/role`, {
+    const response = await authenticatedFetch(`/api/users/${userId}/role`, {
       method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ roleId }),
     });
     
     if (!response.ok) {
       console.error(`Failed to assign role to user ${userId}:`, response.statusText);
-      return false;
+      throw new Error(response.statusText || "Failed to assign role");
     }
     
     return true;
   } catch (error) {
     console.error(`Error assigning role to user ${userId}:`, error);
-    return false;
+    throw error;
   }
 }
 
