@@ -1769,84 +1769,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const profiles = await storage.getAllUserProfiles();
       
-      // Get Jellyfin credentials to fetch library info for each profile
-      const credentials = await storage.getJellyfinCredentials();
-      if (!credentials || !credentials.accessToken) {
-        return res.status(401).json({ message: "Not connected to Jellyfin" });
-      }
-      
-      // Process each profile to calculate correct library access
-      const profilesWithLibraryCounts = await Promise.all(profiles.map(async profile => {
+      // Add library count to each profile
+      const profilesWithLibraryCounts = profiles.map(profile => {
+        let libraryCount = 0;
         try {
-          // For each profile, get the source user's policy
-          const sourceUserId = profile.sourceUserId;
-          const apiUrl = credentials.url;
-          
-          // Fetch the user details from Jellyfin
-          const userResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
-            headers: {
-              "X-Emby-Token": credentials.accessToken
-            }
-          });
-          
-          let libraryCount = 0;
-          
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            
-            // Check if the user has access to all folders or specific folders
-            if (userData.Policy?.EnableAllFolders) {
-              // User has access to all libraries
-              // Get the count of all available libraries
-              const librariesResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
-                headers: {
-                  "X-Emby-Token": credentials.accessToken
-                }
-              });
-              
-              if (librariesResponse.ok) {
-                const librariesData = await librariesResponse.json();
-                
-                if (librariesData.Items && Array.isArray(librariesData.Items)) {
-                  libraryCount = librariesData.Items.length;
-                }
-              }
-            } else if (userData.Policy?.EnabledFolders && Array.isArray(userData.Policy.EnabledFolders)) {
-              // Count the specific enabled libraries
-              libraryCount = userData.Policy.EnabledFolders.length;
-            } else {
-              // Fallback to the stored library access
-              const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-              libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-            }
-          } else {
-            // Fallback to parsing the stored library access if we can't fetch user data
-            const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-            libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-          }
-          
-          return {
-            ...profile,
-            libraryCount
-          };
+          const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
+          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
         } catch (e) {
-          console.error("Error calculating library access:", e);
-          
-          // In case of error, return the profile with parsed library count
-          let libraryCount = 0;
-          try {
-            const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-            libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-          } catch (err) {
-            console.error("Error parsing library access:", err);
-          }
-          
-          return {
-            ...profile,
-            libraryCount
-          };
+          console.error("Error parsing library access:", e);
         }
-      }));
+        
+        return {
+          ...profile,
+          libraryCount
+        };
+      });
       
       res.json(profilesWithLibraryCounts);
     } catch (error) {
@@ -1864,65 +1801,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No default user profile found" });
       }
       
-      // Get Jellyfin credentials
-      const credentials = await storage.getJellyfinCredentials();
-      if (!credentials || !credentials.accessToken) {
-        return res.status(401).json({ message: "Not connected to Jellyfin" });
-      }
-      
-      // Calculate accurate library count
+      // Parse library access
       let libraryCount = 0;
-      
       try {
-        // For the profile, get the source user's policy
-        const sourceUserId = defaultProfile.sourceUserId;
-        const apiUrl = credentials.url;
-        
-        // Fetch the user details from Jellyfin
-        const userResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken
-          }
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          
-          // Check if the user has access to all folders or specific folders
-          if (userData.Policy?.EnableAllFolders) {
-            // User has access to all libraries
-            // Get the count of all available libraries
-            const librariesResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
-              headers: {
-                "X-Emby-Token": credentials.accessToken
-              }
-            });
-            
-            if (librariesResponse.ok) {
-              const librariesData = await librariesResponse.json();
-              
-              if (librariesData.Items && Array.isArray(librariesData.Items)) {
-                libraryCount = librariesData.Items.length;
-              }
-            }
-          } else if (userData.Policy?.EnabledFolders && Array.isArray(userData.Policy.EnabledFolders)) {
-            // Count the specific enabled libraries
-            libraryCount = userData.Policy.EnabledFolders.length;
-          } else {
-            // Fallback to the stored library access
-            const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
-            libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-          }
-        } else {
-          // Fallback to parsing the stored library access if we can't fetch user data
-          const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
-          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-        }
-      } catch (e) {
-        console.error("Error calculating library access:", e);
-        // In case of error, use the stored data
         const libraryAccess = JSON.parse(defaultProfile.libraryAccess || "[]");
         libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+      } catch (e) {
+        console.error("Error parsing library access:", e);
       }
       
       res.json({
@@ -1948,65 +1833,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User profile not found" });
       }
       
-      // Get Jellyfin credentials
-      const credentials = await storage.getJellyfinCredentials();
-      if (!credentials || !credentials.accessToken) {
-        return res.status(401).json({ message: "Not connected to Jellyfin" });
-      }
-      
-      // Calculate accurate library count
+      // Parse library access
       let libraryCount = 0;
-      
       try {
-        // For the profile, get the source user's policy
-        const sourceUserId = profile.sourceUserId;
-        const apiUrl = credentials.url;
-        
-        // Fetch the user details from Jellyfin
-        const userResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken
-          }
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          
-          // Check if the user has access to all folders or specific folders
-          if (userData.Policy?.EnableAllFolders) {
-            // User has access to all libraries
-            // Get the count of all available libraries
-            const librariesResponse = await fetch(`${apiUrl}/Library/MediaFolders`, {
-              headers: {
-                "X-Emby-Token": credentials.accessToken
-              }
-            });
-            
-            if (librariesResponse.ok) {
-              const librariesData = await librariesResponse.json();
-              
-              if (librariesData.Items && Array.isArray(librariesData.Items)) {
-                libraryCount = librariesData.Items.length;
-              }
-            }
-          } else if (userData.Policy?.EnabledFolders && Array.isArray(userData.Policy.EnabledFolders)) {
-            // Count the specific enabled libraries
-            libraryCount = userData.Policy.EnabledFolders.length;
-          } else {
-            // Fallback to the stored library access
-            const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-            libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-          }
-        } else {
-          // Fallback to parsing the stored library access if we can't fetch user data
-          const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-          libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-        }
-      } catch (e) {
-        console.error("Error calculating library access:", e);
-        // In case of error, use the stored data
         const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
         libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
+      } catch (e) {
+        console.error("Error parsing library access:", e);
       }
       
       res.json({
