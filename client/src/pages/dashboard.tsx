@@ -79,6 +79,12 @@ export default function Dashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
   
+  // Get all app users (for role information)
+  const appUsersQuery = useQuery({
+    queryKey: ["/api/app-users"],
+    refetchOnWindowFocus: false,
+  });
+  
   // Get all invites
   const invitesQuery = useQuery({
     queryKey: ["/api/invites"],
@@ -249,10 +255,13 @@ export default function Dashboard() {
 
   // Count users by their roles
   const roleCounts = useMemo(() => {
-    if (!usersQuery.data) return { Administrator: 0 };
-
+    if (!usersQuery.data || !usersQuery.data.length) return { Administrator: 0 };
+    
     // Create a map with all roles initialized to 0
     const counts: Record<string, number> = {};
+    
+    // Get app users to check their roleIds
+    const appUsers = Array.isArray(appUsersQuery.data) ? appUsersQuery.data : [];
     
     // Initialize counts for all known roles from the roles table
     if (userRolesQuery.data && Array.isArray(userRolesQuery.data)) {
@@ -264,38 +273,40 @@ export default function Dashboard() {
     // Initialize Administrator role count
     counts["Administrator"] = 0;
     
+    // Find the default role
+    const defaultRole = userRolesQuery.data?.find((r: { isDefault: boolean }) => r.isDefault);
+    const defaultRoleName = defaultRole?.name || "Regular User";
+    
+    // Ensure the default role has a count initialized
+    if (!counts[defaultRoleName]) {
+      counts[defaultRoleName] = 0;
+    }
+    
     // Count users by role
-    usersQuery.data.forEach(user => {
-      if (user.Policy?.IsAdministrator) {
+    usersQuery.data.forEach(jellyfinUser => {
+      // Find the app user corresponding to this Jellyfin user
+      const appUser = appUsers.find((au: { jellyfinUserId: string }) => au.jellyfinUserId === jellyfinUser.Id);
+      
+      if (jellyfinUser.Policy?.IsAdministrator) {
         // Always count administrators separately
         counts["Administrator"] = (counts["Administrator"] || 0) + 1;
-      } else if (user.roleId && Array.isArray(userRolesQuery.data)) {
-        // Find role name from role ID
-        const role = userRolesQuery.data.find((r: { id: number }) => r.id === user.roleId);
+      } else if (appUser?.roleId) {
+        // User has a role assigned in the app
+        const role = userRolesQuery.data?.find((r: { id: number }) => r.id === appUser.roleId);
         if (role) {
           counts[role.name] = (counts[role.name] || 0) + 1;
         } else {
-          // Check if there's a default role, otherwise use "User"
-          const defaultRole = userRolesQuery.data.find((r: { isDefault: boolean }) => r.isDefault);
-          if (defaultRole) {
-            counts[defaultRole.name] = (counts[defaultRole.name] || 0) + 1;
-          } else if (counts["User"] !== undefined) {
-            counts["User"] = (counts["User"] || 0) + 1;
-          }
+          // Role not found, count under default role
+          counts[defaultRoleName] = (counts[defaultRoleName] || 0) + 1;
         }
       } else {
-        // Check if there's a default role, otherwise use "User"
-        const defaultRole = userRolesQuery.data?.find((r: { isDefault: boolean }) => r.isDefault);
-        if (defaultRole) {
-          counts[defaultRole.name] = (counts[defaultRole.name] || 0) + 1;
-        } else if (counts["User"] !== undefined) {
-          counts["User"] = (counts["User"] || 0) + 1;
-        }
+        // User has no role, count under default role
+        counts[defaultRoleName] = (counts[defaultRoleName] || 0) + 1;
       }
     });
     
     return counts;
-  }, [usersQuery.data, userRolesQuery.data]);
+  }, [usersQuery.data, userRolesQuery.data, appUsersQuery.data]);
   
   return (
     <div className="min-h-screen bg-background">
