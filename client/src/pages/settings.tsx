@@ -247,7 +247,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader 
-        title="Jellyfin User Management"
+        title={form.getValues("serverName") || "Jellyfin User Management"}
         subtitle={connectionQuery.data?.serverUrl}
         user={userQuery.data}
         onDisconnect={handleDisconnect}
@@ -274,10 +274,6 @@ export default function SettingsPage() {
               <TabsTrigger value="appearance" className="flex-1 md:flex-initial">
                 <Brush className="mr-2 h-4 w-4" />
                 Appearance
-              </TabsTrigger>
-              <TabsTrigger value="invites" className="flex-1 md:flex-initial">
-                <Users className="mr-2 h-4 w-4" />
-                Invites
               </TabsTrigger>
               <TabsTrigger value="profiles" className="flex-1 md:flex-initial">
                 <UserCog className="mr-2 h-4 w-4" />
@@ -482,50 +478,7 @@ export default function SettingsPage() {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="invites" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Invite Settings</CardTitle>
-                      <CardDescription>
-                        Configure how invitations work
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="inviteDuration"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Default Invite Duration (hours)</FormLabel>
-                            <FormControl>
-                              <Input type="number" min={1} {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              How long invitations are valid for by default (in hours)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        type="submit" 
-                        className="ml-auto"
-                        disabled={updateSettingsMutation.isPending}
-                      >
-                        {updateSettingsMutation.isPending ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Invite Settings"
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
+
 
                 <TabsContent value="profiles" className="space-y-4">
                   <UserProfiles />

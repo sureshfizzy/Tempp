@@ -143,12 +143,6 @@ export function AppHeader({
         <div className="flex items-center gap-2 md:gap-4">
           <ThemeToggle />
           
-          {isAdmin && (
-            <Badge variant="outline" className="hidden md:flex bg-primary/10 text-primary border-primary/20">
-              Admin
-            </Badge>
-          )}
-          
           <Button 
             variant="outline" 
             size="sm" 

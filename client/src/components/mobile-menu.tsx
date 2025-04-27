@@ -77,7 +77,6 @@ export function MobileMenu({ onClose, onDisconnect, isDisconnecting, isAdmin = f
       <div className="space-y-1">
         <div className="flex items-center px-1 mb-2">
           <h3 className="text-sm font-medium text-muted-foreground">Admin</h3>
-          {isAdmin && <Badge className="ml-2 bg-primary/10 text-primary border-primary/20">Admin</Badge>}
         </div>
         
         <Link 
