@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "next-themes";
 import { 
   getUsers, 
   deleteUser, 
@@ -29,8 +28,6 @@ import {
   Users,
   Settings,
   Menu,
-  Moon,
-  Sun,
   X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +60,6 @@ import {
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -204,56 +200,28 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-gray-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-neutral-50">
       {/* Header/Nav */}
-      <motion.header 
-        className="bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg sticky top-0 z-10"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between">
-          <motion.div 
-            className="flex items-center space-x-3"
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
+      <header className="bg-primary text-white shadow-md sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
+          <div className="flex items-center space-x-3">
             <Users className="h-6 w-6" />
-            <h1 className="text-xl font-semibold tracking-tight">Jellyfin User Management</h1>
-          </motion.div>
+            <h1 className="text-xl font-semibold">Jellyfin User Management</h1>
+          </div>
           
-          <motion.div
-            className="flex items-center space-x-2"
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            {/* Theme toggle button */}
+          {/* Mobile menu button */}
+          {isMobile && (
             <Button
               variant="ghost"
               size="icon"
               className="text-white hover:bg-white/20"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={toggleMobileMenu}
             >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <Menu className="h-6 w-6" />
             </Button>
-            
-            {/* Mobile menu button */}
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20"
-                onClick={toggleMobileMenu}
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-            )}
-          </motion.div>
+          )}
         </div>
-      </motion.header>
+      </header>
 
       {/* Sidebar and Main Content */}
       <div className="flex flex-col md:flex-row">
@@ -414,6 +382,11 @@ export default function UsersPage() {
                               <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
                                 {getUserRole(user)}
                               </Badge>
+                              {user.roleName && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-2 text-xs">
+                                  {user.roleName}
+                                </Badge>
+                              )}
                               <span className="text-xs text-gray-500">
                                 {formatDate(user.LastActivityDate)}
                               </span>
@@ -433,9 +406,9 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {user.roleId && rolesQuery.data ? (
+                          {user.roleName ? (
                             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                              {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                              {user.roleName}
                             </Badge>
                           ) : (
                             <span className="text-gray-400">No custom role</span>

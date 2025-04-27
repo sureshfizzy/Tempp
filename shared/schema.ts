@@ -140,6 +140,7 @@ export const userSchema = z.object({
   // Added properties for app integration
   appUserId: z.number().optional(),
   roleId: z.number().optional(),
+  roleName: z.string().optional(),
   Configuration: z.object({
     AudioLanguagePreference: z.string().optional(),
     PlayDefaultAudioTrack: z.boolean().optional(),
