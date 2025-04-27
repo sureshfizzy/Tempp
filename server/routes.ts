@@ -2153,6 +2153,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invite Routes
   app.get("/api/invites", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
+      // First, clean up expired and fully used invites
+      await cleanupInvites();
+      
+      // Now get all the remaining valid invites
       const invites = await storage.getAllInvites();
       res.status(200).json(invites);
     } catch (error) {
@@ -2160,6 +2164,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+  
+  // Helper function to clean up expired and fully used invites
+  async function cleanupInvites() {
+    try {
+      const allInvites = await storage.getAllInvites();
+      const now = new Date();
+      let cleanupCount = 0;
+      
+      for (const invite of allInvites) {
+        let shouldDelete = false;
+        
+        // Check if invite is expired
+        if (invite.expiresAt && new Date(invite.expiresAt) < now) {
+          console.log(`Cleaning up expired invite: ${invite.code}, expired at ${invite.expiresAt}`);
+          shouldDelete = true;
+        }
+        
+        // Check if invite has reached max uses
+        if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+          console.log(`Cleaning up fully used invite: ${invite.code}, used ${invite.usedCount}/${invite.maxUses} times`);
+          shouldDelete = true;
+        }
+        
+        if (shouldDelete) {
+          await storage.deleteInvite(invite.id);
+          cleanupCount++;
+          
+          // Log the cleanup
+          await storage.createActivityLog({
+            type: 'invite_deleted',
+            message: `Invite auto-deleted: ${invite.code}`,
+            metadata: JSON.stringify({
+              reason: invite.expiresAt && new Date(invite.expiresAt) < now ? 'expired' : 'max_uses_reached',
+              expiryDate: invite.expiresAt || null,
+              maxUses: invite.maxUses,
+              usedCount: invite.usedCount
+            })
+          });
+        }
+      }
+      
+      if (cleanupCount > 0) {
+        console.log(`Cleaned up ${cleanupCount} expired or fully used invites`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up invites:", error);
+    }
+  }
 
   app.get("/api/invites/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -2261,26 +2313,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const code = req.params.code;
       const invite = await storage.getInviteByCode(code);
-      if (invite) {
-        // Return information needed for sign-up
-        res.status(200).json({
-          code: invite.code,
-          label: invite.label,
-          userLabel: invite.userLabel,
-          profileId: invite.profileId,
-          maxUses: invite.maxUses,
-          usedCount: invite.usedCount,
-          expiresAt: invite.expiresAt,
-          userExpiryEnabled: invite.userExpiryEnabled,
-          userExpiryHours: invite.userExpiryHours,
-          userExpiryMonths: invite.userExpiryMonths,
-          userExpiryDays: invite.userExpiryDays,
-          // Calculate usesRemaining for UI display
-          usesRemaining: invite.maxUses === null ? null : (invite.maxUses - (invite.usedCount || 0))
-        });
-      } else {
-        res.status(404).json({ error: "Invite not found or expired" });
+      
+      if (!invite) {
+        return res.status(404).json({ error: "Invite not found" });
       }
+      
+      // Check if invite is expired
+      if (invite.expiresAt && new Date() > new Date(invite.expiresAt)) {
+        console.log(`Invite ${code} has expired, deleting it`);
+        
+        // Delete the expired invite
+        await storage.deleteInvite(invite.id);
+        
+        // Log the auto-deletion
+        await storage.createActivityLog({
+          type: 'invite_deleted',
+          message: `Invite auto-deleted after expiry: ${invite.code}`,
+          metadata: JSON.stringify({
+            reason: 'expired',
+            expiryDate: invite.expiresAt
+          })
+        });
+        
+        return res.status(404).json({ error: "Invite has expired" });
+      }
+      
+      // Check if max uses has been reached
+      if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+        console.log(`Invite ${code} has reached max uses (${invite.maxUses}), deleting it`);
+        
+        // Delete the fully used invite
+        await storage.deleteInvite(invite.id);
+        
+        // Log the auto-deletion
+        await storage.createActivityLog({
+          type: 'invite_deleted',
+          message: `Invite auto-deleted after max uses: ${invite.code}`,
+          metadata: JSON.stringify({
+            reason: 'max_uses_reached',
+            maxUses: invite.maxUses,
+            usedCount: invite.usedCount
+          })
+        });
+        
+        return res.status(404).json({ error: "Invite has reached maximum number of uses" });
+      }
+      
+      // Invite is valid, return information needed for sign-up
+      res.status(200).json({
+        code: invite.code,
+        label: invite.label,
+        userLabel: invite.userLabel,
+        profileId: invite.profileId,
+        maxUses: invite.maxUses,
+        usedCount: invite.usedCount,
+        expiresAt: invite.expiresAt,
+        userExpiryEnabled: invite.userExpiryEnabled,
+        userExpiryHours: invite.userExpiryHours,
+        userExpiryMonths: invite.userExpiryMonths,
+        userExpiryDays: invite.userExpiryDays,
+        // Calculate usesRemaining for UI display
+        usesRemaining: invite.maxUses === null ? null : (invite.maxUses - (invite.usedCount || 0))
+      });
     } catch (error) {
       console.error("Error fetching invite by code:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -2369,8 +2463,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
         
-        // Update user policy to disable library access
-        console.log(`Disabling library access for new invited user: ${username}`);
+        // Update user policy based on the profile selection
+        console.log(`Configuring library access for new invited user: ${username}`);
         
         // Get the current user policy
         const userResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}`, {
@@ -2385,11 +2479,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (userData && userData.Policy) {
             const currentPolicy = userData.Policy;
             
-            // Disable access to all libraries
-            currentPolicy.EnableAllFolders = false;
-            currentPolicy.EnabledFolders = []; // Empty array means no library access
+            // Check if a profile is associated with the invite
+            if (invite.profileId) {
+              console.log(`Invite has profile ID: ${invite.profileId}, applying library access from profile`);
+              
+              // Get the profile to apply its library access settings
+              try {
+                const profileId = parseInt(invite.profileId, 10);
+                const profile = await storage.getUserProfileById(profileId);
+                
+                if (profile && profile.libraryAccess) {
+                  // Parse the libraryAccess JSON string to get the enabled folders
+                  const libraryAccess = JSON.parse(profile.libraryAccess);
+                  console.log(`Using library access from profile: ${profile.name}, folders count: ${libraryAccess.length}`);
+                  
+                  // Apply the enabled folders from the profile
+                  currentPolicy.EnableAllFolders = false;
+                  currentPolicy.EnabledFolders = libraryAccess;
+                } else {
+                  console.log(`Profile not found or has no library access, disabling all access`);
+                  // Fallback: disable all access if profile is not found or has no library access
+                  currentPolicy.EnableAllFolders = false;
+                  currentPolicy.EnabledFolders = [];
+                }
+              } catch (error) {
+                console.error(`Error applying profile library access:`, error);
+                // Fallback: disable all access on error
+                currentPolicy.EnableAllFolders = false;
+                currentPolicy.EnabledFolders = [];
+              }
+            } else if (invite.profileId === null) {
+              // No profile selected (use default) - enable access to all libraries
+              console.log(`No profile selected for invite, enabling all library access`);
+              currentPolicy.EnableAllFolders = true;
+              currentPolicy.EnabledFolders = [];
+            } else {
+              // Disable access to all libraries (fallback option)
+              console.log(`No valid profile information, disabling all library access by default`);
+              currentPolicy.EnableAllFolders = false;
+              currentPolicy.EnabledFolders = [];
+            }
             
-            // Update policy to disable library access
+            // Update the user policy
             const updatePolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
               method: "POST",
               headers: {
@@ -2400,7 +2531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
             if (updatePolicyResponse.ok) {
-              console.log(`Successfully disabled library access for new invited user: ${username}`);
+              console.log(`Successfully updated library access for new invited user: ${username}`);
             } else {
               console.error(`Failed to update policy for invited user: ${username}`);
             }
@@ -2454,6 +2585,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             maxUses: invite.maxUses
           })
         });
+        
+        // Check if invite should be deleted after use
+        if (invite.maxUses !== null && invite.usedCount !== null && invite.usedCount >= invite.maxUses) {
+          console.log(`Invite ${code} has reached max uses (${invite.maxUses}), deleting it`);
+          await storage.deleteInvite(invite.id);
+          
+          // Log the auto-deletion
+          await storage.createActivityLog({
+            type: 'invite_deleted',
+            message: `Invite auto-deleted after max uses: ${invite.code}`,
+            metadata: JSON.stringify({
+              reason: 'max_uses_reached',
+              maxUses: invite.maxUses,
+              usedCount: invite.usedCount
+            })
+          });
+        }
         
         // Return success
         res.status(201).json({ 
