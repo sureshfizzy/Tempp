@@ -450,22 +450,38 @@ export default function UsersPage() {
                 <CalendarClock className="h-4 w-4 mr-2" />
                 Set Expiry
               </Button>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                onClick={() => {
-                  const selectedUsersObjects = getSelectedUsersObjects();
-                  if (selectedUsersObjects.length > 0) {
-                    setCurrentUser(selectedUsersObjects[0]);
-                    setIsDisableModalOpen(true);
-                    setSendNotification(false);
-                  }
-                }}
-              >
-                <Ban className="h-4 w-4 mr-2" />
-                Disable
-              </Button>
+              {(() => {
+                const selectedUsersObjects = getSelectedUsersObjects();
+                const firstSelected = selectedUsersObjects.length > 0 ? selectedUsersObjects[0] : null;
+                const isDisabled = firstSelected?.Policy?.IsDisabled;
+                
+                return (
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    className={isDisabled ? "text-green-600 border-green-200 hover:bg-green-50" : "text-amber-600 border-amber-200 hover:bg-amber-50"}
+                    onClick={() => {
+                      if (firstSelected) {
+                        setCurrentUser(firstSelected);
+                        setIsDisableModalOpen(true);
+                        setSendNotification(false);
+                      }
+                    }}
+                  >
+                    {isDisabled ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Enable
+                      </>
+                    ) : (
+                      <>
+                        <Ban className="h-4 w-4 mr-2" />
+                        Disable
+                      </>
+                    )}
+                  </Button>
+                );
+              })()}
               <Button 
                 variant="secondary"
                 size="sm" 
@@ -613,10 +629,19 @@ export default function UsersPage() {
                                     setIsDisableModalOpen(true);
                                     setSendNotification(false);
                                   }}
-                                  className="text-amber-600"
+                                  className={user.Policy?.IsDisabled ? "text-green-600" : "text-amber-600"}
                                 >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Disable
+                                  {user.Policy?.IsDisabled ? (
+                                    <>
+                                      <Check className="h-4 w-4 mr-2" />
+                                      Enable
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Ban className="h-4 w-4 mr-2" />
+                                      Disable
+                                    </>
+                                  )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -668,42 +693,64 @@ export default function UsersPage() {
         />
       )}
 
-      {/* Disable User Modal */}
+      {/* Disable/Enable User Modal */}
       {currentUser && (
         <Dialog open={isDisableModalOpen} onOpenChange={setIsDisableModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Disable {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}</DialogTitle>
+              <DialogTitle>
+                {currentUser.Policy?.IsDisabled ? "Enable" : "Disable"} {selectedUsers.length > 0 ? `${selectedUsers.length} users` : "1 user"}
+              </DialogTitle>
             </DialogHeader>
-            <div className="flex items-center space-x-2 py-2">
-              <Checkbox
-                id="send-notification"
-                checked={sendNotification}
-                onCheckedChange={(checked) => setSendNotification(!!checked)}
-              />
-              <label htmlFor="send-notification" className="text-sm font-medium cursor-pointer">Send notification message</label>
-            </div>
+            {!currentUser.Policy?.IsDisabled && (
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="send-notification"
+                  checked={sendNotification}
+                  onCheckedChange={(checked) => setSendNotification(!!checked)}
+                />
+                <label htmlFor="send-notification" className="text-sm font-medium cursor-pointer">Send notification message</label>
+              </div>
+            )}
             <DialogFooter className="sm:justify-between">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  if (currentUser) {
-                    disableUserMutation.mutate({ 
-                      userId: currentUser.Id, 
-                      disabled: true 
-                    });
-                  }
-                }}
-                disabled={disableUserMutation.isPending}
-              >
-                {disableUserMutation.isPending ? "Disabling..." : "Disable"}
-              </Button>
+              {currentUser.Policy?.IsDisabled ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    if (currentUser) {
+                      disableUserMutation.mutate({ 
+                        userId: currentUser.Id, 
+                        disabled: false 
+                      });
+                    }
+                  }}
+                  disabled={disableUserMutation.isPending}
+                >
+                  {disableUserMutation.isPending ? "Enabling..." : "Enable"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    if (currentUser) {
+                      disableUserMutation.mutate({ 
+                        userId: currentUser.Id, 
+                        disabled: true 
+                      });
+                    }
+                  }}
+                  disabled={disableUserMutation.isPending}
+                >
+                  {disableUserMutation.isPending ? "Disabling..." : "Disable"}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
