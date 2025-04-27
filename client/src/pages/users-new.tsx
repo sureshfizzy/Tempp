@@ -475,7 +475,6 @@ export default function UsersPage() {
                       if (firstSelected) {
                         setCurrentUser(firstSelected);
                         setIsDisableModalOpen(true);
-                        setSendNotification(false);
                       }
                     }}
                   >
@@ -645,7 +644,6 @@ export default function UsersPage() {
                                   onClick={() => {
                                     setCurrentUser(user);
                                     setIsDisableModalOpen(true);
-                                    setSendNotification(false);
                                   }}
                                   className={user.Policy?.IsDisabled ? "text-green-600" : "text-amber-600"}
                                 >
@@ -725,16 +723,7 @@ export default function UsersPage() {
                   : "Disabling this user will prevent them from accessing the server."}
               </DialogDescription>
             </DialogHeader>
-            {!currentUser.Policy?.IsDisabled && (
-              <div className="flex items-center space-x-2 py-2">
-                <Checkbox
-                  id="send-notification"
-                  checked={sendNotification}
-                  onCheckedChange={(checked) => setSendNotification(!!checked)}
-                />
-                <label htmlFor="send-notification" className="text-sm font-medium cursor-pointer">Send notification message</label>
-              </div>
-            )}
+            {/* Send notification checkbox removed as this feature is not implemented */}
             <DialogFooter className="sm:justify-between">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">

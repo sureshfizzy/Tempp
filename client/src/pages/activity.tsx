@@ -273,6 +273,8 @@ function ActivityPage() {
                     bgColorClass = 'bg-red-500';
                   } else if (activity.type === 'user_disabled') {
                     bgColorClass = 'bg-orange-500';
+                  } else if (activity.type === 'user_enabled') {
+                    bgColorClass = 'bg-green-500';
                   } else if (activity.type === 'system') {
                     bgColorClass = 'bg-gray-500';
                   }
@@ -293,6 +295,9 @@ function ActivityPage() {
                           )}
                           {activity.type === "user_disabled" && activity.metadata?.reason && (
                             <p className="text-sm opacity-90">REASON: {activity.metadata.reason}</p>
+                          )}
+                          {activity.type === "user_enabled" && activity.metadata?.expiryReset && (
+                            <p className="text-sm opacity-90">ACCOUNT EXPIRY RESET TO PERMANENT</p>
                           )}
                           {activity.type === "user_updated" && activity.metadata?.updates && Array.isArray(activity.metadata.updates) && (
                             <p className="text-sm opacity-90">UPDATES: {activity.metadata.updates.join(', ')}</p>
