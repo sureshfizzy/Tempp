@@ -14,7 +14,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LogOut, User, UserCheck, Settings, CheckCircle, Users, Film, Infinity } from "lucide-react";
+import { 
+  LogOut, 
+  User, 
+  UserCheck, 
+  Settings, 
+  CheckCircle, 
+  Users, 
+  Film, 
+  Infinity, 
+  Copy, 
+  Trash, 
+  Loader2,
+  Clock,
+  Code
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { queryClient } from "@/lib/queryClient";
 import { AppHeader } from "@/components/app-header";
 import { Switch } from "@/components/ui/switch";
@@ -301,28 +316,65 @@ export default function Dashboard() {
                   <p className="text-muted-foreground text-sm">Error loading invites</p>
                 ) : invitesQuery.data && invitesQuery.data.length > 0 ? (
                   <div className="space-y-3">
-                    {invitesQuery.data.map(invite => (
-                      <div key={invite.id} className="flex justify-between items-center p-3 border rounded-md bg-card">
-                        <div>
-                          <p className="font-medium">{invite.label || `Invite #${invite.id}`}</p>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <p>Code: {invite.code}</p>
-                            <p>Uses: {invite.maxUses === null ? 'Unlimited' : `${invite.usesRemaining} remaining`}</p>
-                            <p>Expires in: {formatExpiryTime(invite.userExpiryMonths || 0, invite.userExpiryDays || 0, invite.userExpiryHours || 0)}</p>
+                    {invitesQuery.data.map(invite => {
+                      const inviteUrl = `${window.location.origin}/invite/${invite.code}`;
+                      const expiryText = invite.expiresAt 
+                        ? formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: false }) 
+                        : formatExpiryTime(invite.userExpiryMonths || 0, invite.userExpiryDays || 0, invite.userExpiryHours || 0);
+
+                      return (
+                        <div key={invite.id} className="flex flex-col p-4 border rounded-md bg-card">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="font-medium">{invite.label || `Invite #${invite.id}`}</p>
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(inviteUrl);
+                                  toast({
+                                    title: "Copied invite link",
+                                    description: "The invite URL has been copied to your clipboard",
+                                  });
+                                }}
+                              >
+                                <Copy className="h-4 w-4 mr-1" />
+                                Copy
+                              </Button>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => {
+                                  setDeleteInviteId(invite.id);
+                                  deleteInviteMutation.mutate(invite.id);
+                                }}
+                                disabled={deleteInviteMutation.isPending && deleteInviteId === invite.id}
+                              >
+                                {deleteInviteMutation.isPending && deleteInviteId === invite.id 
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Trash className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                            <div>
+                              <div className="flex items-center mb-1">
+                                <Code className="h-3 w-3 mr-1" /> 
+                                <span className="font-mono">{invite.code}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Users className="h-3 w-3 mr-1" /> 
+                                <span>{invite.maxUses === null ? 'Unlimited uses' : `${invite.usesRemaining} of ${invite.maxUses} uses remaining`}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>Expires in {expiryText}</span>
+                            </div>
                           </div>
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => deleteInviteMutation.mutate(invite.id)}
-                          disabled={deleteInviteMutation.isPending && deleteInviteId === invite.id}
-                        >
-                          {deleteInviteMutation.isPending && deleteInviteId === invite.id 
-                            ? "Deleting..." 
-                            : "Delete"}
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">No invites have been created yet</p>
