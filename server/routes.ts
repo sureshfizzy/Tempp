@@ -812,19 +812,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!appUsersByJellyfinId.has(jellyfinUser.Id)) {
             console.log(`Syncing user: Creating local user for ${jellyfinUser.Name} with Jellyfin ID ${jellyfinUser.Id}`);
             
-            // Make an educated guess about admin status
-            const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
-            
-            // Generate a secure random password - it will be hashed by createUser
-            const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
-            await storage.createUser({
-              username: jellyfinUser.Name,
-              password: tempPassword, // Random temporary password, will be hashed in storage.createUser
-              email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
-              isAdmin: isAdmin,
-              jellyfinUserId: jellyfinUser.Id
-            });
-            console.log(`Created local user for ${jellyfinUser.Name} with temporary password`);
+            try {
+              // First check if username already exists in our database
+              const existingUser = await storage.getUserByUsername(jellyfinUser.Name);
+              if (existingUser) {
+                console.log(`Username ${jellyfinUser.Name} already exists in database, skipping auto-creation`);
+                continue; // Skip this user and continue with next one
+              }
+              
+              // Make an educated guess about admin status
+              const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
+              
+              // Generate a secure random password - it will be hashed by createUser
+              const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
+              
+              // Generate a unique email to avoid database constraint issues
+              const uniqueEmail = `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}@jellyfin.local`;
+              console.log(`Generated unique email for synced user: ${uniqueEmail}`);
+              
+              await storage.createUser({
+                username: jellyfinUser.Name,
+                password: tempPassword, // Random temporary password, will be hashed in storage.createUser
+                email: uniqueEmail,
+                isAdmin: isAdmin,
+                jellyfinUserId: jellyfinUser.Id
+              });
+              console.log(`Created local user for ${jellyfinUser.Name} with temporary password and unique email`);
+            } catch (syncError) {
+              console.error(`Error auto-creating local user for ${jellyfinUser.Name}:`, syncError);
+              // Continue with next user even if one fails
+            }
           }
         }
       } catch (err) {
@@ -1071,33 +1088,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Also create the user in our local database for authentication
       try {
-        const isAdmin = newUser.Role === "Administrator";
-        // The provided password will be properly hashed by the storage.createUser method
-        const appUser = await storage.createUser({
-          username: newUser.Name,
-          password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
-          email: newUser.Email || `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
-          isAdmin: isAdmin,
-          jellyfinUserId: userId
-        });
-        
-        // Log the account creation in activity logs
-        await storage.createActivityLog({
-          type: 'account_created',
-          message: `Account created: ${newUser.Name}`,
-          username: newUser.Name,
-          userId: appUser.id,
-          createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
-          metadata: JSON.stringify({
+        // First check if the username already exists in our database
+        const existingUser = await storage.getUserByUsername(newUser.Name);
+        if (existingUser) {
+          console.log(`Username ${newUser.Name} already exists in database, checking if it matches Jellyfin ID`);
+          
+          // If the user exists but with a different Jellyfin ID, we need to update it
+          if (existingUser.jellyfinUserId !== userId) {
+            console.log(`Updating existing user's Jellyfin ID from ${existingUser.jellyfinUserId} to ${userId}`);
+            await storage.updateUser(existingUser.id, { jellyfinUserId: userId });
+            
+            // Log the ID update
+            await storage.createActivityLog({
+              type: 'account_updated',
+              message: `User Jellyfin ID updated: ${newUser.Name}`,
+              username: newUser.Name,
+              userId: String(existingUser.id),
+              createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+              metadata: JSON.stringify({
+                oldJellyfinId: existingUser.jellyfinUserId,
+                newJellyfinId: userId
+              })
+            });
+          }
+        } else {
+          // Create new user in our database
+          const isAdmin = newUser.Role === "Administrator";
+          
+          // Generate a unique email if one isn't provided
+          let userEmail = newUser.Email;
+          if (!userEmail || userEmail.trim() === '') {
+            userEmail = `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}@jellyfin.local`;
+            console.log(`Generated unique email for new user: ${userEmail}`);
+          }
+          
+          // The provided password will be properly hashed by the storage.createUser method
+          const appUser = await storage.createUser({
+            username: newUser.Name,
+            password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
+            email: userEmail,
             isAdmin: isAdmin,
-            jellyfinUserId: userId,
-            createdVia: 'admin_panel'
-          })
-        });
-        
-        console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
+            jellyfinUserId: userId
+          });
+          
+          // Log the account creation in activity logs
+          await storage.createActivityLog({
+            type: 'account_created',
+            message: `Account created: ${newUser.Name}`,
+            username: newUser.Name,
+            userId: String(appUser.id),
+            createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+            metadata: JSON.stringify({
+              isAdmin: isAdmin,
+              jellyfinUserId: userId,
+              createdVia: 'admin_panel'
+            })
+          });
+          
+          console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
+        }
       } catch (err) {
-        console.error("Error creating local user:", err);
+        console.error("Error creating or updating local user:", err);
         // Continue even if local user creation fails - we'll still return the Jellyfin user
       }
       
@@ -2355,6 +2406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiUrl = credentials.url;
       const apiKey = credentials.apiKey;
       
+      // Only send username and password to Jellyfin API - no email required
       const jellyfinUserData = {
         Name: username,
         Password: password
