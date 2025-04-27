@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { useMutation } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
-import { 
-  getConnectionStatus
-} from "@/lib/jellyfin";
+import { getConnectionStatus } from "@/lib/jellyfin";
 import { 
   Form, 
   FormControl, 
@@ -17,28 +15,28 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { 
-  Card, 
-  CardContent 
-} from "@/components/ui/card";
-import { 
   Alert, 
   AlertDescription 
 } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; 
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   AlertCircle, 
-  ArrowRight, 
-  CheckCircle, 
-  Film, 
-  Settings,
-  ClapperboardIcon
+  ShieldAlert,
+  Wand2 
 } from "lucide-react";
-import { MovieBackground } from "@/components/movie-background";
-import { CinemaDecoration } from "@/components/cinema-decoration";
+import {
+  FloatingFeather,
+  HogwartsBackground,
+  MagicButton,
+  MagicInput,
+  MagicParchment,
+  MagicShimmer,
+  WandSparkle
+} from "@/components/harry-potter-elements";
 
 // Form schema for the login form
 const loginFormSchema = z.object({
@@ -61,30 +59,41 @@ interface LoginResponse {
   };
 }
 
+// Memorized version of the HogwartsBackground component to prevent re-renders
+const MemoizedBackground = memo(HogwartsBackground);
+const MemoizedFeather = memo(FloatingFeather);
+
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [errorShake, setErrorShake] = useState(false);
+  const [magicSuccess, setMagicSuccess] = useState(false);
 
   // Get connection status to check if we have a server URL configured
   // Disable auto-refresh completely with fetched data
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  const [statusFetched, setStatusFetched] = useState(false);
   
-  // One-time fetch on component mount only, no refetching or polling
-  useEffect(() => {
-    const fetchConnectionStatus = async () => {
-      try {
-        const data = await getConnectionStatus();
-        setConnectionStatus(data);
-      } catch (error) {
-        console.error("Failed to fetch connection status:", error);
-      }
-    };
+  // One-time fetch on component mount only using useCallback to prevent recreating the function
+  const fetchConnectionStatus = useCallback(async () => {
+    if (statusFetched) return; // Prevent multiple fetches
     
+    try {
+      const data = await getConnectionStatus();
+      setConnectionStatus(data);
+      setStatusFetched(true);
+    } catch (error) {
+      console.error("Failed to fetch connection status:", error);
+    }
+  }, [statusFetched]);
+
+  // Only fetch once on mount
+  useEffect(() => {
     fetchConnectionStatus();
-  }, []);
+  }, [fetchConnectionStatus]);
 
   // Login mutation
   const loginMutation = useMutation<LoginResponse, Error, LoginFormData>({
@@ -92,21 +101,30 @@ export default function LoginPage() {
       return await apiRequest<LoginResponse>("/api/login", data);
     },
     onSuccess: (data: LoginResponse) => {
+      // Show magical success transition
+      setMagicSuccess(true);
+      
+      // Toast notification
       toast({
-        title: "Login successful",
-        description: "You have been logged in successfully",
+        title: "Magic Successful!",
+        description: "Welcome to Hogwarts... err, your Jellyfin server!",
       });
       
-      // Force an immediate navigation based on admin status
-      if (data.user.isAdmin) {
-        window.location.href = "/dashboard";
-      } else {
-        window.location.href = "/user-profile";
-      }
+      // Delay navigation for animation
+      setTimeout(() => {
+        // Force an immediate navigation based on admin status
+        if (data.user.isAdmin) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/user-profile";
+        }
+      }, 1800);
     },
     onError: (error) => {
       // Extract the main error message
-      const errorMessage = error instanceof Error ? error.message : "Invalid username or password";
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Invalid spell... I mean, username or password!";
       
       // Check if the error contains additional details
       const responseData = (error as any).responseData;
@@ -115,8 +133,12 @@ export default function LoginPage() {
       // Set the user-facing error message
       setLoginError(errorDetails || errorMessage);
       
+      // Trigger error shake animation
+      setErrorShake(true);
+      setTimeout(() => setErrorShake(false), 600);
+      
       toast({
-        title: "Login failed",
+        title: "Spell Failed!",
         description: errorDetails || errorMessage,
         variant: "destructive",
       });
@@ -146,9 +168,9 @@ export default function LoginPage() {
     } catch (err) {
       console.error("Login error:", err);
     } finally {
-      setTimeout(() => {
+      if (!magicSuccess) {
         setIsLoading(false);
-      }, 500); // Small delay to prevent accidental double-clicks
+      }
     }
   };
 
@@ -157,212 +179,223 @@ export default function LoginPage() {
     setLocation("/onboarding");
   };
 
-  // Desktop render
-  const DesktopLogin = () => (
-    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
-      {/* Plain background with no movie images */}
-      
-      {/* Content Panel (Centered) */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center fade-in">
-            <div className="flex items-center justify-center mb-4">
-              <Film className="h-14 w-14 text-primary blue-glow" />
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2 blue-text-glow">
-              Jellyfin Manager
-            </h1>
-            <p className="text-gray-300">
-              Your complete media server management solution
-            </p>
-          </div>
-          
-          <div className="fade-in" style={{ animationDelay: "0.2s" }}>
-            <Card className="bg-slate-900 border-primary/30 shadow-lg">
-              <CardContent className="pt-6">
-                {!connectionStatus?.connected ? (
-                  <div className="text-center py-4">
-                    {connectionStatus?.configured ? (
-                      <>
-                        <p className="mb-4 text-gray-300">
-                          Your Jellyfin server is configured but you are not connected.
-                          Please log in with your credentials.
-                        </p>
-                        <LoginForm />
-                      </>
-                    ) : (
-                      <>
-                        <p className="mb-4 text-gray-300">
-                          You need to connect to a Jellyfin server first before you can log in.
-                        </p>
-                        <Button 
-                          onClick={handleReconnect}
-                          className="bg-primary hover:bg-primary/90 text-white"
-                        >
-                          Connect to Server
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center text-teal-400 mb-4 text-sm">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span>Connected to {connectionStatus.serverUrl}</span>
-                    </div>
-                    <LoginForm />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Mobile render - simplified design with plain background
-  const MobileLogin = () => (
-    <div className="min-h-screen flex flex-col overflow-hidden bg-slate-950">
-      {/* Plain background with no decorations */}
-      
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md text-center mb-8 fade-in">
-          <div className="inline-block mb-4">
-            <ClapperboardIcon className="h-16 w-16 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2 blue-text-glow">
-            Welcome Back
-          </h1>
-          <p className="text-gray-300">
-            Sign in to manage your Jellyfin server
-          </p>
-        </div>
-        
-        <div className="w-full max-w-md fade-in" style={{ animationDelay: "0.2s" }}>
-          <Card className="bg-slate-900 border-primary/30">
-            <CardContent className="pt-6">
-              {!connectionStatus?.connected ? (
-                <div className="text-center py-4">
-                  {connectionStatus?.configured ? (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Server is configured but you are not connected
-                      </p>
-                      <LoginForm />
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-gray-300">
-                        Connect to your Jellyfin server to get started
-                      </p>
-                      <Button 
-                        onClick={handleReconnect}
-                        className="bg-primary hover:bg-primary/90 text-white"
-                      >
-                        Connect Server
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-center text-teal-400 mb-4 text-sm">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Connected to server</span>
-                  </div>
-                  <LoginForm />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Login form component (used in both mobile and desktop views)
+  // Login form component with Harry Potter theming
   const LoginForm = () => (
-    <>
-      {loginError && (
-        <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-800 text-white">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{loginError}</AlertDescription>
-        </Alert>
-      )}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <motion.div 
+          className="space-y-5"
+          animate={errorShake ? { x: [-10, 10, -10, 10, -5, 5, -2, 2, 0] } : {}}
+          transition={{ duration: 0.5 }}
+        >
+          {loginError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <Alert variant="destructive" className="bg-red-900/90 border-red-800 text-amber-50">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertDescription className="font-serif">
+                  {loginError}
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+
           <FormField
             control={form.control}
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-200">Username</FormLabel>
+                <FormLabel className="text-amber-200 font-serif ml-1">Wizard Name</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     placeholder="Enter your username" 
-                    className="border-gray-600 bg-gray-800/60 text-white placeholder:text-gray-500" 
+                    className="border-amber-900/50 bg-amber-50/90 text-amber-950 
+                              placeholder:text-amber-800/50 rounded-md px-3 py-2
+                              focus:border-amber-500 focus:ring focus:ring-amber-500/50
+                              font-serif"
                     {...field} 
                   />
                 </FormControl>
-                <FormMessage className="text-red-400" />
+                <FormMessage className="text-red-400 font-serif ml-1 text-sm" />
               </FormItem>
             )}
           />
+          
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-200">Password</FormLabel>
+                <FormLabel className="text-amber-200 font-serif ml-1">Secret Spell</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     type="password" 
                     placeholder="Enter your password" 
-                    className="border-gray-600 bg-gray-800/60 text-white placeholder:text-gray-500" 
+                    className="border-amber-900/50 bg-amber-50/90 text-amber-950 
+                              placeholder:text-amber-800/50 rounded-md px-3 py-2
+                              focus:border-amber-500 focus:ring focus:ring-amber-500/50
+                              font-serif"
                     {...field} 
                   />
                 </FormControl>
-                <FormMessage className="text-red-400" />
+                <FormMessage className="text-red-400 font-serif ml-1 text-sm" />
               </FormItem>
             )}
           />
-          <Button 
-            type="submit" 
-            className="w-full mt-4 bg-primary hover:bg-primary/90 text-white transition-all duration-300 relative overflow-hidden group"
-            disabled={isLoading}
-          >
-            <span className="relative z-10">
-              {isLoading ? "Logging in..." : "Sign In"}
-              {!isLoading && <ArrowRight className="ml-2 h-4 w-4 inline" />}
-            </span>
-            <span className="absolute inset-0 w-0 bg-blue-700 transition-all duration-500 ease-out group-hover:w-full"></span>
-          </Button>
 
-          <div className="mt-4 pt-4 border-t border-gray-700 text-center">
-            <p className="text-sm text-gray-400 mb-2">
-              Need to connect to a different server?
-            </p>
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleReconnect}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          <div className="pt-2">
+            <MagicButton
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isLoading}
+              isLoading={isLoading}
             >
-              <Settings className="mr-2 h-4 w-4" />
-              Reconfigure Server
-            </Button>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Cast Spell
+            </MagicButton>
           </div>
 
-          <p className="text-center text-xs text-gray-500 mt-4">
-            Need help? Contact your Jellyfin administrator.
-          </p>
-        </form>
-      </Form>
-    </>
+          {connectionStatus?.configured && (
+            <motion.div 
+              className="mt-6 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <p className="text-amber-200/70 text-sm font-serif mb-2">
+                Need to change your magical portal?
+              </p>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={handleReconnect}
+                className="border-amber-700/50 text-amber-200 hover:bg-amber-950/50
+                          font-serif text-xs"
+              >
+                <Wand2 className="mr-1 h-3 w-3" />
+                Reconnect to Server
+              </Button>
+            </motion.div>
+          )}
+        </motion.div>
+      </form>
+    </Form>
   );
 
-  // Render based on screen size
-  return isMobile ? <MobileLogin /> : <DesktopLogin />;
+  return (
+    <div className="min-h-screen relative overflow-hidden bg-slate-950 flex justify-center items-center">
+      {/* Background Elements */}
+      <MemoizedBackground />
+      
+      {/* Animated feathers */}
+      <MemoizedFeather delay={0} x={10} y={20} />
+      <MemoizedFeather delay={2} x={85} y={15} />
+      <MemoizedFeather delay={4} x={60} y={75} />
+      
+      {/* Mouse sparkle effect */}
+      <WandSparkle />
+      
+      {/* Success animation overlay */}
+      <AnimatePresence>
+        {magicSuccess && (
+          <motion.div 
+            className="absolute inset-0 bg-amber-500/20 z-30 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="text-white text-4xl font-serif"
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ 
+                scale: 1.2, 
+                opacity: 1, 
+                y: 0,
+                transition: { delay: 0.3, duration: 0.8 }
+              }}
+            >
+              <MagicShimmer delay={0.5}>
+                <span className="block text-center text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">
+                  Magic Accepted!
+                </span>
+              </MagicShimmer>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Main Content */}
+      <div className="relative z-10 w-full max-w-md px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-6"
+        >
+          <motion.h1 
+            className="text-4xl font-bold font-serif text-amber-100 mb-2 drop-shadow-[0_2px_5px_rgba(0,0,0,0.7)]"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <MagicShimmer>
+              {connectionStatus?.serverName || "Jellyfin Manager"}
+            </MagicShimmer>
+          </motion.h1>
+          <p className="text-amber-200/80 font-serif italic">
+            Enter your magical credentials
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <MagicParchment>
+            <AnimatePresence mode="wait">
+              {!statusFetched ? (
+                <motion.div 
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-center items-center py-10"
+                >
+                  <div className="text-amber-800 font-serif">Loading...</div>
+                </motion.div>
+              ) : !connectionStatus?.configured ? (
+                <motion.div 
+                  key="unconfigured"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-center py-6"
+                >
+                  <p className="text-amber-900 font-serif mb-4">
+                    You need to set up your Jellyfin server connection first.
+                  </p>
+                  <MagicButton onClick={handleReconnect}>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Connect to Server
+                  </MagicButton>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="login-form"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <LoginForm />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </MagicParchment>
+        </motion.div>
+      </div>
+    </div>
+  );
 }
