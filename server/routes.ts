@@ -1785,9 +1785,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let libraryCount = 0;
         try {
           const libraryAccess = JSON.parse(profile.libraryAccess || "[]");
-          console.log(`Profile ${profile.id}: ${profile.name}, library access:`, libraryAccess);
+          // Reduce log verbosity to improve performance
           libraryCount = Array.isArray(libraryAccess) ? libraryAccess.length : 0;
-          console.log(`Calculated library count: ${libraryCount}`);
         } catch (e) {
           console.error("Error parsing library access:", e);
         }
@@ -1798,7 +1797,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      console.log("Profiles with library counts:", JSON.stringify(profilesWithLibraryCounts));
+      // Add cache headers for 5 minutes
+      res.set('Cache-Control', 'public, max-age=300');
       res.json(profilesWithLibraryCounts);
     } catch (error) {
       console.error("Error fetching user profiles:", error);

@@ -62,11 +62,15 @@ export function UserProfiles() {
   // Get Jellyfin users (to use as base for profiles)
   const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
-  // Get profiles
+  // Get profiles with improved caching
   const { data: profiles, isLoading: isLoadingProfiles } = useQuery<UserProfile[]>({
-    queryKey: ["/api/user-profiles"]
+    queryKey: ["/api/user-profiles"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Form definition
