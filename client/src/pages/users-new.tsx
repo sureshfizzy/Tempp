@@ -36,7 +36,8 @@ import {
   Ban,
   Pencil,
   Info,
-  ChevronDown
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -470,7 +471,7 @@ export default function UsersPage() {
                   >
                     {isDisabled ? (
                       <>
-                        <Check className="h-4 w-4 mr-2" />
+                        <UserPlus className="h-4 w-4 mr-2" />
                         Enable
                       </>
                     ) : (
@@ -633,7 +634,7 @@ export default function UsersPage() {
                                 >
                                   {user.Policy?.IsDisabled ? (
                                     <>
-                                      <Check className="h-4 w-4 mr-2" />
+                                      <UserPlus className="h-4 w-4 mr-2" />
                                       Enable
                                     </>
                                   ) : (
