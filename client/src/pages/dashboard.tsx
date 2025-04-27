@@ -193,18 +193,26 @@ export default function Dashboard() {
       return;
     }
     
-    // Create invite data
+    // Create invite data with all required fields
     const inviteData: Partial<InsertInvite> = {
       maxUses: isInfiniteUses ? null : numberOfUses,
       label: inviteLabel || null,
       userLabel: userLabel || null,
       userExpiryEnabled,
-      userExpiryMonths: inviteMonths,
+      // For invite expiry
+      userExpiryMonths: inviteMonths, 
       userExpiryDays: inviteDays,
       userExpiryHours: inviteHours,
+      // If user expiry is enabled, include those fields too
+      ...(userExpiryEnabled ? {
+        userExpiryMonths: inviteMonths,
+        userExpiryDays: inviteDays,
+        userExpiryHours: inviteHours,
+      } : {}),
       profileId: selectedProfileId?.toString() || null
     };
     
+    console.log("Creating invite with data:", inviteData);
     createInviteMutation.mutate(inviteData);
   };
 

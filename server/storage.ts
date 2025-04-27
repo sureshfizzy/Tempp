@@ -569,7 +569,7 @@ export class DatabaseStorage implements IStorage {
       // Generate a unique invite code
       const code = this.generateInviteCode();
       
-      // Calculate expiration date
+      // Calculate expiration date for the invite itself
       let expiresAt: Date | null = null;
       
       // If we have an explicit expiration date, use it
@@ -595,10 +595,14 @@ export class DatabaseStorage implements IStorage {
         }
         
         // If no expiry specified at all, set to 7 days default (instead of 30)
-        if (!inviteData.userExpiryMonths && !inviteData.userExpiryDays && !inviteData.userExpiryHours) {
+        if ((!inviteData.userExpiryMonths || inviteData.userExpiryMonths <= 0) && 
+            (!inviteData.userExpiryDays || inviteData.userExpiryDays <= 0) && 
+            (!inviteData.userExpiryHours || inviteData.userExpiryHours <= 0)) {
           expiresAt.setDate(expiresAt.getDate() + 7);
         }
       }
+      
+      console.log("Creating invite with expiry:", expiresAt);
 
       // Handle max uses properly (can be null for unlimited)
       const maxUses = inviteData.maxUses === null ? null : (inviteData.maxUses || 1);
