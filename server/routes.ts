@@ -2318,6 +2318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
+      // Validate ID is not a date string or other invalid format
+      if (!id || id.includes('T') || id.length < 5) {
+        return res.status(400).json({ 
+          error: "Invalid user ID format", 
+          details: "The provided ID appears to be invalid or in date format." 
+        });
+      }
+      
       // Get Jellyfin credentials
       const credentials = await storage.getJellyfinCredentials();
       if (!credentials || !credentials.url || !credentials.accessToken) {

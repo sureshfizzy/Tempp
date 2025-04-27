@@ -21,7 +21,8 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
         and(
           eq(appUsers.disabled, false),
           lt(appUsers.expiresAt, now),
-          isNotNull(appUsers.expiresAt)
+          isNotNull(appUsers.expiresAt),
+          isNotNull(appUsers.jellyfinUserId) // Ensure we have a valid Jellyfin user ID
         )
       )
       .returning();
@@ -42,7 +43,7 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
           console.log(`Disabled user ${user.username} (ID: ${user.id}) - Account expired on ${user.expiresAt?.toISOString()}`);
           
           try {
-            if (user.jellyfinUserId) {
+            if (user.jellyfinUserId && user.jellyfinUserId.length > 5) { // Validate the ID is a proper string, not a date
               // First get the current user policy
               const userResponse = await fetch(`${apiUrl}/Users/${user.jellyfinUserId}`, {
                 headers: {
