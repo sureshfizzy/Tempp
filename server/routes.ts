@@ -2152,7 +2152,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      const user = await storage.updateUser(userId, req.body);
+      // Process expiry date
+      const userData = { ...req.body };
+      
+      // If expiresAt is a string, convert it to a Date object
+      if (userData.expiresAt && typeof userData.expiresAt === 'string') {
+        try {
+          userData.expiresAt = new Date(userData.expiresAt);
+          console.log(`Setting expiry date for user ${userId} to ${userData.expiresAt.toISOString()}`);
+        } catch (error) {
+          console.error("Invalid expiry date format:", error);
+          return res.status(400).json({ message: "Invalid expiry date format" });
+        }
+      } else if (userData.expiresAt === null) {
+        // Handle case where we want to clear the expiry
+        console.log(`Clearing expiry date for user ${userId}`);
+      }
+      
+      const user = await storage.updateUser(userId, userData);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
