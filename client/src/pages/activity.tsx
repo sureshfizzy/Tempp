@@ -40,6 +40,17 @@ function ActivityPage() {
     staleTime: 300000, // 5 minutes
   });
   
+  // Get current user data
+  const userQuery = useQuery<{
+    id: number;
+    username: string;
+    email: string;
+    isAdmin: boolean;
+    jellyfinUserId: string;
+  }>({
+    queryKey: ["/api/me"],
+  });
+  
   // Fetch activity data
   const activityQuery = useQuery({
     queryKey: ["/api/activity"],
@@ -105,8 +116,8 @@ function ActivityPage() {
         title={connectionStatusQuery.data?.serverName || "Jellyfin User Management"}
         subtitle={connectionStatusQuery.data?.serverUrl}
         user={{
-          username: connectionStatusQuery.data?.isAdmin ? "Admin" : "User", 
-          jellyfinUserId: undefined
+          username: userQuery.data?.username || "User",
+          jellyfinUserId: userQuery.data?.jellyfinUserId
         }}
         onDisconnect={handleDisconnect}
         isDisconnecting={false}

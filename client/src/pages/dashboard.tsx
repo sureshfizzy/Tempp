@@ -59,6 +59,17 @@ export default function Dashboard() {
     queryFn: getConnectionStatus,
     staleTime: 300000, // 5 minutes
   });
+  
+  // Get current user data
+  const userQuery = useQuery<{
+    id: number;
+    username: string;
+    email: string;
+    isAdmin: boolean;
+    jellyfinUserId: string;
+  }>({
+    queryKey: ["/api/me"],
+  });
 
   // Get all users
   const usersQuery = useQuery({
@@ -238,8 +249,8 @@ export default function Dashboard() {
         title={connectionStatusQuery.data?.serverName || "Jellyfin Manager"}
         subtitle={connectionStatusQuery.data?.serverUrl}
         user={{
-          username: "Admin", // Default name since connectionStatus doesn't include username
-          jellyfinUserId: undefined
+          username: userQuery.data?.username || "User",
+          jellyfinUserId: userQuery.data?.jellyfinUserId
         }}
         onDisconnect={handleDisconnect}
         isDisconnecting={disconnectMutation.isPending}
