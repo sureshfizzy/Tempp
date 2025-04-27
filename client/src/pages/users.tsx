@@ -382,6 +382,11 @@ export default function UsersPage() {
                               <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"} className="mr-2">
                                 {getUserRole(user)}
                               </Badge>
+                              {user.roleName && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mr-2 text-xs">
+                                  {user.roleName}
+                                </Badge>
+                              )}
                               <span className="text-xs text-gray-500">
                                 {formatDate(user.LastActivityDate)}
                               </span>
@@ -401,9 +406,9 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {user.roleId && rolesQuery.data ? (
+                          {user.roleName ? (
                             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-                              {rolesQuery.data.find((r: any) => r.id === user.roleId)?.name || "Custom role"}
+                              {user.roleName}
                             </Badge>
                           ) : (
                             <span className="text-gray-400">No custom role</span>
