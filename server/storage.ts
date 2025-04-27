@@ -11,6 +11,8 @@ import {
   UserActivity,
   UserProfile,
   InsertUserProfile,
+  UserRole,
+  InsertUserRole,
   Invite,
   InsertInvite,
   ActivityLog,
@@ -18,7 +20,7 @@ import {
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, and, desc } from "drizzle-orm";
-import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs } from "@shared/schema";
+import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs, userRoles } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 
@@ -66,6 +68,15 @@ export interface IStorage {
   deleteInvite(id: number): Promise<boolean>;
   useInvite(code: string): Promise<boolean>;
   updateInviteUsage(code: string, usedCount: number): Promise<boolean>;
+  
+  // User roles
+  getAllRoles(): Promise<UserRole[]>;
+  getRoleById(id: number): Promise<UserRole | undefined>;
+  getDefaultRole(): Promise<UserRole | undefined>;
+  createRole(role: InsertUserRole): Promise<UserRole>;
+  updateRole(id: number, role: Partial<InsertUserRole>): Promise<UserRole | undefined>;
+  deleteRole(id: number): Promise<boolean>;
+  getUserRoleByUserId(userId: number): Promise<UserRole | undefined>;
   
   // Activity logs
   getActivityLogs(limit?: number): Promise<ActivityLog[]>;
