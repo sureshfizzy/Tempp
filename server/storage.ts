@@ -549,6 +549,8 @@ export class DatabaseStorage implements IStorage {
         expiresAt: invites.expiresAt,
         userExpiryEnabled: invites.userExpiryEnabled,
         userExpiryHours: invites.userExpiryHours,
+        userExpiryDays: invites.userExpiryDays,
+        userExpiryMonths: invites.userExpiryMonths,
         createdAt: invites.createdAt,
         createdBy: invites.createdBy
       })
