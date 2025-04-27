@@ -79,11 +79,8 @@ export default function UsersPage() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
   
-  // Get all roles for role display
-  const rolesQuery = useQuery({
-    queryKey: ["/api/user-roles"],
-    queryFn: getUserRoles
-  });
+  // We'll get roles for individual users as needed
+  // This query removed as it requires admin privileges
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
