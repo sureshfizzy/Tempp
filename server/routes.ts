@@ -2299,6 +2299,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username and password are required" });
       }
       
+      // Check if username already exists in our database
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        console.log(`Username ${username} already exists in our database`);
+        return res.status(400).json({ error: "Username already exists. Please choose a different username." });
+      }
+      
       // First, check if the invite exists and is valid
       const invite = await storage.getInviteByCode(code);
       if (!invite) {
@@ -2375,10 +2382,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Successfully created Jellyfin user with ID: ${jellyfinUser.Id}`);
         
         // Create local app user with expiry if needed
+        // Generate a unique email if one isn't provided
+        let userEmail = email;
+        if (!userEmail || userEmail.trim() === '') {
+          // Create a unique email to avoid constraint issues
+          userEmail = `${username.toLowerCase()}_${Date.now()}@example.com`;
+          console.log(`Generated unique email for user: ${userEmail}`);
+        }
+        
         const appUser = await storage.createUser({
           username,
           password, // Will be hashed by storage implementation
-          email: email || '',
+          email: userEmail,
           jellyfinUserId: jellyfinUser.Id,
           expiresAt
         });
