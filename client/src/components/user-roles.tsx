@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "../lib/queryClient";
 import { UserRole } from "@shared/schema";
 import { Loader2, PlusCircle, Save, Trash, Edit } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +22,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Custom fetch wrapper for handling authentication properly
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  // Ensure credentials are included for session cookies
+  const fetchOptions: RequestInit = {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...options.headers,
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  return fetch(url, fetchOptions);
+};
+
 export const UserRolesList: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -39,7 +53,11 @@ export const UserRolesList: React.FC = () => {
   // Create a new role
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: { name: string, description: string, isDefault: boolean }) => {
-      const res = await apiRequest("POST", "/api/user-roles", roleData);
+      const res = await authenticatedFetch("/api/user-roles", {
+        method: "POST",
+        body: JSON.stringify(roleData)
+      });
+      
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText || "Failed to create role");
@@ -67,7 +85,11 @@ export const UserRolesList: React.FC = () => {
   // Update an existing role
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<UserRole> }) => {
-      const res = await apiRequest("PATCH", `/api/user-roles/${id}`, data);
+      const res = await authenticatedFetch(`/api/user-roles/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data)
+      });
+      
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText || "Failed to update role");
@@ -94,7 +116,10 @@ export const UserRolesList: React.FC = () => {
   // Delete a role
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/user-roles/${id}`);
+      const res = await authenticatedFetch(`/api/user-roles/${id}`, {
+        method: "DELETE"
+      });
+      
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText || "Failed to delete role");
