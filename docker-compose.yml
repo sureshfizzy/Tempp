@@ -18,6 +18,8 @@ services:
       - PGID=1000
       - TZ=UTC
       - DATA_DIR=/app/data
+      # Empty DATABASE_URL to force SQLite mode
+      - DATABASE_URL=
     volumes:
       - ./config:/app/config
       - ./data:/app/data
