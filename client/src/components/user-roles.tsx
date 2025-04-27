@@ -68,6 +68,10 @@ export const UserRolesList: React.FC = () => {
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<UserRole> }) => {
       const res = await apiRequest("PATCH", `/api/user-roles/${id}`, data);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to update role");
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -91,6 +95,10 @@ export const UserRolesList: React.FC = () => {
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/user-roles/${id}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete role");
+      }
       return await res.json();
     },
     onSuccess: () => {
