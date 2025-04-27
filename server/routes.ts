@@ -1868,6 +1868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sourceUserId = validatedData.sourceUserId;
       const apiUrl = credentials.url;
       
+      // Fetch the source user's basic information
       const sourceUserResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
         headers: {
           "X-Emby-Token": credentials.accessToken
@@ -1878,12 +1879,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Source user not found in Jellyfin" });
       }
       
-      const sourceUser = await sourceUserResponse.json() as { Name: string };
+      const sourceUser = await sourceUserResponse.json() as { 
+        Name: string, 
+        Id: string,
+        Policy?: {
+          EnableAllFolders?: boolean,
+          EnabledFolders?: string[]
+        }
+      };
       
-      // Create the profile with the source user's name
+      // Fetch the user's display preferences which contains the home layout
+      const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken
+        }
+      });
+      
+      // Get the user's policy which includes library access permissions
+      const policyResponse = await fetch(`${apiUrl}/Users/${sourceUserId}/Policy`, {
+        headers: {
+          "X-Emby-Token": credentials.accessToken
+        }
+      });
+      
+      // Extract library access and home layout from API responses
+      let libraryAccess = "[]";
+      let homeLayout = "[]";
+      
+      if (policyResponse.ok) {
+        const policy = await policyResponse.json() as {
+          EnableAllFolders?: boolean;
+          EnabledFolders?: string[];
+        };
+        
+        // If the user has specific folder permissions, save them as library access
+        if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+          libraryAccess = JSON.stringify(policy.EnabledFolders);
+        }
+      }
+      
+      if (displayPrefsResponse.ok) {
+        const displayPrefs = await displayPrefsResponse.json() as {
+          CustomPrefs?: {
+            homeLayout?: string;
+          };
+        };
+        
+        // Extract home layout configuration if available
+        if (displayPrefs.CustomPrefs && displayPrefs.CustomPrefs.homeLayout) {
+          try {
+            // Store the home layout configuration
+            homeLayout = displayPrefs.CustomPrefs.homeLayout;
+          } catch (e) {
+            console.error("Error parsing home layout:", e);
+          }
+        }
+      }
+      
+      // Create the profile with the source user's settings
       const newProfile = await storage.createUserProfile({
         ...validatedData,
-        sourceName: sourceUser.Name
+        sourceName: sourceUser.Name,
+        libraryAccess,
+        homeLayout
       });
       
       res.status(201).json(newProfile);
@@ -1926,6 +1984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sourceUserId = validatedData.sourceUserId;
         const apiUrl = credentials.url;
         
+        // Fetch the source user's basic information
         const sourceUserResponse = await fetch(`${apiUrl}/Users/${sourceUserId}`, {
           headers: {
             "X-Emby-Token": credentials.accessToken
@@ -1936,8 +1995,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Source user not found in Jellyfin" });
         }
         
-        const sourceUser = await sourceUserResponse.json() as { Name: string };
+        const sourceUser = await sourceUserResponse.json() as { 
+          Name: string,
+          Id: string,
+          Policy?: {
+            EnableAllFolders?: boolean,
+            EnabledFolders?: string[]
+          }
+        };
+        
+        // Update the name in the validated data
         validatedData.sourceName = sourceUser.Name;
+        
+        // Fetch the user's display preferences which contains the home layout
+        const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${sourceUserId}&client=emby`, {
+          headers: {
+            "X-Emby-Token": credentials.accessToken
+          }
+        });
+        
+        // Get the user's policy which includes library access permissions
+        const policyResponse = await fetch(`${apiUrl}/Users/${sourceUserId}/Policy`, {
+          headers: {
+            "X-Emby-Token": credentials.accessToken
+          }
+        });
+        
+        // Extract library access and home layout from API responses
+        if (policyResponse.ok) {
+          const policy = await policyResponse.json() as {
+            EnableAllFolders?: boolean;
+            EnabledFolders?: string[];
+          };
+          
+          // If the user has specific folder permissions, save them as library access
+          if (policy.EnableAllFolders === false && Array.isArray(policy.EnabledFolders)) {
+            validatedData.libraryAccess = JSON.stringify(policy.EnabledFolders);
+          } else {
+            // User has access to all libraries
+            validatedData.libraryAccess = "[]";
+          }
+        }
+        
+        if (displayPrefsResponse.ok) {
+          const displayPrefs = await displayPrefsResponse.json() as {
+            CustomPrefs?: {
+              homeLayout?: string;
+            };
+          };
+          
+          // Extract home layout configuration if available
+          if (displayPrefs.CustomPrefs && displayPrefs.CustomPrefs.homeLayout) {
+            try {
+              // Store the home layout configuration
+              validatedData.homeLayout = displayPrefs.CustomPrefs.homeLayout;
+            } catch (e) {
+              console.error("Error parsing home layout:", e);
+            }
+          }
+        }
       }
       
       // Update the profile
