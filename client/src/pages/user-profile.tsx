@@ -13,7 +13,7 @@ import {
   LogOut, User as UserIcon, Clock, FileBarChart, Film, 
   Home, Mail, Play, AlarmClock, CalendarClock, Pencil, ExternalLink,
   TimerReset, Sparkles, Settings, Calendar, ImageIcon, AlertTriangle,
-  Heart, Star, Tv2
+  Heart, Star, Tv2, CheckCircle2
 } from "lucide-react";
 import MediaTabsCard from "@/components/media-tabs-card";
 import FavoritesTab from "@/components/favorites-tab";
