@@ -732,6 +732,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the response with zod
       const parsedUsers = z.array(userSchema).parse(users);
       
+      // Get local app users for expiry information
+      const appUsers = await storage.getAllUsers();
+      const appUsersByJellyfinId = new Map(
+        appUsers
+          .filter(user => user.jellyfinUserId)
+          .map(user => [user.jellyfinUserId, user])
+      );
+      
       // Synchronize Jellyfin users with local database
       try {
         // Get existing app users
@@ -767,14 +775,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue even if sync fails - we'll still return the Jellyfin users
       }
       
+      // Enhance users with expiry information from our database
+      const usersWithExpiry = parsedUsers.map(user => {
+        const appUser = appUsersByJellyfinId.get(user.Id);
+        if (appUser) {
+          return {
+            ...user,
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
+            disabled: appUser.disabled
+          };
+        }
+        return user;
+      });
+      
       // If admin, return all users
       // If regular user, only return own info
       if (req.session?.isAdmin) {
-        return res.status(200).json(parsedUsers);
+        return res.status(200).json(usersWithExpiry);
       } else {
         // Only return the current user's data
         const jellyfinUserId = req.session?.jellyfinUserId;
-        const currentUserData = parsedUsers.find(user => user.Id === jellyfinUserId);
+        const currentUserData = usersWithExpiry.find(user => user.Id === jellyfinUserId);
         
         if (!currentUserData) {
           return res.status(404).json({ message: "User not found" });
@@ -817,6 +838,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await response.json();
       // Validate the response with zod
       const parsedUser = userSchema.parse(user);
+      
+      // Get expiry information from our database
+      try {
+        const appUsers = await storage.getAllUsers();
+        const appUser = appUsers.find(u => u.jellyfinUserId === id);
+        
+        if (appUser) {
+          return res.status(200).json({
+            ...parsedUser,
+            expiresAt: appUser.expiresAt ? appUser.expiresAt.toISOString() : null,
+            disabled: appUser.disabled
+          });
+        }
+      } catch (err) {
+        console.error("Error getting local user data:", err);
+        // Continue even if we can't get expiry info
+      }
       
       return res.status(200).json(parsedUser);
     } catch (error) {

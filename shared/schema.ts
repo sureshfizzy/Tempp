@@ -107,6 +107,8 @@ export const userSchema = z.object({
   ServerId: z.string().optional(),
   ServerName: z.string().optional(),
   PrimaryImageTag: z.string().optional(),
+  expiresAt: z.string().nullable().optional(),
+  disabled: z.boolean().optional(),
   HasPassword: z.boolean().optional(),
   HasConfiguredPassword: z.boolean().optional(),
   HasConfiguredEasyPassword: z.boolean().optional(),
