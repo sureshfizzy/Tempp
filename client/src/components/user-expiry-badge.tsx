@@ -91,7 +91,7 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
   
   // If the account is expired, we should trigger the disable process 
   useEffect(() => {
-    if (isExpired && expiryDate && expiresAt) {
+    if (isExpired && expiryDate && expiresAt && !disabled) {
       // Only attempt to disable once when component mounts and is expired
       const disableExpiredUser = async () => {
         try {
@@ -102,12 +102,22 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
           
           // Call our simplified disable endpoint that handles everything in one request
           const response = await fetch(`/api/users/${jellyfinUserId}/disable`, {
-            method: "POST"
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              reason: 'account_expired',
+              autoDisabled: true
+            })
           });
           
           if (response.ok) {
             const result = await response.json();
             console.log(`Auto-disabled expired user: ${result.userName} (${jellyfinUserId})`);
+            
+            // Refresh users data to show updated status
+            window.location.reload();
           } else {
             console.error(`Failed to disable user: ${await response.text()}`);
           }
@@ -118,7 +128,7 @@ export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpi
       
       disableExpiredUser();
     }
-  }, [isExpired, expiryDate, expiresAt]);
+  }, [isExpired, expiryDate, expiresAt, disabled]);
   
   // Permanent account (no expiry)
   if (!expiresAt && !disabled) {
