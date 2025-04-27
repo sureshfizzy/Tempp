@@ -32,9 +32,31 @@ Jellyfin User Manager is a sophisticated web application that enhances Jellyfin'
 
 ## Installation
 
-### Using Docker (Recommended)
+### One-Click Installation (Recommended)
 
-The easiest way to run Jellyfin User Manager is with Docker and Docker Compose.
+We provide easy one-click installation scripts for both Docker and local environments.
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/jellyfin-user-manager.git
+   cd jellyfin-user-manager
+   ```
+
+2. Run the installation script:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+
+3. Follow the prompts to choose your installation method:
+   - Option 1: Docker installation (recommended)
+   - Option 2: Local installation
+
+4. The script will handle all the setup for you and provide instructions for accessing the application.
+
+### Manual Docker Installation
+
+If you prefer to set up Docker manually:
 
 1. Clone the repository:
    ```bash
@@ -51,7 +73,7 @@ The easiest way to run Jellyfin User Manager is with Docker and Docker Compose.
 
 4. Access the application at `http://localhost:5000`
 
-### Building from Source
+### Manual Local Installation
 
 If you prefer to build and run the application directly:
 

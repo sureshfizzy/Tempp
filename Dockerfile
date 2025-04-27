@@ -30,7 +30,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init tzdata
+RUN apk add --no-cache dumb-init tzdata netcat-openbsd
 
 # Create a non-root user
 RUN addgroup -g 1000 jellyfin && \
@@ -55,6 +55,9 @@ EXPOSE 5000
 
 # Set volumes
 VOLUME ["/app/config", "/app/data"]
+
+# Label with architecture
+LABEL org.opencontainers.image.architecture="amd64"
 
 # Switch to non-root user
 USER jellyfin
