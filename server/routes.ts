@@ -26,6 +26,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { setupLibraryFoldersRoutes } from "./library-folders";
 
 // Extend the session type to include our custom properties
 declare module 'express-session' {
@@ -40,6 +41,12 @@ declare module 'express-session' {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware with PostgreSQL
   const PgSession = connectPgSimple(session);
+  
+  // Use Express.Router for organizing routes
+  const router = app.Router ? app.Router() : app;
+  
+  // Setup library folders routes
+  setupLibraryFoldersRoutes(router);
   
   app.use(
     session({
