@@ -4,7 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   getUsers, 
   deleteUser, 
-  getUserRole
+  getUserRole, 
+  getUserRoleById
 } from "@/lib/jellyfin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AddUserModal from "@/components/add-user-modal";
 import EditUserModal from "@/components/edit-user-modal";
 import DeleteConfirmationModal from "@/components/delete-confirmation-modal";
+import { AssignRoleModal } from "@/components/assign-role-modal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -55,6 +57,7 @@ export default function UsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAssignRoleModalOpen, setIsAssignRoleModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -141,6 +144,12 @@ export default function UsersPage() {
   const handleDeleteUser = (user: User) => {
     setCurrentUser(user);
     setIsDeleteModalOpen(true);
+  };
+
+  // Handle assign role
+  const handleAssignRole = (user: User) => {
+    setCurrentUser(user);
+    setIsAssignRoleModalOpen(true);
   };
 
   // Confirm delete user
