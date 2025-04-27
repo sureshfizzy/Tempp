@@ -1669,8 +1669,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { itemId } = req.params;
       
+      // Get tag from query if available
+      const tag = req.query.tag ? `?tag=${req.query.tag}` : '';
+      
       // Construct the URL for the primary image
-      const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary`;
+      const imageUrl = `${apiUrl}/Items/${itemId}/Images/Primary${tag}`;
       // Fetch item image from Jellyfin
       
       // Forward request to Jellyfin

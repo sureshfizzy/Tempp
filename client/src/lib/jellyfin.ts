@@ -518,7 +518,20 @@ export async function getUserFavorites(userId: string): Promise<{ Items: any[], 
       throw new Error("Failed to fetch user favorites");
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    // Add debug output to understand image structure
+    console.log("Favorites data structure:", 
+      data.Items?.[0] ? {
+        Id: data.Items[0].Id,
+        Name: data.Items[0].Name,
+        Type: data.Items[0].Type,
+        ImageTags: data.Items[0].ImageTags,
+        HasPrimaryImage: !!data.Items[0].ImageTags?.Primary
+      } : "No favorite items found"
+    );
+    
+    return data;
   } catch (error) {
     console.error(`Error fetching favorites for user ${userId}:`, error);
     return { Items: [], TotalRecordCount: 0 }; // Return empty result as fallback
