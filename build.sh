@@ -1,39 +1,23 @@
 #!/bin/bash
 
-set -e
+# Build Docker image for the current architecture
+ARCH=$(uname -m)
+TAG="latest"
 
-echo "==============================================="
-echo "Jellyfin User Manager - Build Script"
-echo "==============================================="
-
-# Check if Node.js is installed
-if ! command -v node &> /dev/null; then
-    echo "Error: Node.js is not installed. Please install Node.js v18+ before proceeding."
-    exit 1
+if [ "$ARCH" = "x86_64" ]; then
+  DOCKERFILE="Dockerfile"
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+  DOCKERFILE="Dockerfile.arm"
+else
+  echo "Unsupported architecture: $ARCH"
+  exit 1
 fi
 
-# Check Node.js version
-NODE_VERSION=$(node -v | cut -d 'v' -f 2 | cut -d '.' -f 1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "Error: Node.js version is $NODE_VERSION. Please install Node.js v18+ before proceeding."
-    exit 1
-fi
+echo "Building Docker image for architecture: $ARCH using $DOCKERFILE"
+docker build -t jellyfin-manager:$TAG -f $DOCKERFILE .
 
-echo "Node.js version $(node -v) detected."
-
-# Install dependencies
-echo "Installing dependencies..."
-npm ci
-
-# Build the project
-echo "Building the project..."
-npm run build
-
-echo "==============================================="
-echo "Build completed successfully!"
-echo "==============================================="
-echo "To start the application:"
-echo "1. Make sure your PostgreSQL database is running"
-echo "2. Copy .env.example to .env and update the database connection string"
-echo "3. Run: npm start"
-echo "==============================================="
+echo "Build complete!"
+echo "Your image is now available as jellyfin-manager:$TAG"
+echo ""
+echo "To run the container:"
+echo "docker run -d --name jellyfin-manager -p 5000:5000 -v ./data:/app/data -v ./config:/app/config jellyfin-manager:$TAG"

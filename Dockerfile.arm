@@ -1,14 +1,14 @@
-FROM node:20-alpine as builder
+FROM arm64v8/node:20-alpine as builder
 
 WORKDIR /app
 
-# Install necessary build dependencies - optimized for ARM
+# Install necessary build dependencies
 RUN apk add --no-cache python3 make g++ git
 
 # Copy package.json files
 COPY package.json package-lock.json ./
 
-# Install dependencies - with specific ARM optimization flags
+# Install dependencies
 RUN npm ci
 
 # Copy application code
@@ -21,13 +21,14 @@ RUN npm run build
 RUN npm prune --production
 
 # Production stage
-FROM node:20-alpine
+FROM arm64v8/node:20-alpine
 
 # Create app directory
 WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV DATA_DIR=/app/data
 
 # Install runtime dependencies
 RUN apk add --no-cache dumb-init tzdata
@@ -58,9 +59,6 @@ VOLUME ["/app/config", "/app/data"]
 
 # Switch to non-root user
 USER jellyfin
-
-# ARM-specific label
-LABEL org.opencontainers.image.architecture="arm64"
 
 # Start application using dumb-init as PID 1
 ENTRYPOINT ["/docker-entrypoint.sh"]

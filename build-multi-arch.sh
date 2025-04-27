@@ -1,43 +1,55 @@
 #!/bin/bash
 
-set -e
+# Multi-architecture Docker build script
+# Builds for amd64 and arm64, tags them, and creates a multi-arch manifest
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo "Error: Docker is not installed. Please install Docker before proceeding."
-    exit 1
+# Set variables
+IMAGE_NAME="jellyfin-manager"
+TAG="latest"
+REGISTRY="" # Set this to your Docker Hub username if you're publishing the image
+
+# Check if Docker buildx is available
+if ! docker buildx version > /dev/null 2>&1; then
+  echo "Docker buildx not available. Please install or enable Docker buildx."
+  exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "Error: Docker Compose is not installed. Please install Docker Compose before proceeding."
-    exit 1
+# Create or use a builder instance
+BUILDER="multi-arch-builder"
+if ! docker buildx inspect $BUILDER > /dev/null 2>&1; then
+  echo "Creating new buildx builder: $BUILDER"
+  docker buildx create --name $BUILDER --use
+else
+  echo "Using existing buildx builder: $BUILDER"
+  docker buildx use $BUILDER
 fi
 
-echo "==============================================="
-echo "Jellyfin User Manager - Multi-Architecture Build"
-echo "==============================================="
+# Build for multiple platforms
+echo "Building multi-arch Docker image for: linux/amd64, linux/arm64"
 
-# Build for AMD64 (x86_64)
-echo "Building for AMD64 architecture..."
-DOCKERFILE=Dockerfile TAG=amd64 ARCH=amd64 docker-compose build
+if [ -z "$REGISTRY" ]; then
+  # No registry specified, build locally
+  echo "Building multi-arch images (local only)"
+  docker buildx build --platform linux/amd64,linux/arm64 \
+    -t $IMAGE_NAME:$TAG \
+    --load .
+else
+  # Registry specified, build and push
+  echo "Building and pushing multi-arch images to $REGISTRY/$IMAGE_NAME:$TAG"
+  docker buildx build --platform linux/amd64,linux/arm64 \
+    -t $REGISTRY/$IMAGE_NAME:$TAG \
+    --push .
+fi
 
-# Build for ARM64 (aarch64)
-echo "Building for ARM64 architecture..."
-DOCKERFILE=Dockerfile.arm TAG=arm64 ARCH=arm64 docker-compose build
-
-echo "==============================================="
-echo "Multi-architecture builds completed successfully!"
-echo "==============================================="
-echo "Docker images available:"
-echo "- jellyfin-manager:amd64 (for x86_64 systems)"
-echo "- jellyfin-manager:arm64 (for ARM64 systems)"
-echo ""
-echo "To run the container using docker-compose:"
-echo "  docker-compose up -d"
-echo ""
-echo "To run the specific architecture manually:"
-echo "  docker run -d -p 5000:5000 -v $(pwd)/config:/app/config -v $(pwd)/data:/app/data jellyfin-manager:amd64"
-echo "  or"
-echo "  docker run -d -p 5000:5000 -v $(pwd)/config:/app/config -v $(pwd)/data:/app/data jellyfin-manager:arm64"
-echo "==============================================="
+echo "Build complete!"
+if [ -z "$REGISTRY" ]; then
+  echo "Your multi-arch image is now available as $IMAGE_NAME:$TAG"
+  echo ""
+  echo "To run the container:"
+  echo "docker run -d --name jellyfin-manager -p 5000:5000 -v ./data:/app/data -v ./config:/app/config $IMAGE_NAME:$TAG"
+else
+  echo "Your multi-arch image is now available as $REGISTRY/$IMAGE_NAME:$TAG"
+  echo ""
+  echo "To run the container:"
+  echo "docker run -d --name jellyfin-manager -p 5000:5000 -v ./data:/app/data -v ./config:/app/config $REGISTRY/$IMAGE_NAME:$TAG"
+fi
