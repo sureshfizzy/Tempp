@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
-  LogOut, User as UserIcon, CheckCircle, Clock, FileBarChart, Film, 
+  LogOut, User as UserIcon, Clock, FileBarChart, Film, 
   Home, Mail, Play, AlarmClock, CalendarClock, Pencil, ExternalLink,
-  TimerReset, Sparkles
+  TimerReset, Sparkles, Settings, Calendar, ImageIcon
 } from "lucide-react";
 import { formatDate } from "@/lib/jellyfin";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import { UserExpiryBadge } from "@/components/user-expiry-badge";
 
 export default function UserProfilePage() {
   const [, setLocation] = useLocation();
@@ -44,6 +45,12 @@ export default function UserProfilePage() {
   const connectionQuery = useQuery({
     queryKey: ["/api/connection-status"],
     queryFn: getConnectionStatus,
+  });
+
+  // Fetch server settings to get server name and logo
+  const serverSettingsQuery = useQuery({
+    queryKey: ["/api/system/status"],
+    enabled: userQuery.data?.isAdmin === true,
   });
 
   // Fetch watch history
@@ -211,33 +218,17 @@ export default function UserProfilePage() {
       .substring(0, 2);
   };
 
-  // Format account expiry for display
-  const formatExpiry = (expiryDate: string | null | undefined) => {
-    if (!expiryDate) return null;
-    
-    try {
-      const expiry = new Date(expiryDate);
-      const now = new Date();
-      
-      if (expiry < now) {
-        return { status: "expired", text: "Expired" };
-      }
-      
-      // Difference in days
-      const diffTime = expiry.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 7) {
-        return { status: "warning", text: `Expires in ${diffDays} day${diffDays !== 1 ? 's' : ''}` };
-      }
-      
-      return { status: "active", text: `Expires on ${expiry.toLocaleDateString()}` };
-    } catch (e) {
-      return { status: "unknown", text: "Unknown expiry" };
-    }
+  // Get server name
+  const getServerName = () => {
+    return connectionQuery.data?.serverName || 
+           serverSettingsQuery.data?.serverName || 
+           "Jellyfin Server";
   };
 
-  const expiryInfo = formatExpiry(userQuery.data?.expiresAt);
+  // Get server logo
+  const getServerLogo = () => {
+    return serverSettingsQuery.data?.logoUrl || null;
+  };
 
   // Animation variants for cards
   const containerVariants = {
@@ -275,35 +266,61 @@ export default function UserProfilePage() {
       animate="visible"
       variants={fadeInVariants}
     >
-      {/* Header */}
-      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md">
+      {/* Modern Header with Glass Morphism */}
+      <header className="bg-black/40 backdrop-blur-md border-b border-white/10 text-white sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
           <motion.div 
-            className="flex items-center space-x-3"
+            className="flex items-center gap-3"
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 100 }}
           >
-            <Home className="h-6 w-6" />
-            <h1 className="text-xl font-semibold">Jellyfin User Profile</h1>
+            {getServerLogo() ? (
+              <img 
+                src={getServerLogo() as string} 
+                alt={getServerName()} 
+                className="h-8 w-auto object-contain" 
+              />
+            ) : (
+              <div className="h-8 w-8 bg-blue-600 rounded-md flex items-center justify-center text-white">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-lg font-medium leading-none">{getServerName()}</h1>
+              <p className="text-xs text-gray-400">User Dashboard</p>
+            </div>
           </motion.div>
           
           <motion.div 
-            className="flex items-center space-x-4"
+            className="flex items-center space-x-3"
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 100 }}
           >
             <ThemeToggle />
+            
+            {userQuery.data?.isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => setLocation("/settings")}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Settings</span>
+              </Button>
+            )}
+            
             <Button 
               variant="outline" 
               size="sm"
-              className="border-white text-white hover:bg-white/20 transition-colors duration-300"
+              className="border-white/20 text-white hover:bg-white/10 transition-colors duration-300"
               onClick={handleDisconnect}
               disabled={disconnectMutation.isPending}
             >
               <LogOut className="h-4 w-4 mr-1" />
-              <span>Disconnect</span>
+              <span className="hidden sm:inline">Disconnect</span>
             </Button>
           </motion.div>
         </div>
@@ -344,24 +361,18 @@ export default function UserProfilePage() {
                       </AvatarFallback>
                     </Avatar>
                   </motion.div>
+                  
                   <CardTitle className="text-xl text-center text-white">{userQuery.data?.username}</CardTitle>
                   <CardDescription className="text-center text-gray-400">
                     {userQuery.data?.isAdmin ? "Administrator" : "Regular User"}
                   </CardDescription>
                   
-                  {expiryInfo && (
-                    <Badge 
-                      className={`mt-2 ${
-                        expiryInfo.status === "active" ? "bg-green-500/20 text-green-300 border-green-600" :
-                        expiryInfo.status === "warning" ? "bg-yellow-500/20 text-yellow-300 border-yellow-600" :
-                        "bg-red-500/20 text-red-300 border-red-600"
-                      }`}
-                    >
-                      <CalendarClock className="w-3 h-3 mr-1" />
-                      {expiryInfo.text}
-                    </Badge>
-                  )}
+                  {/* Account Expiry Badge */}
+                  <div className="mt-3">
+                    <UserExpiryBadge expiresAt={userQuery.data?.expiresAt} />
+                  </div>
                 </CardHeader>
+                
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div className="border-t border-gray-800 pt-4">
@@ -396,6 +407,18 @@ export default function UserProfilePage() {
                             </p>
                           </div>
                         </div>
+                        
+                        {userQuery.data?.expiresAt && (
+                          <div className="flex items-start">
+                            <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-white">Account Expiry</p>
+                              <p className="text-sm text-gray-400">
+                                {new Date(userQuery.data.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         
                         {watchTimeQuery.data && (
                           <div className="flex items-start">
