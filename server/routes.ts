@@ -803,10 +803,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Generate a secure random password - it will be hashed by createUser
             const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
+            // Generate a unique email with a random suffix to avoid collisions
+            const uniqueEmail = `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Math.random().toString(36).substring(2, 10)}@jellyfin.local`;
+            
+            console.log(`Creating user with username: ${jellyfinUser.Name}, email: ${uniqueEmail}`);
+            
             await storage.createUser({
               username: jellyfinUser.Name,
               password: tempPassword, // Random temporary password, will be hashed in storage.createUser
-              email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+              email: uniqueEmail,
               isAdmin: isAdmin,
               jellyfinUserId: jellyfinUser.Id
             });
@@ -1059,10 +1064,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const isAdmin = newUser.Role === "Administrator";
         // The provided password will be properly hashed by the storage.createUser method
+        // Generate a unique email if not provided to avoid collisions
+        const uniqueEmail = newUser.Email || 
+          `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Math.random().toString(36).substring(2, 10)}@jellyfin.local`;
+        
+        console.log(`Creating user with username: ${newUser.Name}, email: ${uniqueEmail}`);
+        
         const appUser = await storage.createUser({
           username: newUser.Name,
           password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
-          email: newUser.Email || `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+          email: uniqueEmail,
           isAdmin: isAdmin,
           jellyfinUserId: userId
         });
@@ -2358,11 +2369,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
         
+        // Update user policy to disable library access
+        console.log(`Disabling library access for new invited user: ${username}`);
+        
+        // Get the current user policy
+        const userResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}`, {
+          headers: {
+            "X-Emby-Token": credentials.accessToken || "",
+          },
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          
+          if (userData && userData.Policy) {
+            const currentPolicy = userData.Policy;
+            
+            // Disable access to all libraries
+            currentPolicy.EnableAllFolders = false;
+            currentPolicy.EnabledFolders = []; // Empty array means no library access
+            
+            // Update policy to disable library access
+            const updatePolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Emby-Token": credentials.accessToken || "",
+              },
+              body: JSON.stringify(currentPolicy),
+            });
+            
+            if (updatePolicyResponse.ok) {
+              console.log(`Successfully disabled library access for new invited user: ${username}`);
+            } else {
+              console.error(`Failed to update policy for invited user: ${username}`);
+            }
+          }
+        }
+        
         // Create local app user with expiry if needed
+        // Generate a unique email if not provided
+        const uniqueEmail = email || 
+          (username + '_' + Math.random().toString(36).substring(2, 10) + '@jellyfin.local');
+        
+        console.log(`Creating user with username: ${username}, email: ${uniqueEmail}`);
+        
         const appUser = await storage.createUser({
           username,
           password, // Will be hashed by storage implementation
-          email: email || '',
+          email: uniqueEmail,
           jellyfinUserId: jellyfinUser.Id,
           expiresAt
         });
