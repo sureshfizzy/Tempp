@@ -311,3 +311,29 @@ export type Invite = {
   usesRemaining?: number | null;
 };
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
+
+// Activity Logs schema
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // account_created, account_disabled, account_enabled, invite_created, invite_used, invite_expired
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp", { mode: 'date' }).defaultNow().notNull(),
+  username: text("username"),
+  userId: text("user_id"), // Jellyfin User ID
+  inviteCode: text("invite_code"),
+  createdBy: text("created_by"),
+  metadata: text("metadata") // JSON string with any additional data
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).pick({
+  type: true,
+  message: true,
+  username: true,
+  userId: true,
+  inviteCode: true,
+  createdBy: true,
+  metadata: true
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;

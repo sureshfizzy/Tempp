@@ -12,11 +12,13 @@ import {
   UserProfile,
   InsertUserProfile,
   Invite,
-  InsertInvite
+  InsertInvite,
+  ActivityLog,
+  InsertActivityLog
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, and, desc } from "drizzle-orm";
-import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites } from "@shared/schema";
+import { serverConfig, jellyfinCredentials, appUsers, sessions, userProfiles, invites, activityLogs } from "@shared/schema";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 
@@ -64,6 +66,10 @@ export interface IStorage {
   deleteInvite(id: number): Promise<boolean>;
   useInvite(code: string): Promise<boolean>;
   updateInviteUsage(code: string, usedCount: number): Promise<boolean>;
+  
+  // Activity logs
+  getActivityLogs(limit?: number): Promise<ActivityLog[]>;
+  createActivityLog(logData: InsertActivityLog): Promise<ActivityLog>;
 }
 
 export class DatabaseStorage implements IStorage {

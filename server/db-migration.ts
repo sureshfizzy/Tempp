@@ -1,5 +1,5 @@
 import { pool, db } from "./db";
-import { serverConfig, userProfiles, invites } from "@shared/schema";
+import { serverConfig, userProfiles, invites, activityLogs } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 /**
@@ -96,6 +96,22 @@ export async function runCustomMigrations() {
       $$;
     `);
     console.log('Added expiry columns to app_users table');
+    
+    // Create activity_logs table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        type TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        username TEXT,
+        user_id TEXT,
+        invite_code TEXT,
+        created_by TEXT,
+        metadata TEXT
+      )
+    `);
+    console.log('activity_logs table created or already exists.');
     
     console.log("Custom migrations completed successfully.");
   } catch (error) {
