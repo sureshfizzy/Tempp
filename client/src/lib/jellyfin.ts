@@ -1,4 +1,10 @@
-import { User, NewUser, UserActivity, Invite, InsertInvite, UserProfile } from "@shared/schema";
+import { User as BaseUser, NewUser, UserActivity, Invite, InsertInvite, UserProfile } from "@shared/schema";
+
+// Extended User interface with role information
+export interface User extends BaseUser {
+  roleName?: string;
+  appUserId?: number;
+}
 
 // Connection status interface
 export interface ConnectionStatus {

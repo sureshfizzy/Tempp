@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   LogOut, 
-  User, 
+  User as UserIcon, 
   UserCheck, 
   Settings, 
   CheckCircle,
@@ -35,6 +35,7 @@ import { queryClient } from "@/lib/queryClient";
 import { AppHeader } from "@/components/app-header";
 import { Switch } from "@/components/ui/switch";
 import { InsertInvite } from "@shared/schema";
+import { User as JellyfinUser } from "@/lib/jellyfin";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -298,7 +299,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
-                <User className="h-5 w-5 mr-2 text-primary" />
+                <UserIcon className="h-5 w-5 mr-2 text-primary" />
                 Total Users
               </CardTitle>
               <CardDescription>All users on your Jellyfin server</CardDescription>
@@ -336,17 +337,27 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
-                <User className="h-5 w-5 mr-2 text-blue-500" />
-                Regular Users
+                <UserIcon className="h-5 w-5 mr-2 text-blue-500" />
+                All User Roles
               </CardTitle>
-              <CardDescription>Users with standard access</CardDescription>
+              <CardDescription>Users by assigned role</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
+              <div className="space-y-2">
                 {usersQuery.isLoading ? (
                   <div className="h-8 w-12 bg-gray-200 animate-pulse rounded"></div>
+                ) : Object.keys(userRoleCounts).length > 0 ? (
+                  Object.entries(userRoleCounts).map(([roleName, count]) => (
+                    <div key={roleName} className="flex justify-between items-center">
+                      <span className="text-sm">{roleName}</span>
+                      <span className="text-sm font-semibold">{count}</span>
+                    </div>
+                  ))
                 ) : (
-                  regularUserCount
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Regular User</span>
+                    <span className="text-sm font-semibold">{regularUserCount}</span>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -442,7 +453,7 @@ export default function Dashboard() {
                             
                             {invite.userLabel && (
                               <div className="flex items-center pt-1 border-t border-border/40">
-                                <User className="h-3 w-3 mr-1" />
+                                <UserIcon className="h-3 w-3 mr-1" />
                                 <span>User label: {invite.userLabel}</span>
                               </div>
                             )}
