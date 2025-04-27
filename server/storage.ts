@@ -613,10 +613,13 @@ export class DatabaseStorage implements IStorage {
       // Handle max uses properly (can be null for unlimited)
       const maxUses = inviteData.maxUses === null ? null : (inviteData.maxUses || 1);
       
+      // Generate a unique label if none is provided
+      const inviteLabel = inviteData.label || this.generateUniqueInviteLabel();
+      
       // Create the invite with only the columns that actually exist in the database
       const values: any = {
         code,
-        label: inviteData.label || null,
+        label: inviteLabel,
         user_label: inviteData.userLabel || null,
         profile_id: inviteData.profileId || null,
         max_uses: maxUses,
@@ -761,6 +764,30 @@ export class DatabaseStorage implements IStorage {
   // Helper method to generate a unique invite code
   private generateInviteCode(): string {
     return randomBytes(6).toString('hex').toUpperCase();
+  }
+  
+  // Generate a unique memorable label for an invite
+  private generateUniqueInviteLabel(): string {
+    // Create a more user-friendly label with 2 adjectives and a noun
+    const adjectives = [
+      'Swift', 'Bright', 'Calm', 'Deft', 'Eager', 'Fast', 'Grand', 'Happy', 'Ideal', 'Jolly',
+      'Kind', 'Lively', 'Magic', 'Noble', 'Prime', 'Quick', 'Royal', 'Smart', 'True', 'Vital',
+      'Wise', 'Young', 'Zesty', 'Alpha', 'Brave', 'Cosmic', 'Divine', 'Elite', 'Fresh', 'Golden'
+    ];
+    
+    const nouns = [
+      'Hawk', 'Tiger', 'Eagle', 'Lion', 'Shark', 'Wolf', 'Bear', 'Falcon', 'Raven', 'Fox',
+      'Panther', 'Cheetah', 'Dragon', 'Phoenix', 'Titan', 'Giant', 'Knight', 'Ranger', 'Wizard', 'Hero',
+      'Legend', 'Voyager', 'Pioneer', 'Explorer', 'Spark', 'Comet', 'Star', 'Moon', 'Planet', 'Galaxy'
+    ];
+    
+    // Select random elements
+    const adj1 = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const adj2 = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    
+    // Combine them to create a label
+    return `${adj1}${adj2}${noun}`;
   }
   
   // Activity Logs methods
