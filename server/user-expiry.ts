@@ -101,15 +101,15 @@ export async function checkAndDisableExpiredUsers(): Promise<number> {
   }
 }
 
-// Set up interval to check for expired users - every hour
-export function startExpiryCheckJob(intervalMs = 60 * 60 * 1000): NodeJS.Timeout {
+// Set up interval to check for expired users - every minute
+export function startExpiryCheckJob(intervalMs = 60 * 1000): NodeJS.Timeout {
   console.log(`Starting user expiry check job, interval: ${intervalMs}ms`);
   // Run immediately on startup
   checkAndDisableExpiredUsers().catch(err => {
     console.error('Error in initial user expiry check:', err);
   });
   
-  // Then set up interval
+  // Then set up interval to check every minute
   return setInterval(() => {
     checkAndDisableExpiredUsers().catch(err => {
       console.error('Error in scheduled user expiry check:', err);

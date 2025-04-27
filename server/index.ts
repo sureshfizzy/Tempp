@@ -77,7 +77,7 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start the user expiry check job - check every hour
+    // Start the user expiry check job - check every minute
     startExpiryCheckJob();
     log("Started user expiry check job");
   });

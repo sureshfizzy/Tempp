@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, AlertTriangle, Ban, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface UserExpiryBadgeProps {
   expiresAt?: string | null;
@@ -61,23 +61,24 @@ function formatTimeRemaining(time: TimeRemaining, small: boolean): string {
 
 export function UserExpiryBadge({ expiresAt, disabled, small = false }: UserExpiryBadgeProps) {
   const [timeRemaining, setTimeRemaining] = useState<TimeRemaining | null>(null);
-  const [now, setNow] = useState(new Date());
   
   // Parse the expiry date once
-  const expiryDate = expiresAt ? new Date(expiresAt) : null;
+  const expiryDate = useMemo(() => expiresAt ? new Date(expiresAt) : null, [expiresAt]);
   
   // Update the countdown timer every minute
   useEffect(() => {
     if (!expiryDate) return;
     
+    // Function to update the time remaining
+    const updateTime = () => {
+      setTimeRemaining(getTimeRemaining(expiryDate));
+    };
+    
     // Initial calculation
-    setTimeRemaining(getTimeRemaining(expiryDate));
+    updateTime();
     
     // Set up an interval to update every minute
-    const intervalId = setInterval(() => {
-      setNow(new Date());
-      setTimeRemaining(getTimeRemaining(expiryDate));
-    }, 60000); // 60000ms = 1 minute
+    const intervalId = setInterval(updateTime, 60000); // 60000ms = 1 minute
     
     return () => clearInterval(intervalId);
   }, [expiryDate]);
