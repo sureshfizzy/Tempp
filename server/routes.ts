@@ -2344,13 +2344,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userProfile = null;
       if (invite.profileId) {
         try {
-          // Convert profileId to number
-          const profileId = Number(invite.profileId);
-          userProfile = await storage.getUserProfileById(profileId);
-          console.log(`Using profile ID ${profileId} for new user creation:`, userProfile?.name);
+          // Convert profileId to number - make sure to handle string values properly
+          const profileId = parseInt(invite.profileId, 10);
+          if (!isNaN(profileId)) {
+            userProfile = await storage.getUserProfileById(profileId);
+            console.log(`Using profile ID ${profileId} for new user creation:`, 
+              userProfile ? `${userProfile.name} (exists)` : 'NOT FOUND');
+            
+            if (!userProfile) {
+              console.error(`Profile with ID ${profileId} not found in database`);
+            }
+          } else {
+            console.error(`Invalid profile ID format: ${invite.profileId}`);
+          }
         } catch (error) {
           console.error(`Error fetching user profile with ID ${invite.profileId}:`, error);
         }
+      } else {
+        console.log('No profile ID associated with this invite');
       }
       
       try {
@@ -2426,30 +2437,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               let homeLayout = userProfile.homeLayout;
               
-              console.log(`Setting home layout for user ${jellyfinUser.Id}`, homeLayout);
+              // Log the raw homeLayout from the profile for debugging
+              console.log(`Raw home layout from profile: ${homeLayout}`);
               
-              // Update the user's display preferences
-              const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Emby-Token': credentials.accessToken || ''
-                },
-                body: JSON.stringify({
-                  CustomPrefs: {
-                    homeLayout: homeLayout
-                  }
-                })
-              });
-              
-              if (!displayPrefsResponse.ok) {
-                console.error(`Failed to set home layout: ${displayPrefsResponse.status}`, await displayPrefsResponse.text());
+              // Check if the layout is just an empty array string
+              if (homeLayout === '[]') {
+                console.log('Home layout is empty, skipping this step');
               } else {
-                console.log(`Successfully set home layout for user ${username}`);
+                // Get the user's current display preferences first to ensure we're updating the existing structure
+                const currentPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
+                  headers: {
+                    'X-Emby-Token': credentials.accessToken || ''
+                  }
+                });
+                
+                if (currentPrefsResponse.ok) {
+                  let currentPrefs = await currentPrefsResponse.json();
+                  
+                  // Make sure CustomPrefs exists
+                  if (!currentPrefs.CustomPrefs) {
+                    currentPrefs.CustomPrefs = {};
+                  }
+                  
+                  // Set the homeLayout preference
+                  currentPrefs.CustomPrefs.homeLayout = homeLayout;
+                  
+                  console.log(`Setting home layout for user ${jellyfinUser.Id}:`, JSON.stringify(currentPrefs));
+                  
+                  // Update the user's display preferences
+                  const displayPrefsResponse = await fetch(`${apiUrl}/DisplayPreferences/usersettings?userId=${jellyfinUser.Id}&client=emby`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Emby-Token': credentials.accessToken || ''
+                    },
+                    body: JSON.stringify(currentPrefs)
+                  });
+                  
+                  if (!displayPrefsResponse.ok) {
+                    console.error(`Failed to set home layout: ${displayPrefsResponse.status}`, await displayPrefsResponse.text());
+                  } else {
+                    console.log(`Successfully set home layout for user ${username}`);
+                  }
+                } else {
+                  console.error(`Failed to get current display preferences: ${currentPrefsResponse.status}`, await currentPrefsResponse.text());
+                }
               }
             } catch (error) {
               console.error("Error setting home layout:", error);
             }
+          } else {
+            console.log('No home layout in profile, skipping this step');
           }
         }
         
