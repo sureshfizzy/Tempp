@@ -528,6 +528,15 @@ export default function Dashboard() {
                                 <Users className="h-3 w-3 mr-1" /> 
                                 <span>{invite.maxUses === null ? 'Unlimited uses' : `${invite.usesRemaining} of ${invite.maxUses} uses remaining`}</span>
                               </div>
+                              {/* Display assigned role if one is selected */}
+                              {invite.roleId && (
+                                <div className="flex items-center">
+                                  <UserCheck className="h-3 w-3 mr-1 text-blue-500" /> 
+                                  <span className="text-blue-500">
+                                    {userRolesQuery.data?.find(role => role.id === invite.roleId)?.name || 'Custom role'}
+                                  </span>
+                                </div>
+                              )}
                               
                               {invite.userExpiryEnabled && (
                                 <div className="flex items-center text-amber-500">
@@ -543,10 +552,21 @@ export default function Dashboard() {
                               )}
                             </div>
                             
+                            {/* Show user label if available */}
                             {invite.userLabel && (
                               <div className="flex items-center pt-1 border-t border-border/40">
                                 <User className="h-3 w-3 mr-1" />
                                 <span>User label: {invite.userLabel}</span>
+                              </div>
+                            )}
+                            
+                            {/* Show profile name if applicable */}
+                            {invite.profileId && (
+                              <div className="flex items-center pt-1 border-t border-border/40">
+                                <Film className="h-3 w-3 mr-1 text-purple-500" />
+                                <span className="text-purple-500">
+                                  Profile: {profilesQuery.data?.find(p => p.id.toString() === invite.profileId)?.name || 'Custom profile'}
+                                </span>
                               </div>
                             )}
                           </div>
