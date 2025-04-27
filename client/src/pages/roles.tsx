@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import UserRolesList from "@/components/user-roles";
 import { useLocation } from "wouter";
@@ -18,11 +18,12 @@ export default function RolesPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Redirect non-admin users
-  if (!isLoading && connectionStatus && !connectionStatus.isAdmin) {
-    navigate("/");
-    return null;
-  }
+  // Redirect non-admin users using useEffect
+  useEffect(() => {
+    if (!isLoading && connectionStatus && !connectionStatus.isAdmin) {
+      navigate("/");
+    }
+  }, [connectionStatus, isLoading, navigate]);
 
   return (
     <div className="container mx-auto px-4 py-8">

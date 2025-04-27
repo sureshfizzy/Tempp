@@ -40,6 +40,10 @@ export const UserRolesList: React.FC = () => {
   const createRoleMutation = useMutation({
     mutationFn: async (roleData: { name: string, description: string, isDefault: boolean }) => {
       const res = await apiRequest("POST", "/api/user-roles", roleData);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to create role");
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -74,10 +78,10 @@ export const UserRolesList: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-roles"] });
       setEditingRole(null);
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error updating role",
-        description: error.message,
+        description: error.message || "Failed to update role",
         variant: "destructive",
       });
     },
@@ -96,10 +100,10 @@ export const UserRolesList: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user-roles"] });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error deleting role",
-        description: error.message,
+        description: error.message || "Failed to delete role",
         variant: "destructive",
       });
     },
@@ -257,7 +261,7 @@ export const UserRolesList: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`edit-default-${role.id}`}
-                      checked={editingRole.isDefault}
+                      checked={editingRole.isDefault || false}
                       onCheckedChange={(checked) => setEditingRole({ ...editingRole, isDefault: checked })}
                     />
                     <Label htmlFor={`edit-default-${role.id}`}>Default role</Label>

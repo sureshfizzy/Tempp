@@ -18,7 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Server, Brush, Globe, Users, AlertTriangle, UserCog } from "lucide-react";
+import { Upload, Server, Brush, Globe, Users, AlertTriangle, UserCog, Shield } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { UserProfiles } from "@/components/user-profiles";
 
@@ -280,6 +280,10 @@ export default function SettingsPage() {
               <TabsTrigger value="profiles" className="flex-1 md:flex-initial">
                 <UserCog className="mr-2 h-4 w-4" />
                 User Profiles
+              </TabsTrigger>
+              <TabsTrigger value="roles" className="flex-1 md:flex-initial" onClick={() => navigate("/roles")}>
+                <Shield className="mr-2 h-4 w-4" />
+                User Roles
               </TabsTrigger>
             </TabsList>
 
