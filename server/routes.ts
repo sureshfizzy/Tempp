@@ -453,9 +453,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const jellyfinCreds = await storage.getJellyfinCredentials();
         if (jellyfinCreds) {
           await storage.saveJellyfinCredentials({
-            ...jellyfinCreds,
             apiKey,
             url: serverUrl || jellyfinCreds.url,
+            adminUsername: jellyfinCreds.adminUsername,
+            adminPassword: jellyfinCreds.adminPassword,
+            accessToken: jellyfinCreds.accessToken || undefined,
+            userId: jellyfinCreds.userId || undefined
           });
         }
       }
@@ -1892,7 +1895,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           usedCount: invite.usedCount,
           expiresAt: invite.expiresAt,
           userExpiryEnabled: invite.userExpiryEnabled,
-          userExpiryHours: invite.userExpiryHours
+          userExpiryHours: invite.userExpiryHours,
+          userExpiryMonths: invite.userExpiryMonths,
+          userExpiryDays: invite.userExpiryDays,
+          // Calculate usesRemaining for UI display
+          usesRemaining: invite.maxUses === null ? null : (invite.maxUses - (invite.usedCount || 0))
         });
       } else {
         res.status(404).json({ error: "Invite not found or expired" });
@@ -1930,9 +1937,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate the expiry date for the user account if enabled
       let expiresAt = null;
-      if (invite.userExpiryEnabled && invite.userExpiryHours) {
+      if (invite.userExpiryEnabled) {
         const expiryDate = new Date();
-        expiryDate.setHours(expiryDate.getHours() + invite.userExpiryHours);
+        
+        // Add months if defined
+        if (invite.userExpiryMonths) {
+          expiryDate.setMonth(expiryDate.getMonth() + invite.userExpiryMonths);
+        }
+        
+        // Add days if defined
+        if (invite.userExpiryDays) {
+          expiryDate.setDate(expiryDate.getDate() + invite.userExpiryDays);
+        }
+        
+        // Add hours if defined
+        if (invite.userExpiryHours) {
+          expiryDate.setHours(expiryDate.getHours() + invite.userExpiryHours);
+        }
+        
         expiresAt = expiryDate;
       }
       

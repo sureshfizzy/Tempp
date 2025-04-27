@@ -57,6 +57,11 @@ interface InviteData {
   expiresAt?: string;
   maxUses?: number;
   usedCount?: number;
+  usesRemaining?: number | null;
+  userExpiryEnabled?: boolean;
+  userExpiryMonths?: number;
+  userExpiryDays?: number;
+  userExpiryHours?: number;
 }
 
 export default function InviteSignupPage() {
