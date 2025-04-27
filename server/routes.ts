@@ -731,27 +731,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Define proper type for Jellyfin API response
-  interface JellyfinUser {
-    Id: string;
-    Name: string;
-    Policy?: {
-      IsAdministrator?: boolean;
-      IsDisabled?: boolean;
-      EnableAllFolders?: boolean;
-      EnabledFolders?: string[];
-      [key: string]: any; // For other policy properties
-    };
-    [key: string]: any; // For other user properties
-  }
-  
-  const users = await response.json() as JellyfinUser[];
+      const users = await response.json() as any[];
       
-  // Log the first user's policy data for debugging
-  if (users && users.length > 0 && users[0]) {
-    const firstUser = users[0];
-    console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
-  }
+      // Log the first user's policy data for debugging
+      if (users && users.length > 0 && users[0]) {
+        const firstUser = users[0];
+        console.log("Debug - User Policy structure:", JSON.stringify(firstUser.Policy || {}));
+      }
       
       // Get individual user details which include the full policy
       // This is needed because the list API might not return complete policy data
@@ -812,36 +798,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!appUsersByJellyfinId.has(jellyfinUser.Id)) {
             console.log(`Syncing user: Creating local user for ${jellyfinUser.Name} with Jellyfin ID ${jellyfinUser.Id}`);
             
-            try {
-              // First check if username already exists in our database
-              const existingUser = await storage.getUserByUsername(jellyfinUser.Name);
-              if (existingUser) {
-                console.log(`Username ${jellyfinUser.Name} already exists in database, skipping auto-creation`);
-                continue; // Skip this user and continue with next one
-              }
-              
-              // Make an educated guess about admin status
-              const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
-              
-              // Generate a secure random password - it will be hashed by createUser
-              const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
-              
-              // Generate a unique email to avoid database constraint issues
-              const uniqueEmail = `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}@jellyfin.local`;
-              console.log(`Generated unique email for synced user: ${uniqueEmail}`);
-              
-              await storage.createUser({
-                username: jellyfinUser.Name,
-                password: tempPassword, // Random temporary password, will be hashed in storage.createUser
-                email: uniqueEmail,
-                isAdmin: isAdmin,
-                jellyfinUserId: jellyfinUser.Id
-              });
-              console.log(`Created local user for ${jellyfinUser.Name} with temporary password and unique email`);
-            } catch (syncError) {
-              console.error(`Error auto-creating local user for ${jellyfinUser.Name}:`, syncError);
-              // Continue with next user even if one fails
-            }
+            // Make an educated guess about admin status
+            const isAdmin = Boolean(jellyfinUser.Policy?.IsAdministrator);
+            
+            // Generate a secure random password - it will be hashed by createUser
+            const tempPassword = "changeme" + Math.random().toString(36).substring(2, 10);
+            await storage.createUser({
+              username: jellyfinUser.Name,
+              password: tempPassword, // Random temporary password, will be hashed in storage.createUser
+              email: `${jellyfinUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+              isAdmin: isAdmin,
+              jellyfinUserId: jellyfinUser.Id
+            });
+            console.log(`Created local user for ${jellyfinUser.Name} with temporary password`);
           }
         }
       } catch (err) {
@@ -1088,67 +1057,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Also create the user in our local database for authentication
       try {
-        // First check if the username already exists in our database
-        const existingUser = await storage.getUserByUsername(newUser.Name);
-        if (existingUser) {
-          console.log(`Username ${newUser.Name} already exists in database, checking if it matches Jellyfin ID`);
-          
-          // If the user exists but with a different Jellyfin ID, we need to update it
-          if (existingUser.jellyfinUserId !== userId) {
-            console.log(`Updating existing user's Jellyfin ID from ${existingUser.jellyfinUserId} to ${userId}`);
-            await storage.updateUser(existingUser.id, { jellyfinUserId: userId });
-            
-            // Log the ID update
-            await storage.createActivityLog({
-              type: 'account_updated',
-              message: `User Jellyfin ID updated: ${newUser.Name}`,
-              username: newUser.Name,
-              userId: String(existingUser.id),
-              createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
-              metadata: JSON.stringify({
-                oldJellyfinId: existingUser.jellyfinUserId,
-                newJellyfinId: userId
-              })
-            });
-          }
-        } else {
-          // Create new user in our database
-          const isAdmin = newUser.Role === "Administrator";
-          
-          // Generate a unique email if one isn't provided
-          let userEmail = newUser.Email;
-          if (!userEmail || userEmail.trim() === '') {
-            userEmail = `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}@jellyfin.local`;
-            console.log(`Generated unique email for new user: ${userEmail}`);
-          }
-          
-          // The provided password will be properly hashed by the storage.createUser method
-          const appUser = await storage.createUser({
-            username: newUser.Name,
-            password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
-            email: userEmail,
+        const isAdmin = newUser.Role === "Administrator";
+        // The provided password will be properly hashed by the storage.createUser method
+        const appUser = await storage.createUser({
+          username: newUser.Name,
+          password: newUser.Password || "changeme" + Math.random().toString(36).substring(2, 10), // Unique password if none provided
+          email: newUser.Email || `${newUser.Name.toLowerCase().replace(/[^a-z0-9]/g, '')}@jellyfin.local`,
+          isAdmin: isAdmin,
+          jellyfinUserId: userId
+        });
+        
+        // Log the account creation in activity logs
+        await storage.createActivityLog({
+          type: 'account_created',
+          message: `Account created: ${newUser.Name}`,
+          username: newUser.Name,
+          userId: appUser.id,
+          createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
+          metadata: JSON.stringify({
             isAdmin: isAdmin,
-            jellyfinUserId: userId
-          });
-          
-          // Log the account creation in activity logs
-          await storage.createActivityLog({
-            type: 'account_created',
-            message: `Account created: ${newUser.Name}`,
-            username: newUser.Name,
-            userId: String(appUser.id),
-            createdBy: req.session.userId ? (await storage.getUserById(req.session.userId))?.username || 'Admin' : 'Admin',
-            metadata: JSON.stringify({
-              isAdmin: isAdmin,
-              jellyfinUserId: userId,
-              createdVia: 'admin_panel'
-            })
-          });
-          
-          console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
-        }
+            jellyfinUserId: userId,
+            createdVia: 'admin_panel'
+          })
+        });
+        
+        console.log(`Created local user for ${newUser.Name} with Jellyfin ID ${userId}`);
       } catch (err) {
-        console.error("Error creating or updating local user:", err);
+        console.error("Error creating local user:", err);
         // Continue even if local user creation fails - we'll still return the Jellyfin user
       }
       
@@ -2350,13 +2285,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username and password are required" });
       }
       
-      // Check if username already exists in our database
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        console.log(`Username ${username} already exists in our database`);
-        return res.status(400).json({ error: "Username already exists. Please choose a different username." });
-      }
-      
       // First, check if the invite exists and is valid
       const invite = await storage.getInviteByCode(code);
       if (!invite) {
@@ -2406,14 +2334,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiUrl = credentials.url;
       const apiKey = credentials.apiKey;
       
-      // Only send username and password to Jellyfin API - no email required
       const jellyfinUserData = {
         Name: username,
         Password: password
       };
       
       try {
-        console.log(`Creating new Jellyfin user: ${username} via invite code: ${code}`);
         const jellyfinResponse = await fetch(`${apiUrl}/Users/New`, {
           method: 'POST',
           headers: {
@@ -2431,144 +2357,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const jellyfinUser = await jellyfinResponse.json() as { Id: string };
-        console.log(`Successfully created Jellyfin user with ID: ${jellyfinUser.Id}`);
         
         // Create local app user with expiry if needed
-        // Generate a unique email if one isn't provided
-        let userEmail = email;
-        if (!userEmail || userEmail.trim() === '') {
-          // Create a unique email to avoid constraint issues
-          userEmail = `${username.toLowerCase()}_${Date.now()}@example.com`;
-          console.log(`Generated unique email for user: ${userEmail}`);
-        }
-        
         const appUser = await storage.createUser({
           username,
           password, // Will be hashed by storage implementation
-          email: userEmail,
+          email: email || '',
           jellyfinUserId: jellyfinUser.Id,
           expiresAt
         });
-        
-        // Step 1: First disable access to all libraries for the new user
-        // Get the current policy for the newly created user
-        console.log(`Getting current policy for new user: ${jellyfinUser.Id}`);
-        const userResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}`, {
-          headers: {
-            "X-Emby-Token": credentials.accessToken || "",
-          },
-        });
-        
-        if (userResponse.ok) {
-          // Define type for Jellyfin user response
-          interface JellyfinUserData {
-            Id: string;
-            Name: string;
-            Policy?: {
-              IsAdministrator?: boolean;
-              IsDisabled?: boolean;
-              EnableAllFolders?: boolean;
-              EnabledFolders?: string[];
-              [key: string]: any;
-            };
-            [key: string]: any;
-          }
-          
-          const userData = await userResponse.json() as JellyfinUserData;
-          
-          if (userData && userData.Policy) {
-            console.log(`Retrieved current policy for new user ${username}`);
-            const currentPolicy = userData.Policy;
-            
-            // Disable access to all libraries
-            currentPolicy.EnableAllFolders = false;
-            currentPolicy.EnabledFolders = []; // Empty array to disable all access
-            
-            console.log(`Updating policy for new user ${username} to disable all library access`);
-            const updatePolicyResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Emby-Token": credentials.accessToken || "",
-              },
-              body: JSON.stringify(currentPolicy),
-            });
-
-            if (!updatePolicyResponse.ok) {
-              console.error(`Failed to update library access policy: ${updatePolicyResponse.statusText}`);
-            } else {
-              console.log(`Successfully disabled all library access for new user ${username}`);
-              
-              // Step 2: Check if this invite has an associated profile to copy library access from
-              if (invite.profileId) {
-                console.log(`Invite has associated profile ID: ${invite.profileId}, applying library access settings`);
-                
-                try {
-                  // Get the user profile
-                  const profileId = parseInt(invite.profileId, 10);
-                  if (!isNaN(profileId)) {
-                    const profile = await storage.getUserProfileById(profileId);
-                    
-                    if (profile && profile.libraryAccess) {
-                      console.log(`Found profile ${profile.name} with library access settings`);
-                      
-                      // Parse the library access from the profile
-                      try {
-                        const libraryAccess = JSON.parse(profile.libraryAccess);
-                        
-                        if (Array.isArray(libraryAccess) && libraryAccess.length > 0) {
-                          console.log(`Setting library access for user ${username} based on profile ${profile.name}`);
-                          
-                          // Apply the library access to the user's policy
-                          currentPolicy.EnabledFolders = libraryAccess;
-                          
-                          const updateLibraryResponse = await fetch(`${apiUrl}/Users/${jellyfinUser.Id}/Policy`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              "X-Emby-Token": credentials.accessToken || "",
-                            },
-                            body: JSON.stringify(currentPolicy),
-                          });
-                          
-                          if (updateLibraryResponse.ok) {
-                            console.log(`Successfully applied library access settings from profile "${profile.name}" with ${libraryAccess.length} libraries`);
-                            
-                            // Log the library access change
-                            await storage.createActivityLog({
-                              type: 'library_access_updated',
-                              message: `Library access set for ${username} from profile "${profile.name}"`,
-                              username: username,
-                              userId: String(appUser.id),
-                              inviteCode: code,
-                              metadata: JSON.stringify({
-                                profileId: profile.id,
-                                profileName: profile.name,
-                                libraryCount: libraryAccess.length
-                              })
-                            });
-                          } else {
-                            console.error(`Failed to update library access: ${updateLibraryResponse.statusText}`);
-                          }
-                        } else {
-                          console.log(`Profile ${profile.name} has no library access defined or empty array`);
-                        }
-                      } catch (parseError) {
-                        console.error(`Error parsing library access JSON from profile: ${parseError}`);
-                      }
-                    } else {
-                      console.log(`Profile ID ${profileId} not found or has no library access settings`);
-                    }
-                  }
-                } catch (profileError) {
-                  console.error(`Error applying profile library access: ${profileError}`);
-                }
-              } else {
-                console.log(`No profile associated with invite code: ${code}, keeping all libraries disabled`);
-              }
-            }
-          }
-        }
         
         // Increment the invite used count
         const usedCount = invite.usedCount !== null ? invite.usedCount + 1 : 1;
