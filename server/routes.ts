@@ -42,11 +42,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware with PostgreSQL
   const PgSession = connectPgSimple(session);
   
-  // Use Express.Router for organizing routes
-  const router = app.Router ? app.Router() : app;
-  
-  // Setup library folders routes
-  setupLibraryFoldersRoutes(router);
+  // Setup library folders routes directly on the app
+  setupLibraryFoldersRoutes(app);
   
   app.use(
     session({

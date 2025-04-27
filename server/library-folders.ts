@@ -1,9 +1,9 @@
-import { Request, Response, Router } from "express";
+import { Request, Response, Express } from "express";
 import { storage } from "./storage";
 
-export function setupLibraryFoldersRoutes(router: Router) {
+export function setupLibraryFoldersRoutes(app: Express) {
   // Get library folder information
-  router.get("/api/users/library-folders", async (req: Request, res: Response) => {
+  app.get("/api/users/library-folders", async (req: Request, res: Response) => {
     try {
       // Check if user is authenticated
       if (!req.session.connected) {
