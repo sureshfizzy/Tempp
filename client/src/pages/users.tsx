@@ -5,7 +5,8 @@ import {
   getUsers, 
   deleteUser, 
   getUserRole, 
-  getUserRoleById
+  getUserRoleById,
+  getUserRoles
 } from "@/lib/jellyfin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,8 @@ import {
   LogOut,
   Users,
   Settings,
-  Menu
+  Menu,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
@@ -48,6 +50,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function UsersPage() {
   const { toast } = useToast();
@@ -58,6 +67,7 @@ export default function UsersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAssignRoleModalOpen, setIsAssignRoleModalOpen] = useState(false);
+  const [isRolesTableOpen, setIsRolesTableOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -502,6 +512,143 @@ export default function UsersPage() {
           onClose={() => setIsAssignRoleModalOpen(false)}
         />
       )}
+
+      {/* Roles Table Modal */}
+      <Dialog 
+        open={isRolesTableOpen} 
+        onOpenChange={setIsRolesTableOpen}
+      >
+        <DialogContent className="max-w-4xl overflow-y-auto max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Users className="mr-2 h-5 w-5" />
+              User Roles
+            </DialogTitle>
+            <DialogDescription>
+              View and manage role assignments for all users
+            </DialogDescription>
+          </DialogHeader>
+          
+          <RolesTable users={usersQuery.data || []} />
+          
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline" 
+              onClick={() => setIsRolesTableOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// Separate component for the roles table
+function RolesTable({ users }: { users: User[] }) {
+  const [isAssignRoleModalOpen, setIsAssignRoleModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { toast } = useToast();
+
+  // Get all roles
+  const rolesQuery = useQuery({
+    queryKey: ["/api/user-roles"],
+    queryFn: getUserRoles
+  });
+
+  // Handle assign role click
+  const handleAssignRole = (user: User) => {
+    setCurrentUser(user);
+    setIsAssignRoleModalOpen(true);
+  };
+
+  if (rolesQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Loading roles...</span>
+      </div>
+    );
+  }
+
+  if (rolesQuery.error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+        Error loading roles: {rolesQuery.error instanceof Error ? rolesQuery.error.message : "Unknown error"}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Username</TableHead>
+              <TableHead>Current Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Users className="h-10 w-10 text-gray-300" />
+                    <span>No users found</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.Id}>
+                  <TableCell className="font-medium">{user.Name}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.Policy?.IsAdministrator ? "default" : "secondary"}>
+                      {getUserRole(user)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.Policy?.IsDisabled ? (
+                      <Badge variant="destructive">Disabled</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleAssignRole(user)}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Change Role
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Nested Assign Role Modal */}
+      {currentUser && (
+        <AssignRoleModal 
+          isOpen={isAssignRoleModalOpen}
+          userId={currentUser.appUserId || 0}
+          userName={currentUser.Name || ""}
+          currentRoleId={currentUser.roleId}
+          onClose={() => {
+            setIsAssignRoleModalOpen(false);
+            // Force refresh users data after role change
+            queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+          }}
+        />
+      )}
+    </>
   );
 }
