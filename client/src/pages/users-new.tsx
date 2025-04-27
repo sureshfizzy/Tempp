@@ -705,7 +705,22 @@ export default function UsersPage() {
             </DialogHeader>
             <div className="space-y-6">
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Set Expiry</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-medium">Set Expiry</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setExpiryDate("");
+                      setExpiryMonths("0");
+                      setExpiryDays("0");
+                      setExpiryHours("0");
+                      setExpiryMinutes("0");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
                 <Input 
                   placeholder="Enter an expiry"
                   type="datetime-local"
@@ -783,7 +798,16 @@ export default function UsersPage() {
                 variant="default"
                 onClick={() => {
                   if (currentUser) {
-                    const calculatedDate = expiryDate || calculateExpiryDate();
+                    // If we have an exact date entered, use it; 
+                    // otherwise calculate from relative time fields
+                    let calculatedDate = null;
+                    
+                    if (expiryDate) {
+                      calculatedDate = new Date(expiryDate).toISOString();
+                    } else {
+                      calculatedDate = calculateExpiryDate();
+                    }
+                    
                     setExpiryMutation.mutate({
                       userId: currentUser.Id,
                       expiryDate: calculatedDate

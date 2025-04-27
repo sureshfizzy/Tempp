@@ -2020,6 +2020,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // App User API Routes
+  // Get app user by Jellyfin user ID
+  app.get("/api/app-users/by-jellyfin-id/:jellyfinId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.jellyfinUserId === req.params.jellyfinId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("Error getting app user by Jellyfin ID:", error);
+      return res.status(500).json({ message: "Error retrieving user" });
+    }
+  });
+  
+  // Update app user
+  app.patch("/api/app-users/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.updateUser(userId, req.body);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("Error updating app user:", error);
+      return res.status(500).json({ message: "Error updating user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
