@@ -1514,8 +1514,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!response.ok) {
-        console.error(`Failed to fetch user image: ${response.status} ${response.statusText}`);
-        return res.status(response.status).send(await response.text());
+        // Don't log 404 errors for user images, as they're expected when users don't have avatars
+        if (response.status !== 404) {
+          console.error(`Failed to fetch user image: ${response.status} ${response.statusText}`);
+        }
+        
+        // Return a SVG fallback avatar with the first letter of the username
+        const firstLetter = req.params.id.charAt(0).toUpperCase();
+        const colors = ['#4F46E5', '#22C55E', '#EF4444', '#F59E0B', '#6366F1', '#06B6D4'];
+        const colorIndex = req.params.id.charCodeAt(0) % colors.length;
+        const bgColor = colors[colorIndex];
+        
+        res.set('Content-Type', 'image/svg+xml');
+        return res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+          <rect width="80" height="80" fill="${bgColor}" rx="40" />
+          <text x="40" y="46" font-family="Arial, sans-serif" font-size="32" fill="white" text-anchor="middle">${firstLetter}</text>
+        </svg>`);
       }
 
       // Copy content type
@@ -1561,8 +1575,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!response.ok) {
-        console.error(`Failed to fetch image for item ${itemId}:`, response.status, response.statusText);
-        return res.status(response.status).send(await response.text());
+        // Don't log 404 errors for item images, as they're expected
+        if (response.status !== 404) {
+          console.error(`Failed to fetch image for item ${itemId}:`, response.status, response.statusText);
+        }
+        
+        // Return a generic media placeholder SVG
+        res.set('Content-Type', 'image/svg+xml');
+        res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+        return res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="150" viewBox="0 0 100 150">
+          <rect width="100" height="150" fill="#1F2937" rx="8" />
+          <rect x="20" y="20" width="60" height="60" fill="#4B5563" rx="4" />
+          <rect x="20" y="90" width="60" height="10" fill="#4B5563" rx="2" />
+          <rect x="20" y="110" width="40" height="10" fill="#4B5563" rx="2" />
+          <circle cx="40" cy="50" r="15" fill="#6B7280" />
+          <rect x="30" y="70" width="40" height="5" fill="#6B7280" rx="2" />
+        </svg>`);
       }
 
       // Set cache headers to improve performance
